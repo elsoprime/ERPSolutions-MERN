@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-roboto-regular: 'Roboto', sans-serif;
+  --font-roboto-bold: 'Roboto', sans-serif;
+  --font-roboto-black: 'Roboto', sans-serif;
+}
+
+.font-roboto-regular {
+  font-family: var(--font-roboto-regular);
+  font-weight: 400;
+}
+
+.font-roboto-bold {
+  font-family: var(--font-roboto-bold);
+  font-weight: 700;
+}
+
+.font-roboto-black {
+  font-family: var(--font-roboto-black);
+  font-weight: 900;
+}
