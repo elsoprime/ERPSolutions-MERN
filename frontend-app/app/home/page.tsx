@@ -1,7 +1,9 @@
-/** Autor: @elsoprimeDev */
+/**
+ * Autor: Esteban Soto @elsoprimeDev
+ */
 
-import React from 'react'
+import HomeViews from '@/components/Home/Views/HomeViews'
 
 export default function page() {
-  return <div>page</div>
+  return <HomeViews />
 }

@@ -10,12 +10,19 @@ export interface IWareHouse {
   body: IPageBody[]
 }
 
-/** Interface para los Modulos de la Warehouse */
-export interface IWareHouseCard {
+/** Definir Interface para el Dashbord de la Aplicacion */
+export interface IDashboard {
+  mainContent?: IPageBody[]
+}
+
+/** Interface Card para los Modulos del Sistema */
+export interface IModuleCard {
   id: number
   title: string
+  subtitle?: string
   description: string
   image: string
+  background?: string
   DataAOS: string
   IAction: {
     title: string
@@ -23,3 +30,5 @@ export interface IWareHouseCard {
     onClick?: () => void // Acción cuando se hace clic en la tarjeta
   }[]
 }
+
+/** Interface para el Menu de la Aplicacion */

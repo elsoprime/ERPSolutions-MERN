@@ -3,7 +3,7 @@
  */
 
 import {IFormField} from '../interfaces/IComponents'
-import {IWareHouse, IWareHouseCard} from '../interfaces/IPageComponents'
+import {IModuleCard, IWareHouse} from '../interfaces/IPageComponents'
 
 // Arreglo para el Mapeo de la Vista del Modulo Warehouse
 export const WarehouseHeading: IWareHouse[] = [
@@ -29,7 +29,7 @@ export const WarehouseHeading: IWareHouse[] = [
 ]
 
 // Arreglo de Datos para el Map de Cards [WarehouseCard]
-export const WarehouseCardData: IWareHouseCard[] = [
+export const WarehouseCardData: IModuleCard[] = [
   {
     id: 1,
     title: 'Administra tus Categorias',
@@ -181,8 +181,8 @@ export const ProductFormField: IFormField[] = [
     required: false
   },
   {
-    id: 'image',   
-    type: 'hidden',    
+    id: 'image',
+    type: 'hidden',
     required: false
   },
   {

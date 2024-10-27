@@ -3,17 +3,17 @@
  */
 
 'use client'
-import React, { useState } from 'react'
+import React, {useState} from 'react'
 import Header from '@/components/Warehouse/Common/Header'
 import ListProduct from '@/components/Warehouse/Products/ListProduct'
-import { useQuery } from '@tanstack/react-query'
-import { useParams, useRouter } from 'next/navigation'
-import { getAllProducts } from '@/api/ProductApi'
-import { LoagingSpinner } from '@/components/Shared/LoadingSpinner'
+import {useQuery} from '@tanstack/react-query'
+import {useParams, useRouter} from 'next/navigation'
+import {getAllProducts} from '@/api/ProductApi'
+import {LoagingSpinner} from '@/components/Shared/LoadingSpinner'
 import Pagination from '@/components/Shared/Pagination'
 import Buttons from '@/components/Warehouse/Common/Buttons'
 import SearchForm from '@/components/Warehouse/Products/SearchForm'
-import Page404 from '@/components/Shared/404'
+import Page404 from '@/components/Shared/Page404'
 
 export default function Products() {
   const params = useParams()
@@ -24,7 +24,7 @@ export default function Products() {
   const [page, setPage] = useState(1)
   const limit = 7
 
-  const { data, isLoading, isFetching, isError, error } = useQuery({
+  const {data, isLoading, isFetching, isError, error} = useQuery({
     queryKey: ['products', page],
     queryFn: () => getAllProducts(page, limit),
     retry: false
@@ -35,7 +35,10 @@ export default function Products() {
   console.log('Error:', error) */
 
   if (isLoading) return <LoagingSpinner />
-  if (isError) return <Page404 description='Lo sentimos, la página que estás buscando no existe o ha sido movida.' />
+  if (isError)
+    return (
+      <Page404 description='Lo sentimos, la página que estás buscando no existe o ha sido movida.' />
+    )
 
   const total = data?.total || 0
   const totalPages = Math.ceil(total / limit)
