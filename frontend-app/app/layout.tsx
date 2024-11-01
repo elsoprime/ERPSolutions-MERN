@@ -1,14 +1,9 @@
 import type {Metadata} from 'next'
-import localFont from 'next/font/local'
 import './globals.css'
 import React from 'react'
 import 'react-toastify/dist/ReactToastify.css'
 import {ToastContainer} from 'react-toastify'
-
-const notoSans = localFont({
-  src: '/fonts/NotoSansDisplay_Condensed-Regular.ttf',
-  weight: '300 400 700 900'
-})
+import {globalFonts} from './fonts'
 
 export const metadata: Metadata = {
   title: 'Plataforma de gestión de Procesos de Desarrollo',
@@ -23,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang='en'>
-      <body className={`${notoSans.className}`}>
+      <body className={`${globalFonts.map(font => font.variable).join(' ')}`}>
         {children}
         <ToastContainer
           pauseOnFocusLoss={false}
