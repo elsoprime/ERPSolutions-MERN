@@ -64,7 +64,7 @@ export default function Menu(): JSX.Element {
         const baseClasses = "flex items-center w-full justify-between px-2 py-2 text-sm font-regular rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-100";
         const activeClasses = isItemActiveForStyling
             ? "bg-purple-600 text-white"
-            : "bg-white/90 text-gray-600 hover:bg-white/80 hover:text-gray-600 transition-colors duration-200 font-light";
+            : "text-gray-600 hover:bg-white/10 hover:text-gray-600 transition-colors duration-200 font-light";
 
         // Clases especiales para el último elemento
         const lastItemClasses = isLastItem
@@ -102,7 +102,7 @@ export default function Menu(): JSX.Element {
                                     className={`block px-2 py-2 text-sm rounded-md
                                         ${subItem.isActive
                                             ? 'bg-purple-100 text-purple-800'
-                                            : 'text-white bg-gray-500/50 hover:bg-gray-100 hover:text-gray-800 transition-colors duration-200'
+                                            : 'text-gray-500 hover:bg-white/10 hover:text-purple-800 transition-colors duration-200'
                                         }`}
                                 >
                                     <span className="flex items-center">

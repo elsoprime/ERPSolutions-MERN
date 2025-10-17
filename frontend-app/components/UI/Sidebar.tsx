@@ -14,7 +14,7 @@ interface LogoProps {
 
 export default function Sidebar() {
     return (
-        <div className=' relative py-2 px-4 lg:flex flex-col shadow-md hidden '
+        <div className=' relative py-2 px-4 lg:flex flex-col shadow-md hidden bg-contain bg-no-repeat h-full overflow-y-auto'
             style={{
                 backgroundImage: `url(${BGSidebar.src})`,
                 backgroundAttachment: "fixed",
@@ -29,7 +29,7 @@ export default function Sidebar() {
             <div className="p-4 z-30">
                 <Menu />
             </div>
-            <div className="absolute inset-0 top-0 bg-black/70 backdrop-blur-sm"></div>
+            <div className="absolute inset-0 top-0 bg-gray-50/90 backdrop-blur-xs"></div>
         </div>
     )
 }
