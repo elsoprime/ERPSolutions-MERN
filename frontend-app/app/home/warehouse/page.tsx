@@ -2,13 +2,13 @@
  *  Autor: Esteban Soto @elsoprimeDev
  */
 'use client'
-import Header from '@/components/Warehouse/Common/Header'
+import HeaderSection from '@/components/UI/HeaderSection'
 import WarehouseViews from '@/components/Warehouse/Views/WarehouseViews'
 
 export default function Warehouse() {
   return (
     <>
-      <Header
+      <HeaderSection
         link={'/home'}
         nameLink={'Dashboard'}
         sectionTitle={'Mi Almacen'}

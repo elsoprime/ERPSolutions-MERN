@@ -2,10 +2,10 @@
  * Autor: Esteban Soto @elsoprimeDev
  */
 
-import {WarehouseCardData} from '@/data/Warehouse'
-import {ICardModule} from '@/interfaces/IPageComponents'
+import { WarehouseCardData } from '@/data/Warehouse'
+import { IModuleCard } from '@/interfaces/IPageComponents'
 import Image from 'next/image'
-import {useRouter} from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 /**
  * Componente de tarjeta para mostrar la información de un almacén
@@ -23,8 +23,8 @@ export default function WarehouseCard() {
   }
 
   return (
-    <ul className='grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6'>
-      {WarehouseCardData.map((featureCard: ICardModule) => (
+    <ul className='grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 px-10 md:px-0'>
+      {WarehouseCardData.map((featureCard: IModuleCard) => (
         <li
           key={featureCard.id}
           className='bg-gray-50 shadow-md rounded-xl p-4 mb-4  hover:bg-slate-100 hover:transform hover:scale-105 transition-transform cursor-pointer'

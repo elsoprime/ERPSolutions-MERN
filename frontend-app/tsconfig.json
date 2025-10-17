@@ -29,7 +29,8 @@
       "@/locale/*": ["locale/*"],
       "@/schemas/*": ["schemas/*"],
       "@/api/*": ["api/*"],
-      "@/Shared/*": ["Shared/*"]
+      "@/Shared/*": ["Shared/*"],
+      "@/hooks/*": ["hooks/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

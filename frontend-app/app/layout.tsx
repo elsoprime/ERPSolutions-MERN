@@ -1,9 +1,9 @@
-import type {Metadata} from 'next'
+import type { Metadata } from 'next'
 import './globals.css'
 import React from 'react'
 import 'react-toastify/dist/ReactToastify.css'
-import {ToastContainer} from 'react-toastify'
-import {globalFonts} from './fonts'
+import { ToastContainer } from 'react-toastify'
+import { globalFonts } from './fonts'
 
 export const metadata: Metadata = {
   title: 'Plataforma de gestión de Procesos de Desarrollo',
@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='en'>
+    <html lang='es'>
       <body className={`${globalFonts.map(font => font.variable).join(' ')}`}>
         {children}
         <ToastContainer

@@ -2,7 +2,7 @@
  * Autor: Esteban Soto @elsoprimeDev
  */
 
-import Header from '@/components/Warehouse/Common/Header'
+import Header from '@/components/UI/HeaderSection'
 import AddProductView from '@/components/Warehouse/Products/AddProduct'
 
 export default function AddProduct() {

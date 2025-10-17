@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --font-noto-sans: 'Noto Sans', sans-serif;
-  --font-roboto-light: 'Roboto-Light', sans-serif;
-  --font-roboto-regular: 'Roboto-Regular', sans-serif;
-  --font-roboto-bold: 'Roboto-Bold', sans-serif;
-  --font-poppins: 'Poppins', sans-serif;
+  --font-noto-sans: "Noto Sans", sans-serif;
+  --font-roboto-light: "Roboto-Light", sans-serif;
+  --font-roboto-regular: "Roboto-Regular", sans-serif;
+  --font-roboto-bold: "Roboto-Bold", sans-serif;
+  --font-poppins: "Poppins", sans-serif;
 }
 
 body {
@@ -30,4 +30,46 @@ pre {
 
 .font-roboto-light {
   font-family: var(--font-roboto-light);
+}
+
+/* Clases utilitarias para todas tus fuentes */
+.font-noto {
+  font-family: var(--font-noto-sans);
+}
+
+.font-roboto-light {
+  font-family: var(--font-roboto-light);
+}
+
+.font-roboto {
+  font-family: var(--font-roboto-regular);
+}
+
+.font-roboto-bold {
+  font-family: var(--font-roboto-bold);
+}
+
+.font-poppins {
+  font-family: var(--font-poppins);
+}
+
+/* Clases temáticas para diferentes usos */
+.font-heading {
+  font-family: var(--font-noto-sans);
+  font-weight: 700;
+}
+
+.font-body {
+  font-family: var(--font-roboto-regular);
+  font-weight: 400;
+}
+
+.font-caption {
+  font-family: var(--font-roboto-light);
+  font-weight: 300;
+}
+
+.font-button {
+  font-family: var(--font-roboto-bold);
+  font-weight: 600;
 }

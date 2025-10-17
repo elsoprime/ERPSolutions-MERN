@@ -110,24 +110,6 @@ export const WarehouseCardData: IModuleCard[] = [
   }
 ]
 
-/** Definiendo Datos para el Formulario de Categorías */
-export const CategoryForm: IFormField[] = [
-  {
-    id: 'name',
-    label: 'Nombre de la Categoria',
-    type: 'text',
-    placeholder: 'Nombre de la Categoria',
-    required: true
-  },
-  {
-    id: 'description',
-    label: 'Descripción de la Categoria',
-    type: 'textarea',
-    placeholder: 'Descripción de la Categoria',
-    required: false
-  }
-]
-
 /** Definiendo Datos para el Formulario de Productos */
 export const ProductFormField: IFormField[] = [
   {

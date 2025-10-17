@@ -69,3 +69,58 @@ export interface ICard {
   link?: string // Enlace opcional
   DataAOS?: string // Atributo de animación AOS
 }
+
+/**
+ * @description: Definición de Interfaces el Menu de la Aplicación
+ * @requires: React
+ * @exports: IMenu
+ * @Author Esteban Soto Ojeda [elsoprimeDev]
+ */
+
+export interface ISubMenu {
+  id: number;
+  title: string;
+  icon: React.ReactNode;
+  link: string;
+  isExternal?: boolean;
+  isActive?: boolean;
+}
+
+export interface IMenu {
+  id: number;
+  title: string;
+  icon?: React.ReactNode;
+  link?: string;
+  isExternal?: boolean;
+  isActive?: boolean;
+  ISubMenu?: ISubMenu[];
+}
+
+/** Interface para el perfil de usuario en el Header */
+export interface IUserProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  role: string;
+  isAuthenticated: boolean;
+}
+
+/** Interface para las opciones del menú de usuario */
+export interface IUserMenuOption {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  href?: string;
+  onClick?: () => void;
+  divider?: boolean;
+}
+
+/** Interface para el componente de navegación del Header */
+export interface IHeaderNavigation {
+  menuItems: IMenu[];
+  userProfile: IUserProfile;
+  userMenuOptions: IUserMenuOption[];
+  onMenuItemClick?: (item: IMenu) => void;
+  onUserMenuClick?: (option: IUserMenuOption) => void;
+}

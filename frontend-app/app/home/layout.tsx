@@ -2,8 +2,11 @@
 
 'use client'
 
-import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
-import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
+import Header from '@/components/UI/Header'
+import HeaderNavigation from '@/components/UI/HeaderNavigation'
+import Sidebar from '@/components/UI/Sidebar'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 export default function HomeLayout({
   children
@@ -15,7 +18,9 @@ export default function HomeLayout({
     <QueryClientProvider client={queryClient}>
       <ReactQueryDevtools />
       <div className='min-h-screen grid grid-col-1 md:grid-cols-6 lg:grid-cols-6'>
+        <Sidebar />
         <div className='col-span-5 md:col-span-6 lg:col-span-6 xl:col-span-5 bg-gray-50'>
+          <Header />
           <div className='container mx-auto p-4 lg:max-w-none lg:px-8'>
             {children}
           </div>

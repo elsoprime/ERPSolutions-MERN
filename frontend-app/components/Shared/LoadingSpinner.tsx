@@ -2,7 +2,7 @@
  * Autor: Esteban Soto @elsoprimeDev
  */
 
-export const LoagingSpinner = () => {
+export const LoadingSpinner = () => {
   return (
     <div className='flex items-center justify-center min-h-screen'>
       <div className='relative'>

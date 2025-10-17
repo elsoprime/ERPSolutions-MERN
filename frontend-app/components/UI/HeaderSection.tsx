@@ -2,8 +2,8 @@
  * Autor: Esteban Soto @elsoprimeDev
  */
 
-import {WarehouseHeading} from '@/data/Warehouse'
-import NavLink from './NavLink'
+import { WarehouseHeading } from '@/data/Warehouse'
+import NavLink from '../Warehouse/Common/NavLink'
 
 /**
  * Section de la cabecera de la vista de almacén
@@ -15,23 +15,23 @@ type HeaderProps = {
   sectionTitle: string
 }
 
-export default function Header({link, nameLink, sectionTitle}: HeaderProps) {
+export default function HeaderSection({ link, nameLink, sectionTitle }: HeaderProps) {
   return (
     <div className='relative'>
       <NavLink link={link} backLink={nameLink} sectionTitle={sectionTitle} />
       {WarehouseHeading.map((feature, index) => (
         <div key={index} className='bg-products bg-cover rounded-lg'>
-          <div className=' bg-gray-50 opacity-90 items-center h-[350px]'>
+          <div className=' bg-gray-50 opacity-90 items-center h-[650px] lg:h[700px] '>
             {feature.body.map((body, index) => (
               <div key={index} className='absolute top-10 inset-0'>
                 <div className='p-4 items-center'>
-                  <h1 className='text-3xl md:text-5xl font-bold text-center text-gray-700'>
+                  <h1 className='font-roboto-bold text-3xl md:text-5xl font-black text-center text-gray-700'>
                     {body.title}
                   </h1>
-                  <h2 className='text-lg md:text-xl text-center text-purple-600'>
+                  <h2 className='font-noto text-lg md:text-xl font-semibold text-center text-purple-600'>
                     {body.subtitle}
                   </h2>
-                  <p className='text-sm text-center text-gray-900 font-light'>
+                  <p className='font-roboto text-sm text-center text-gray-500 font-light'>
                     {body.description}
                   </p>
                 </div>
