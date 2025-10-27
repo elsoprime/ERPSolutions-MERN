@@ -1,9 +1,11 @@
 /**
- * Autor: Esteban Soto @elsoprimeDev
+ * Home Page with Smart Routing
+ * @description: Página home que redirige automáticamente según el rol del usuario
+ * @author: Esteban Soto @elsoprimeDev
  */
 
-import HomeViews from '@/components/Home/Views/HomeViews'
+import SmartHomeRouter from '@/components/Routing/SmartHomeRouter'
 
-export default function page() {
-  return <HomeViews />
+export default function HomePage() {
+  return <SmartHomeRouter />
 }

@@ -1,5 +1,8 @@
 /**
- * Autor: Esteban Soto @elsoprimeDev
+ * @description: Archivo de Data para Autenticación de Usuarios
+ * Define la estructura de formularios y datos relacionados con la autenticación.
+ * @author Esteban Leonardo Soto @elsoprimeDev
+ * @version 1.0.0
  */
 
 import {IFormField} from '@/interfaces/IComponents'
@@ -60,7 +63,7 @@ export const AuthRegisterForm: IRegisterUser[] = [
         required: true
       },
       {
-        id: 'confirmPassword',
+        id: 'passwordConfirmation',
         label: 'Confirmar Contraseña',
         type: 'password',
         placeholder: 'Confirmar Contraseña...',
@@ -77,6 +80,37 @@ export const RecoverPasswordForm: IFormField[] = [
     label: 'Correo Electrónico',
     type: 'email',
     placeholder: 'Correo Electrónico...',
+    required: true
+  }
+]
+
+/**
+ * Definiendo Formulario para Cambiar Password
+ */
+export const NewPasswordFormData: IFormField[] = [
+  {
+    id: 'password',
+    label: 'Nueva Contraseña',
+    type: 'password',
+    placeholder: 'Introduce tu Nueva Contraseña...',
+    required: true
+  },
+  {
+    id: 'passwordConfirmation',
+    label: 'Confirmar Nueva Contraseña',
+    type: 'password',
+    placeholder: 'Confirmar Nueva Contraseña...',
+    required: true
+  }
+]
+
+/** Definiendo Formulario de Confirmación de Cuenta */
+export const AuthConfirmForm: IFormField[] = [
+  {
+    id: 'token',
+    label: 'Código de Confirmación',
+    type: 'text',
+    placeholder: 'Código de Confirmación...',
     required: true
   }
 ]

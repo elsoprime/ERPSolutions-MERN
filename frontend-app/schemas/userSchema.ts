@@ -1,21 +1,14 @@
-/**
- * Autor: Esteban Soto Ojeda @elsoprimeDev
- */
-
-import {create} from 'domain'
 import {z} from 'zod'
 
-/** Definido mis Schemas de Zod para Usuarios */
-export const userSchema = z.object({
-  email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {
-    message: 'El correo electrónico no es válido'
-  }),
-  password: z.string().min(6),
-  name: z
-    .string()
-    .min(3, {message: 'El nombre debe tener al menos 3 caracteres'})
-    .optional(),
-  createAt: z.string().optional()
+/**
+ * @description Definir Schema para la Autenticación y los Usuarios
+ */
+export const authSchema = z.object({
+  name: z.string().min(3).max(50),
+  email: z.string().email(),
+  password: z.string().min(6).max(100),
+  passwordConfirmation: z.string().min(6).max(100),
+  token: z.string()
 })
 
 /** Definir Schema para Listar los Usuarios */
@@ -24,6 +17,17 @@ export const listUserSchema = z.object({
   limit: z.number().int().positive()
 })
 
-/** Definir Types Diferidos */
-export type User = z.infer<typeof userSchema>
-export type UserFormData = Pick<User, 'email' | 'password' | 'name'>
+/** @description Definir Types Diferidos
+ * @typedef Auth
+ * @typedef UserFormData
+ */
+export type Auth = z.infer<typeof authSchema>
+export type UserLoginForm = Pick<Auth, 'email' | 'password'>
+export type UserRegistrationForm = Pick<
+  Auth,
+  'name' | 'email' | 'password' | 'passwordConfirmation'
+>
+export type RequestConfirmationCodeForm = Pick<Auth, 'email'>
+export type ForgotPasswordForm = Pick<Auth, 'email'>
+export type ChangePasswordForm = Pick<Auth, 'password' | 'passwordConfirmation'>
+export type ConfirmToken = Pick<Auth, 'token'>

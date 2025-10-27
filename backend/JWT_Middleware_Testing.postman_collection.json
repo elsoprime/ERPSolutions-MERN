@@ -1,0 +1,590 @@
+{
+  "info": {
+    "name": "JWT Middleware Testing - ERPSolutions",
+    "description": "Collection completa para probar todas las funcionalidades del middleware JWT mejorado",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "testing_path",
+      "value": "/api/testing/auth",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string",
+      "description": "Tu JWT token - actualízalo aquí"
+    },
+    {
+      "key": "company_id",
+      "value": "123",
+      "type": "string",
+      "description": "ID de una empresa para testing"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "🔍 HELP - Ver todas las rutas",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}{{testing_path}}/help",
+          "host": ["{{base_url}}"],
+          "path": ["{{testing_path}}", "help"]
+        }
+      }
+    },
+    {
+      "name": "🧪 Testing Básico",
+      "item": [
+        {
+          "name": "1. Basic Auth - Verificar middleware",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has user data\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('user');",
+                  "    pm.expect(jsonData.user).to.have.property('name');",
+                  "    pm.expect(jsonData.user).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/basic-auth",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "basic-auth"]
+            }
+          }
+        },
+        {
+          "name": "2. Middleware Config - Solo Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Has auth config\", function () {",
+                  "        const jsonData = pm.response.json();",
+                  "        pm.expect(jsonData).to.have.property('authConfig');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/middleware-config",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "middleware-config"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎭 Testing de Roles",
+      "item": [
+        {
+          "name": "3. Admin Only",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"User is admin\", function () {",
+                  "        const jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.role).to.include('admin');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/admin-only",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "admin-only"]
+            }
+          }
+        },
+        {
+          "name": "4. Management Only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/management-only",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "management-only"]
+            }
+          }
+        },
+        {
+          "name": "5. Employee Plus",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/employee-plus",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "employee-plus"]
+            }
+          }
+        },
+        {
+          "name": "6. Warehouse Create Permission",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/warehouse-create",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "warehouse-create"]
+            }
+          }
+        },
+        {
+          "name": "7. My Permissions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Has permissions object\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('permissions');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/my-permissions",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "my-permissions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏢 Testing Multi-tenant",
+      "item": [
+        {
+          "name": "8. Company Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/company/{{company_id}}/info",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "company", "{{company_id}}", "info"]
+            }
+          }
+        },
+        {
+          "name": "9. Owner Action",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/company/{{company_id}}/owner-action",
+              "host": ["{{base_url}}"],
+              "path": [
+                "{{testing_path}}",
+                "company",
+                "{{company_id}}",
+                "owner-action"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10. My Companies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Has companies array\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('companies');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/my-companies",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "my-companies"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚦 Testing Rate Limiting",
+      "item": [
+        {
+          "name": "11. Rate Limit Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 429\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 429]);",
+                  "});",
+                  "",
+                  "pm.test(\"Has rate limit headers\", function () {",
+                  "    pm.expect(pm.response.headers.get('X-RateLimit-Limit')).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/rate-limit-test",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "rate-limit-test"]
+            }
+          }
+        },
+        {
+          "name": "12. Rate Limit Strict",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/rate-limit-strict",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "rate-limit-strict"]
+            }
+          }
+        },
+        {
+          "name": "13. Critical Operation - Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"test_critical\",\n  \"data\": \"testing data\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/critical-operation",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "critical-operation"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Testing Logging",
+      "item": [
+        {
+          "name": "14. Security Metrics - Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Has security metrics\", function () {",
+                  "        const jsonData = pm.response.json();",
+                  "        pm.expect(jsonData).to.have.property('eventStats');",
+                  "        pm.expect(jsonData).to.have.property('securitySummary');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/security-metrics",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "security-metrics"]
+            }
+          }
+        },
+        {
+          "name": "15. My Activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Has activity data\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('recentActivity');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/my-activity",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "my-activity"]
+            }
+          }
+        },
+        {
+          "name": "16. Simulate Suspicious - Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Testing suspicious activity detection\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/simulate-suspicious",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "simulate-suspicious"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚀 Testing Avanzado",
+      "item": [
+        {
+          "name": "17. Ultimate Protection",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Ultimate protection working\", function () {",
+                  "        const jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.securityLevel).to.equal('MAXIMUM');",
+                  "        pm.expect(jsonData.protections).to.be.an('array');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"ultimate_test\",\n  \"data\": \"maximum security test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/ultimate-protection/{{company_id}}",
+              "host": ["{{base_url}}"],
+              "path": [
+                "{{testing_path}}",
+                "ultimate-protection",
+                "{{company_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18. System Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"All systems operational\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('systemStatus');",
+                  "    pm.expect(jsonData.allSystemsOperational).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"Has all system components\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const systems = jsonData.systemStatus;",
+                  "    pm.expect(systems).to.have.property('authentication');",
+                  "    pm.expect(systems).to.have.property('roleSystem');",
+                  "    pm.expect(systems).to.have.property('multiTenant');",
+                  "    pm.expect(systems).to.have.property('rateLimiting');",
+                  "    pm.expect(systems).to.have.property('logging');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/system-status",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "system-status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 Testing Masivo",
+      "item": [
+        {
+          "name": "Rate Limit Stress Test (5x)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Este test envía 5 requests rápidos para probar rate limiting",
+                  "console.log('Iniciando stress test de rate limiting...');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{testing_path}}/rate-limit-strict",
+              "host": ["{{base_url}}"],
+              "path": ["{{testing_path}}", "rate-limit-strict"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Verificar que hay token JWT",
+          "if (!pm.variables.get('jwt_token')) {",
+          "    console.warn('⚠️ ADVERTENCIA: No se ha configurado jwt_token');",
+          "    console.log('Por favor actualiza la variable jwt_token con tu token válido');",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Log básico de respuesta",
+          "console.log(`${pm.request.method} ${pm.request.url.toString()} - ${pm.response.code}`);",
+          "",
+          "// Verificar headers de rate limiting",
+          "if (pm.response.headers.get('X-RateLimit-Limit')) {",
+          "    console.log(`Rate Limit: ${pm.response.headers.get('X-RateLimit-Remaining')}/${pm.response.headers.get('X-RateLimit-Limit')}`);",
+          "}"
+        ]
+      }
+    }
+  ]
+}

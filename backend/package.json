@@ -4,7 +4,18 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts"
+    "dev": "nodemon --exec ts-node -r tsconfig-paths/register src/index.ts",
+    "init-db": "ts-node -r tsconfig-paths/register src/scripts/runInitialization.ts",
+    "init-db:test": "ts-node -r tsconfig-paths/register src/scripts/runInitialization.ts --test-users",
+    "init-db:clean": "ts-node -r tsconfig-paths/register src/scripts/runInitialization.ts --clean",
+    "clean-db": "ts-node -r tsconfig-paths/register src/scripts/cleanDatabase.ts",
+    "migrate-users": "ts-node -r tsconfig-paths/register src/scripts/migrateUsers.ts",
+    "verify-db": "ts-node -r tsconfig-paths/register src/scripts/verifyDatabase.ts",
+    "migrate-to-enhanced": "ts-node -r tsconfig-paths/register src/scripts/migrateToEnhancedCompany.ts",
+    "update-company-refs": "ts-node -r tsconfig-paths/register src/scripts/migrateToEnhancedCompany.ts --update-refs",
+    "init-enhanced-db": "ts-node -r tsconfig-paths/register src/scripts/runEnhancedInitialization.ts",
+    "init-enhanced-db:clean": "ts-node -r tsconfig-paths/register src/scripts/runEnhancedInitialization.ts --clean",
+    "verify-enhanced-db": "ts-node -r tsconfig-paths/register src/scripts/verifyEnhancedDatabase.ts"
   },
   "keywords": [],
   "author": "",
@@ -15,19 +26,26 @@
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.4.0",
     "colors": "^1.4.0",
+    "cookies-next": "^6.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-validator": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.3",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^7.0.9",
+    "resend": "^6.2.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.9",
+    "@types/nodemailer": "^7.0.2",
     "nodemon": "^3.1.4",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.5.4"
   }
 }

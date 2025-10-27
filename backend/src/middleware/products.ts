@@ -3,7 +3,8 @@
  */
 
 import type {Request, Response, NextFunction} from 'express'
-import Product, {IProduct} from '../models/Product'
+import Product from '@/modules/warehouseManagement/models/Product'
+import {IProduct} from '@/modules/warehouseManagement/types/Product'
 import mongoose from 'mongoose'
 
 declare global {

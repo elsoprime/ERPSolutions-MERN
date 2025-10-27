@@ -5,17 +5,17 @@
 import Image from 'next/image'
 import {useEffect, useState} from 'react'
 import AOS from 'aos'
-import AuthView from '@/components/Auth/Views/AuthView'
-import RecoveryView from '@/components/Auth/Views/RecoveryView'
-import RegisterView from '@/components/Auth/Views/RegisterView'
-import AuthBackground from '@/components/Layout/Background/AuthBackground'
+import AuthView from '@/components/Modules/Auth/Views/AuthView'
+import AuthGuard from '@/components/Auth/AuthGuard'
+
+import RegisterView from '@/components/Modules/Auth/Views/RegisterView'
+import LoginLayout from '@/components/Layout/LoginLayout'
+import Logo from '@/components/Shared/Logo'
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<
-    'login' | 'register' | 'recovery'
-  >('login')
+  const [currentView, setCurrentView] = useState<'login' | 'register'>('login')
 
-  const handleViewChange = (view: 'login' | 'register' | 'recovery') => {
+  const handleViewChange = (view: 'login' | 'register') => {
     setCurrentView(view)
   }
 
@@ -24,29 +24,34 @@ export default function Home() {
   }, [])
 
   return (
-    <>
-      <div className='flex justify-center min-h-screen bg-gradient-to-b from-gray-50 via-gray-100 to-gray-200'>
-        <AuthBackground />
+    <AuthGuard
+      requireAuth={false}
+      fallback={
+        <div className='min-h-screen flex items-center justify-center'>
+          <div className='text-center'>
+            <div className='animate-spin rounded-full h-32 w-32 border-b-2 border-sky-600 mx-auto'></div>
+            <p className='mt-4 text-gray-600'>Redirigiendo...</p>
+          </div>
+        </div>
+      }
+    >
+      <div className='flex justify-center min-h-screen bg-gradient-to-tr from-slate-100 via-slate-2000 to-gray-400'>
+        <LoginLayout />
         <div className='flex flex-col items-center justify-center w-full max-w-md mx-auto lg:w-2/6'>
+          <Logo width={300} height={150} />
           {currentView === 'login' ? (
             <AuthView
               onRegisterClick={() => handleViewChange('register')}
-              onRecoveryClick={() => handleViewChange('recovery')}
               dataAOS='zoom-in'
             />
           ) : currentView === 'register' ? (
             <RegisterView
               onAuthClick={() => handleViewChange('login')}
-              dataAOS='flip-up'
+              dataAOS='zoom-out'
             />
-          ) : (
-            <RecoveryView
-              onAuthClick={() => handleViewChange('login')}
-              dataAOS='flip-left'
-            />
-          )}
+          ) : null}
         </div>
       </div>
-    </>
+    </AuthGuard>
   )
 }

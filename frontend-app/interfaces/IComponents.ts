@@ -2,6 +2,9 @@
  * Autor: Esteban Soto @elsoprimeDev
  */
 
+import {UserRole, Permission} from '../types/roles'
+import {UserRole as EnhancedUserRole} from './MultiCompany'
+
 /** Definiendo Interface para los Campos del Formulario */
 export interface IFormField {
   id: string
@@ -78,49 +81,57 @@ export interface ICard {
  */
 
 export interface ISubMenu {
-  id: number;
-  title: string;
-  icon: React.ReactNode;
-  link: string;
-  isExternal?: boolean;
-  isActive?: boolean;
+  id: number
+  title: string
+  icon: React.ReactNode
+  link: string
+  isExternal?: boolean
+  isActive?: boolean
+  requiredPermissions?: Permission[] // Permisos requeridos para ver este submenu
+  requiredRoles?: EnhancedUserRole[] // Roles requeridos para ver este submenu
 }
 
 export interface IMenu {
-  id: number;
-  title: string;
-  icon?: React.ReactNode;
-  link?: string;
-  isExternal?: boolean;
-  isActive?: boolean;
-  ISubMenu?: ISubMenu[];
+  id: number
+  title: string
+  icon?: React.ReactNode
+  link?: string
+  isExternal?: boolean
+  isActive?: boolean
+  ISubMenu?: ISubMenu[]
+  requiredPermissions?: Permission[] // Permisos requeridos para ver este menu
+  requiredRoles?: EnhancedUserRole[] // Roles requeridos para ver este menu
 }
 
 /** Interface para el perfil de usuario en el Header */
 export interface IUserProfile {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  role: string;
-  isAuthenticated: boolean;
+  id: string
+  name: string
+  email: string
+  avatar?: string
+  role: UserRole // Cambiado de string a UserRole
+  isAuthenticated: boolean
+  permissions?: Permission[] // Permisos específicos del usuario
+  company?: string // Empresa del usuario
+  lastLogin?: Date // Último login
 }
 
 /** Interface para las opciones del menú de usuario */
 export interface IUserMenuOption {
-  id: string;
-  label: string;
-  icon?: React.ReactNode;
-  href?: string;
-  onClick?: () => void;
-  divider?: boolean;
+  id: string
+  label: string
+  icon?: React.ReactNode
+  href?: string
+  onClick?: () => void
+  divider?: boolean
+  requiredPermissions?: Permission[] // Permisos requeridos para ver esta opción
 }
 
 /** Interface para el componente de navegación del Header */
 export interface IHeaderNavigation {
-  menuItems: IMenu[];
-  userProfile: IUserProfile;
-  userMenuOptions: IUserMenuOption[];
-  onMenuItemClick?: (item: IMenu) => void;
-  onUserMenuClick?: (option: IUserMenuOption) => void;
+  menuItems: IMenu[]
+  userProfile: IUserProfile
+  userMenuOptions: IUserMenuOption[]
+  onMenuItemClick?: (item: IMenu) => void
+  onUserMenuClick?: (option: IUserMenuOption) => void
 }

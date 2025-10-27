@@ -10,7 +10,7 @@ import axios from 'axios'
 
 // Crea una instancia de Axios
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api',
   timeout: 10000, // Tiempo de espera máximo para una solicitud
   headers: {
     'Content-Type': 'application/json' // Tipo de contenido por defecto
@@ -22,7 +22,7 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   config => {
     // Agrega el token de autenticación a las solicitudes, si existe
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('AUTH_TOKEN_VALIDATE')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -49,9 +49,13 @@ axiosInstance.interceptors.response.use(
       // Manejo de errores específicos por estado
       switch (status) {
         case 401:
-          // Ejemplo: Redirigir al login si el usuario no está autenticado
-          // window.location.href = '/login';
-          console.warn('No autorizado - Redirigir al login.')
+          // 🔥 FIX CRÍTICO: NO limpiar localStorage automáticamente aquí
+          // El localStorage solo debe limpiarse en logout explícito o en funciones específicas
+          console.warn('No autorizado - Token expirado o inválido')
+          // Solo loggar el error, la limpieza se hará en AuthAPI si es necesario
+          break
+        case 403:
+          console.error('Acceso prohibido - Permisos insuficientes')
           break
         case 400:
           console.error('Solicitud incorrecta:', data?.message || data)

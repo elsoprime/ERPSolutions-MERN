@@ -89,5 +89,21 @@ export const ModuleCardViews: IModuleCard[] = [
         href: '/home/inventory'
       }
     ]
+  },
+  {
+    id: 6,
+    title: 'Centro de Costos',
+    subtitle: 'Administra tus Costos Operativos',
+    description:
+      'Este módulo permite gestionar los costos operativos de la empresa, asi como definir Centros de Costos y Categorias de Gastos.',
+    background: '/images/box-people.webp',
+    image: `/MarBusiness.png`,
+    DataAOS: 'fade-up',
+    IAction: [
+      {
+        title: 'Acceder al Modulo',
+        href: '/home/cost-center'
+      }
+    ]
   }
 ]

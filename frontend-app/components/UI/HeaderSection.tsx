@@ -2,8 +2,8 @@
  * Autor: Esteban Soto @elsoprimeDev
  */
 
-import { WarehouseHeading } from '@/data/Warehouse'
-import NavLink from '../Warehouse/Common/NavLink'
+import {WarehouseHeading} from '@/data/Warehouse'
+import NavLink from '../Shared/NavLink'
 
 /**
  * Section de la cabecera de la vista de almacén
@@ -15,7 +15,18 @@ type HeaderProps = {
   sectionTitle: string
 }
 
-export default function HeaderSection({ link, nameLink, sectionTitle }: HeaderProps) {
+/**
+ *
+ * @param param0 Cambiar esta seccion del HeaderSectión
+ * Dejarla Reutilizable para todas las secciones de la aplicacion
+ * @returns
+ */
+
+export default function HeaderSection({
+  link,
+  nameLink,
+  sectionTitle
+}: HeaderProps) {
   return (
     <div className='relative'>
       <NavLink link={link} backLink={nameLink} sectionTitle={sectionTitle} />

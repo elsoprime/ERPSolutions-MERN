@@ -8,28 +8,29 @@ import BGSidebar from '@/public/images/BGSidebar.webp'
  */
 
 interface LogoProps {
-    width?: number
-    height?: number
+  width?: number
+  height?: number
 }
 
 export default function Sidebar() {
-    return (
-        <div className=' relative py-2 px-4 lg:flex flex-col shadow-md hidden bg-contain bg-no-repeat h-full overflow-y-auto'
-            style={{
-                backgroundImage: `url(${BGSidebar.src})`,
-                backgroundAttachment: "fixed",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-            }}
-        >
-            <div className="z-30 bg-gradient-to-tr bg-white/80 via-gray-50/90 to-gray-50/90 rounded-lg shadow-md p-4 mb-6">
-                <Logo width={120} height={90} />
-            </div>
-            <div className="p-4 z-30">
-                <Menu />
-            </div>
-            <div className="absolute inset-0 top-0 bg-gray-50/90 backdrop-blur-xs"></div>
-        </div>
-    )
+  return (
+    <div
+      className='relative py-2 px-4 hidden xl:flex xl:flex-col shadow-md bg-contain'
+      style={{
+        backgroundImage: `url(${BGSidebar.src})`,
+        backgroundAttachment: 'fixed',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <div className='z-30 flex items-center justify-center'>
+        <Logo width={300} height={200} />
+      </div>
+      <div className='p-4 z-30'>
+        <Menu />
+      </div>
+      <div className='absolute inset-0 top-0 bg-gray-50/90 backdrop-blur-xs'></div>
+    </div>
+  )
 }

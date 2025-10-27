@@ -6,22 +6,11 @@
  */
 
 'use client'
-import React, { useState } from 'react'
 import HeaderSection from '@/components/UI/HeaderSection'
-import { useParams, useRouter } from 'next/navigation'
-import CategoryManagement from '@/components/Warehouse/Views/CategoryManagement'
+import CategoryManagement from '@/components/Modules/WarehouseManagement/Views/CategoryManagement'
+import Navbar from '@/components/Modules/WarehouseManagement/UI/Navbar'
 
 export default function Categories() {
-  const params = useParams()
-  const router = useRouter()
-  const category = params.id as string
-
-  // El paginado y la carga de datos se manejan internamente en CategoryList
-
-  /**
-   * Definiendo la Vista de la página de Categorías
-   */
-
   return (
     <>
       <HeaderSection
@@ -31,11 +20,9 @@ export default function Categories() {
       />
 
       {/* <!-- Sección de Busqueda de Productos --> */}
-      <div className='mx-auto -mt-32 xl:-mt-40 relative z-10 flex flex-col md:flex-row justify-center gap-4 '>
+      <div className='relative z-10 -mt-96 flex flex-col gap-4 mx-auto px-4 mb-12'>
         <CategoryManagement />
       </div>
-
-
     </>
   )
 }
