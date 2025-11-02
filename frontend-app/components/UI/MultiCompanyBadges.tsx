@@ -10,7 +10,7 @@ import {
   CompanyStatus,
   UserRole,
   CompanyPlan
-} from '@/interfaces/MultiCompany'
+} from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 interface StatusBadgeProps {
   status: UserStatus | CompanyStatus

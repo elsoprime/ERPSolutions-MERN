@@ -1,9 +1,13 @@
 /** Autor: @elsoprimeDEV */
 
 import mongoose from 'mongoose'
-import {getOrCreateCompany, initializeAdminUser} from '../scripts/initializeNew'
 import colors from 'colors'
-import {initializeApplication} from '../scripts/initializeSettings'
+import {
+  getOrCreateCompany,
+  initializeAdminUser
+} from '@/scripts/initialization/initializeEnhancedNew'
+
+import {initializeApplication} from '@/scripts/initialization/initializeSettings'
 
 export const connectDB = async () => {
   try {

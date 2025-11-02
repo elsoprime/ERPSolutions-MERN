@@ -1,7 +1,7 @@
 import React, {useState} from 'react'
 import {DataList} from '@/components/Shared/DataList'
 import {getAllCategories} from '@/api/CategoryApi'
-import {Category} from '@/interfaces/Category'
+import {Category} from '@/interfaces/WareHouse/Category'
 import {DataListColumn} from '@/interfaces/DataList'
 import {useQuery} from '@tanstack/react-query'
 import {EyeIcon, PencilIcon, TrashIcon} from '@heroicons/react/20/solid'

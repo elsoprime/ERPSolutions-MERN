@@ -4,10 +4,9 @@
 
 import {Router} from 'express'
 import {body, param} from 'express-validator'
-import {handleInputErrors} from '@/middleware/validation'
+import {handleInputErrors} from '@/middleware/handleInputErrorsMiddleware'
 import {CategoriesController} from '../controllers/CategoriesController'
 import {ProductsController} from '../controllers/ProductsController'
-import {validateProductExists} from '@/middleware/products'
 
 // 🔒 SEGURIDAD AVANZADA - Middleware JWT y Roles
 import {authMiddleware} from '@/modules/userManagement/middleware/authMiddleware'
@@ -174,7 +173,7 @@ router.get(
   '/product/:id',
   requirePermission('warehouse', 'read'),
   param('id').isMongoId().withMessage('ID de Producto no válido'),
-  validateProductExists,
+  // validateProductExists,
   handleInputErrors,
   ProductsController.getProductById
 )
@@ -191,7 +190,7 @@ router.put(
   '/product/:id',
   requirePermission('warehouse', 'update'),
   param('id').isMongoId().withMessage('ID de Producto no válido'),
-  validateProductExists,
+  //validateProductExists,
   body('name')
     .isString()
     .isLength({min: 3, max: 50})

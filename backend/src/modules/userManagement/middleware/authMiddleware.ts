@@ -8,7 +8,7 @@
 
 import type {Request, Response, NextFunction} from 'express'
 import jwt from 'jsonwebtoken'
-import User, {IUser} from '../models/User'
+import EnhancedUser, {IUser} from '../models/EnhancedUser'
 import type {
   AuthenticatedUser,
   AuthError,
@@ -112,7 +112,7 @@ export class authMiddleware {
 
       // 5. Si no está en cache, buscar en base de datos
       if (!authenticatedUser) {
-        const user = await User.findById(userId)
+        const user = await EnhancedUser.findById(userId)
 
         if (!user) {
           return authMiddleware.sendErrorResponse(
@@ -193,23 +193,13 @@ export class authMiddleware {
 
     if (
       authMiddleware.config.validateUserStatus &&
-      user.status === 'inactive'
+      (user.status === 'inactive' || user.status === 'suspended')
     ) {
       return {
         isValid: false,
         error: {
-          message: 'Cuenta inactiva',
+          message: 'Cuenta inactiva o suspendida',
           code: AuthErrorCode.USER_INACTIVE
-        }
-      }
-    }
-
-    if (user.status === 'blocked') {
-      return {
-        isValid: false,
-        error: {
-          message: 'Cuenta bloqueada',
-          code: AuthErrorCode.USER_BLOCKED
         }
       }
     }
@@ -224,14 +214,22 @@ export class authMiddleware {
     user: IUser,
     payload: any
   ): AuthenticatedUser {
+    // Obtener el rol primario activo del usuario
+    const primaryRole = user.roles.find(role => role.isActive)
+    const userRole = primaryRole ? primaryRole.role : 'viewer'
+    const isGlobalRole = primaryRole?.roleType === 'global'
+
     return {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
       status: user.status || 'active',
       confirmed: user.confirmed,
-      role: user.role || 'user',
-      companyId: user.companyId,
+      role: userRole,
+      roleType: primaryRole?.roleType || 'company',
+      companyId: isGlobalRole ? null : user.primaryCompanyId,
+      companies: user.getAllCompanies(),
+      hasGlobalRole: user.hasGlobalRole(),
       iat: payload.iat,
       exp: payload.exp
     }

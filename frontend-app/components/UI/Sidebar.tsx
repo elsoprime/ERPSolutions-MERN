@@ -15,22 +15,26 @@ interface LogoProps {
 export default function Sidebar() {
   return (
     <div
-      className='relative py-2 px-4 hidden xl:flex xl:flex-col shadow-md bg-contain'
+      className='hidden sticky top-0 py-2 px-4 lg:flex flex-col shadow-md bg-white overflow-hidden h-screen'
       style={{
         backgroundImage: `url(${BGSidebar.src})`,
-        backgroundAttachment: 'fixed',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
       }}
     >
-      <div className='z-30 flex items-center justify-center'>
+      {/* Background overlay con z-index 0 - detrás del contenido pero encima del fondo */}
+      <div
+        className='absolute inset-0 bg-gray-50/90 backdrop-blur-xs'
+        style={{zIndex: 0}}
+      ></div>
+
+      <div className='relative z-10 flex items-center justify-center'>
         <Logo width={300} height={200} />
       </div>
-      <div className='p-4 z-30'>
+      <div className='relative z-10 p-4 flex-1 overflow-y-auto'>
         <Menu />
       </div>
-      <div className='absolute inset-0 top-0 bg-gray-50/90 backdrop-blur-xs'></div>
     </div>
   )
 }

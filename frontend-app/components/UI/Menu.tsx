@@ -1,4 +1,4 @@
-import {MenuItems} from '@/data/Menu'
+import {getMenuByRole} from '@/data/Menu'
 import {ChevronUpIcon, ChevronDownIcon} from '@heroicons/react/20/solid'
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
@@ -7,7 +7,7 @@ import {IMenu, ISubMenu} from '@/interfaces/IComponents'
 import {useAuth} from '@/hooks/useAuth'
 import {useLogout} from '@/hooks/useLogout'
 import {getHighestRole} from '@/utils/roleRouting'
-import {UserRole} from '@/interfaces/MultiCompany'
+import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 /**
  *
@@ -26,15 +26,6 @@ export default function Menu(): JSX.Element {
   const userData = getUserData()
   const userRole = getHighestRole(userData)
 
-  // Debug: Log del rol actual (remover en producción)
-  useEffect(() => {
-    console.log('Menu - User Role:', {
-      userData: userData?.name,
-      role: userData?.role,
-      highestRole: userRole
-    })
-  }, [userData, userRole])
-
   // Función para verificar si el usuario tiene acceso a un elemento del menú
   const hasAccess = (item: IMenu | ISubMenu): boolean => {
     if (!item.requiredRoles || item.requiredRoles.length === 0) {
@@ -51,12 +42,30 @@ export default function Menu(): JSX.Element {
   // Función para determinar si un elemento del menú está activo
   const isItemActive = (item: IMenu | ISubMenu): boolean => {
     if (item.link) {
-      return (
-        pathname === item.link ||
-        (item.link !== '/home' && pathname.startsWith(item.link))
-      )
+      // Normalizar las rutas eliminando barras finales
+      const normalizedPathname = pathname.replace(/\/$/, '') || '/'
+      const normalizedItemLink = item.link.replace(/\/$/, '') || '/'
+
+      // Coincidencia exacta
+      if (normalizedPathname === normalizedItemLink) {
+        return true
+      }
+
+      // Para rutas anidadas: /dashboard/users debe activar solo el item /dashboard/users, no /dashboard
+      // Verificar que la ruta actual comience con el link del item Y tenga un / después
+      if (
+        normalizedItemLink !== '/' &&
+        normalizedItemLink !== '/home' &&
+        normalizedItemLink !== '/dashboard'
+      ) {
+        return (
+          normalizedPathname.startsWith(normalizedItemLink + '/') ||
+          normalizedPathname === normalizedItemLink
+        )
+      }
     }
 
+    // Si el item tiene submenú, verificar si algún subitem está activo
     if ('ISubMenu' in item && item.ISubMenu) {
       return item.ISubMenu.some(subItem => isItemActive(subItem))
     }
@@ -66,24 +75,24 @@ export default function Menu(): JSX.Element {
 
   // Filtrar elementos del menú basado en roles y procesarlos
   const processedMenuItems = useMemo(() => {
-    return MenuItems.filter(item => hasAccess(item)) // Filtrar por rol
-      .map(item => {
-        const processedItem = {...item}
-        processedItem.isActive = isItemActive(processedItem)
+    // Obtener el menú específico para el rol del usuario
+    const menuForRole = getMenuByRole(userRole)
 
-        if (processedItem.ISubMenu) {
-          // Filtrar submenús por rol también
-          processedItem.ISubMenu = processedItem.ISubMenu.filter(subItem =>
-            hasAccess(subItem)
-          ).map(subItem => ({
-            ...subItem,
-            isActive: isItemActive(subItem)
-          }))
-        }
+    return menuForRole.map(item => {
+      const processedItem = {...item}
+      processedItem.isActive = isItemActive(processedItem)
 
-        return processedItem
-      })
-  }, [pathname])
+      if (processedItem.ISubMenu) {
+        // Mapear submenús con estado activo
+        processedItem.ISubMenu = processedItem.ISubMenu.map(subItem => ({
+          ...subItem,
+          isActive: isItemActive(subItem)
+        }))
+      }
+
+      return processedItem
+    })
+  }, [pathname, userRole])
 
   // Función para manejar clicks en elementos del menú
   const handleMenuItemClick = async (item: IMenu, e: React.MouseEvent) => {

@@ -4,7 +4,7 @@
  * @author: Esteban Soto Ojeda @elsoprimeDev
  */
 
-import CompanyManagementPage from '@/components/SuperAdmin/CompanyManagement/CompanyManagementPage'
+import CompanyManagementPage from '@/components/Modules/CompanyManagement/Views/CompanyManagementPage'
 import ProtectedLayout from '@/components/Layout/ProtectedLayout'
 import {Metadata} from 'next'
 

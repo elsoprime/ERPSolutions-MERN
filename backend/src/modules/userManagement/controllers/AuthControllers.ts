@@ -1,5 +1,11 @@
 import type {Request, Response} from 'express'
-import User from '../models/User'
+import mongoose from 'mongoose'
+import EnhancedUser, {
+  IUser,
+  IUserRole,
+  GlobalRole,
+  CompanyRole
+} from '../models/EnhancedUser'
 import {checkPassword, hashPassword} from '@/utils/authUtils'
 import {generateToken} from '@/utils/generateToken'
 import Token from '../models/Token'
@@ -16,10 +22,10 @@ export class AuthControllers {
    */
   static createAccount = async (req: Request, res: Response) => {
     try {
-      const {password, email} = req.body
+      const {password, email, name, role = 'employee', companyId} = req.body
 
       // Verificar si el usuario ya existe
-      const existingUser = await User.findOne({
+      const existingUser = await EnhancedUser.findOne({
         email: email.toLowerCase()
       })
       if (existingUser) {
@@ -27,17 +33,61 @@ export class AuthControllers {
           .status(409)
           .json({error: 'Ya existe una cuenta con este correo electrónico'})
       }
-      // Crear nuevo usuario
-      const user = new User(req.body)
-      user.email = email.toLowerCase() // Normalizar email
-      // Hash de la contraseña antes de guardar el usuario
-      user.password = await hashPassword(password)
 
-      /* Generar el Token de verificación
-      const newToken = new Token()
-      newToken.token = generateToken()
-      newToken.user = user.id
-      */
+      // Validar que se proporcione companyId para roles de empresa
+      if (
+        !role.startsWith('super_admin') &&
+        !role.startsWith('system_admin') &&
+        !companyId
+      ) {
+        return res.status(400).json({
+          error: 'Se requiere companyId para roles de empresa'
+        })
+      }
+
+      // Crear estructura de rol para el nuevo usuario
+      const userId = new mongoose.Types.ObjectId()
+      const userRole: IUserRole = {
+        roleType:
+          role.startsWith('super_admin') || role.startsWith('system_admin')
+            ? 'global'
+            : 'company',
+        role: role as GlobalRole | CompanyRole,
+        companyId: companyId || undefined,
+        permissions: [],
+        isActive: true,
+        assignedAt: new Date(),
+        assignedBy: userId // Asignar a sí mismo para usuarios que se auto-registran
+      }
+
+      // Crear nuevo usuario con estructura EnhancedUser
+      const userData = {
+        _id: userId,
+        name,
+        email: email.toLowerCase(),
+        password: await hashPassword(password),
+        status: 'pending' as const,
+        confirmed: false,
+        emailVerified: false,
+        roles: [userRole],
+        primaryCompanyId: companyId || null,
+        lastLogin: null,
+        loginCount: 0,
+        createdBy: null,
+        preferences: {
+          theme: 'light' as const,
+          language: 'es',
+          timezone: 'America/Santiago',
+          notifications: {
+            email: true,
+            push: true,
+            sms: false
+          }
+        }
+      }
+
+      const user = new EnhancedUser(userData)
+
       const newToken = new Token({
         token: generateToken(),
         user: user.id,
@@ -57,7 +107,7 @@ export class AuthControllers {
       if (tokenResult.status === 'rejected') {
         console.error('Error al guardar token:', tokenResult.reason)
         // Eliminar usuario si el token falla
-        await User.findByIdAndDelete(user.id)
+        await EnhancedUser.findByIdAndDelete(user.id)
         return res.status(500).json({error: 'Error al generar el token'})
       }
 
@@ -96,7 +146,7 @@ export class AuthControllers {
         return res.status(404).json({error: error.message})
       }
 
-      const user = await User.findById(foundToken.user)
+      const user = await EnhancedUser.findById(foundToken.user)
 
       if (!user) {
         const error = new Error('Usuario no encontrado')
@@ -104,6 +154,8 @@ export class AuthControllers {
       }
 
       user.confirmed = true
+      user.emailVerified = true
+      user.status = 'active'
 
       const results = await Promise.allSettled([
         user.save(),
@@ -134,7 +186,7 @@ export class AuthControllers {
   static login = async (req: Request, res: Response) => {
     try {
       const {email, password} = req.body
-      const user = await User.findOne({email: email.toLowerCase()})
+      const user = await EnhancedUser.findOne({email: email.toLowerCase()})
 
       if (!user) {
         return res.status(404).json({error: 'Esta cuenta de usuario no existe'})
@@ -159,6 +211,7 @@ export class AuthControllers {
             'La cuenta no ha sido confirmada. Hemos enviado un correo electrónico para activar tu cuenta.'
         })
       }
+
       const isPasswordValid = await checkPassword(password, user.password)
       if (!isPasswordValid) {
         return res
@@ -166,13 +219,25 @@ export class AuthControllers {
           .json({error: 'La contraseña ingresada es incorrecta'})
       }
 
-      // 🔥 CORREGIDO: Generar JWT con información completa del usuario
+      // Actualizar estadísticas de login
+      user.lastLogin = new Date()
+      user.loginCount += 1
+      await user.save()
+
+      // Obtener el rol más alto del usuario
+      const primaryRole = user.roles.find(role => role.isActive)
+      const userRole = primaryRole ? primaryRole.role : 'viewer'
+      const isGlobalRole = primaryRole?.roleType === 'global'
+
+      // Generar JWT con información completa del usuario
       const token = generateJWT({
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role || 'viewer', // Rol por defecto si no tiene
-        companyId: user.companyId ? user.companyId.toString() : null // 🔥 CORREGIDO: Convertir a string
+        role: userRole,
+        companyId: isGlobalRole
+          ? null
+          : user.primaryCompanyId?.toString() || null
       })
 
       res.status(200).json({
@@ -182,9 +247,12 @@ export class AuthControllers {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role || 'viewer',
-          companyId: user.companyId, // 🔥 CORREGIDO: Usar companyId consistente
-          confirmed: user.confirmed
+          role: userRole,
+          roleType: primaryRole?.roleType || 'company',
+          companyId: user.primaryCompanyId,
+          companies: user.getAllCompanies(),
+          confirmed: user.confirmed,
+          hasGlobalRole: user.hasGlobalRole()
         }
       })
     } catch (error) {
@@ -205,7 +273,7 @@ export class AuthControllers {
     try {
       const {email} = req.body
 
-      const user = await User.findOne({email: email.toLowerCase()})
+      const user = await EnhancedUser.findOne({email: email.toLowerCase()})
       if (!user) {
         const error = new Error('Esta cuenta de usuario no existe')
         return res.status(404).json({error: error.message})
@@ -253,7 +321,7 @@ export class AuthControllers {
     try {
       const {email} = req.body
 
-      const user = await User.findOne({email: email.toLowerCase()})
+      const user = await EnhancedUser.findOne({email: email.toLowerCase()})
       if (!user) {
         const error = new Error('Esta cuenta de usuario no existe')
         return res.status(404).json({error: error.message})
@@ -356,7 +424,7 @@ export class AuthControllers {
       }
 
       // Buscar el usuario asociado al token
-      const user = await User.findById(validToken.user)
+      const user = await EnhancedUser.findById(validToken.user)
       if (!user) {
         console.error('Usuario no encontrado:', validToken.user)
         return res.status(404).json({
@@ -444,7 +512,7 @@ export class AuthControllers {
       }
 
       // Buscar el usuario en la base de datos para obtener datos actualizados
-      const user = await User.findById(currentUser.id)
+      const user = await EnhancedUser.findById(currentUser.id)
 
       if (!user) {
         return res.status(404).json({
@@ -458,13 +526,20 @@ export class AuthControllers {
         })
       }
 
+      // Obtener el rol primario activo
+      const primaryRole = user.roles.find(role => role.isActive)
+      const userRole = primaryRole ? primaryRole.role : 'viewer'
+      const isGlobalRole = primaryRole?.roleType === 'global'
+
       // Generar nuevo token con información actualizada
       const newToken = generateJWT({
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role || 'viewer',
-        company: user.companyId?.toString()
+        role: userRole,
+        companyId: isGlobalRole
+          ? null
+          : user.primaryCompanyId?.toString() || null
       })
 
       console.log('Token renovado exitosamente para usuario:', user.email)
@@ -476,8 +551,11 @@ export class AuthControllers {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role || 'viewer',
-          company: user.companyId
+          role: userRole,
+          roleType: primaryRole?.roleType || 'company',
+          companyId: user.primaryCompanyId,
+          companies: user.getAllCompanies(),
+          hasGlobalRole: user.hasGlobalRole()
         }
       })
     } catch (error) {

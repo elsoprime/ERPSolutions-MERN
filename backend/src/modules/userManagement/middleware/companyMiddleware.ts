@@ -32,9 +32,20 @@ export interface CompanyAccess {
 /**
  * Usuario con acceso a múltiples empresas
  */
-export interface MultiTenantUser extends AuthenticatedUser {
+export interface MultiTenantUser {
+  id: string
+  name: string
+  email: string
+  status: string
+  confirmed: boolean
+  role: string
+  roleType: 'global' | 'company'
+  companyId: mongoose.Types.ObjectId | null
   companies: CompanyAccess[]
+  hasGlobalRole: boolean
   currentCompany?: string
+  iat?: number
+  exp?: number
 }
 
 /**
@@ -78,6 +89,19 @@ export class CompanyMiddleware {
   private static config: CompanyMiddlewareConfig = DEFAULT_COMPANY_CONFIG
 
   /**
+   * Convierte AuthenticatedUser a MultiTenantUser de forma segura
+   */
+  private static convertToMultiTenantUser(
+    user: AuthenticatedUser
+  ): MultiTenantUser {
+    return {
+      ...user,
+      companies: [], // Por ahora vacío, se llenará desde el modelo EnhancedUser si es necesario
+      currentCompany: user.companyId?.toString()
+    }
+  }
+
+  /**
    * Verifica si un usuario tiene acceso a una empresa específica
    */
   static hasCompanyAccess(user: AuthenticatedUser, companyId: string): boolean {
@@ -92,8 +116,8 @@ export class CompanyMiddleware {
     }
 
     // Si el usuario tiene acceso multi-empresa (extensión futura)
-    const multiUser = user as MultiTenantUser
-    if (multiUser.companies) {
+    const multiUser = this.convertToMultiTenantUser(user)
+    if (multiUser.companies && multiUser.companies.length > 0) {
       return multiUser.companies.some(
         company => company.companyId === companyId && company.isActive
       )
@@ -136,8 +160,8 @@ export class CompanyMiddleware {
     }
 
     // Para acceso multi-empresa (extensión futura)
-    const multiUser = user as MultiTenantUser
-    if (multiUser.companies) {
+    const multiUser = this.convertToMultiTenantUser(user)
+    if (multiUser.companies && multiUser.companies.length > 0) {
       const companyAccess = multiUser.companies.find(
         company => company.companyId === companyId && company.isActive
       )
@@ -487,8 +511,8 @@ export class CompanyMiddleware {
     }
 
     // Empresas adicionales (multi-tenant)
-    const multiUser = user as MultiTenantUser
-    if (multiUser.companies) {
+    const multiUser = this.convertToMultiTenantUser(user)
+    if (multiUser.companies && multiUser.companies.length > 0) {
       companies.push(
         ...multiUser.companies
           .filter(company => company.isActive)

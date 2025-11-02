@@ -16,7 +16,7 @@ import {
   IUserFilters,
   UserRole,
   UserStatus
-} from '@/interfaces/MultiCompany'
+} from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 // ====== QUERY KEYS ======
 export const USER_QUERY_KEYS = {
@@ -35,39 +35,34 @@ export const USER_QUERY_KEYS = {
 
 // ====== USER LIST HOOK ======
 export function useUsers(filters?: IUserFilters, isCompanyScope = false) {
-  const [currentFilters, setCurrentFilters] = useState<IUserFilters>(
-    filters || {}
-  )
+  // Use the filters provided by the caller (e.g. useUserFilters hook) so
+  // changes to those filters trigger the query correctly.
+  const currentFilters: IUserFilters = filters || {}
 
   const query = useQuery({
     queryKey: isCompanyScope
       ? USER_QUERY_KEYS.company(currentFilters.companyId)
       : USER_QUERY_KEYS.list(currentFilters),
-    queryFn: () =>
-      isCompanyScope
-        ? MultiCompanyAPI.getCompanyUsers(currentFilters)
-        : MultiCompanyAPI.getAllUsers(currentFilters),
+    queryFn: async () => {
+      const result = isCompanyScope
+        ? await MultiCompanyAPI.getCompanyUsers(currentFilters)
+        : await MultiCompanyAPI.getAllUsers(currentFilters)
+
+      return result
+    },
     enabled: true,
-    staleTime: 5 * 60 * 1000 // 5 minutos
+    staleTime: 5 * 60 * 1000
   })
 
-  const updateFilters = useCallback((newFilters: Partial<IUserFilters>) => {
-    setCurrentFilters(prev => ({...prev, ...newFilters}))
-  }, [])
-
-  const clearFilters = useCallback(() => {
-    setCurrentFilters({})
-  }, [])
+  const users = query.data?.data || []
 
   return {
-    users: query.data?.data || [],
+    users,
     pagination: query.data?.pagination,
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
-    filters: currentFilters,
-    updateFilters,
-    clearFilters
+    filters: currentFilters
   }
 }
 

@@ -10,7 +10,7 @@ import React from 'react'
 import {useRouter} from 'next/navigation'
 import {useAuth} from '@/hooks/useAuth'
 import {getHighestRole, hasRouteAccess} from '@/utils/roleRouting'
-import {UserRole} from '@/interfaces/MultiCompany'
+import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 interface ModuleCardProps {
   title: string

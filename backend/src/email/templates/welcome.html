@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+    />
+    <title>¡Bienvenido a ERPSolutions!</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: linear-gradient(135deg, #e8e9e9 0%, #b7b7b7 100%);
+        margin: 0;
+        padding: 40px 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+      }
+      .wrapper {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .container {
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        position: relative;
+      }
+      .header {
+        background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+        padding: 48px 32px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.1) 0%,
+          transparent 70%
+        );
+        animation: pulse 8s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 0.8;
+        }
+      }
+      .logo {
+        position: relative;
+        z-index: 1;
+        margin-bottom: 16px;
+      }
+      .logo img {
+        width: 140px;
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+      }
+      h1 {
+        color: #ffffff;
+        font-size: 2rem;
+        font-weight: 700;
+        position: relative;
+        z-index: 1;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        margin: 0;
+      }
+      .content {
+        padding: 48px 32px;
+      }
+      .greeting {
+        font-size: 1.125rem;
+        color: #1f2937;
+        margin-bottom: 8px;
+      }
+      .greeting strong {
+        color: #2563eb;
+        font-weight: 600;
+      }
+      p {
+        color: #4b5563;
+        font-size: 1rem;
+        line-height: 1.7;
+        margin-bottom: 16px;
+      }
+      .info-section {
+        background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+        border: 2px solid #bfdbfe;
+        border-radius: 16px;
+        padding: 32px;
+        margin: 32px 0;
+        position: relative;
+        overflow: hidden;
+      }
+      .info-section::before {
+        content: '🎉';
+        position: absolute;
+        top: -20px;
+        right: -20px;
+        font-size: 100px;
+        opacity: 0.1;
+      }
+      .info-label {
+        font-size: 0.875rem;
+        color: #2563eb;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 16px;
+      }
+      .info-item {
+        background: #ffffff;
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        border: 1px solid #dbeafe;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .info-item:last-child {
+        margin-bottom: 0;
+      }
+      .info-icon {
+        font-size: 1.5rem;
+      }
+      .info-text {
+        flex: 1;
+      }
+      .info-text .label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+      }
+      .info-text .value {
+        color: #1f2937;
+        font-weight: 600;
+        font-size: 1rem;
+      }
+      .cta-button {
+        display: inline-block;
+        background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+        color: #ffffff;
+        text-decoration: none;
+        padding: 16px 40px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 1rem;
+        margin: 24px 0;
+        box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .cta-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(37, 99, 235, 0.4);
+      }
+      .divider {
+        height: 1px;
+        background: linear-gradient(
+          to right,
+          transparent,
+          #e5e7eb,
+          transparent
+        );
+        margin: 32px 0;
+      }
+      .info-box {
+        background: #ecfdf5;
+        border-left: 4px solid #10b981;
+        padding: 16px;
+        border-radius: 8px;
+        margin: 24px 0;
+      }
+      .info-box p {
+        color: #065f46;
+        margin: 0;
+        font-size: 0.9rem;
+      }
+      .warning-box {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 16px;
+        border-radius: 8px;
+        margin: 24px 0;
+      }
+      .warning-box p {
+        color: #92400e;
+        margin: 0;
+        font-size: 0.9rem;
+      }
+      .footer {
+        background: #f9fafb;
+        padding: 32px;
+        text-align: center;
+        border-top: 1px solid #e5e7eb;
+      }
+      .footer-brand {
+        color: #2563eb;
+        font-weight: 700;
+        font-size: 1.125rem;
+        margin-bottom: 8px;
+      }
+      .footer-text {
+        color: #6b7280;
+        font-size: 0.875rem;
+        line-height: 1.6;
+      }
+      .social-links {
+        margin-top: 20px;
+      }
+      .social-links a {
+        display: inline-block;
+        margin: 0 8px;
+        color: #9ca3af;
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: color 0.2s;
+      }
+      .social-links a:hover {
+        color: #2563eb;
+      }
+      @media only screen and (max-width: 600px) {
+        body {
+          padding: 20px 10px;
+        }
+        .header {
+          padding: 32px 20px;
+        }
+        h1 {
+          font-size: 1.5rem;
+        }
+        .content {
+          padding: 32px 20px;
+        }
+        .cta-button {
+          padding: 14px 32px;
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="container">
+        <div class="header">
+          <div class="logo">
+            <img src="../assets/LogoSolutions.webp" alt="ERPSolutions Logo" />
+          </div>
+          <h1>¡Tu cuenta está activa!</h1>
+        </div>
+
+        <div class="content">
+          <p class="greeting">Hola <strong>{{name}}</strong>,</p>
+          <p>
+            ¡Bienvenido a <strong>ERPSolutions</strong>! Un administrador ha
+            creado tu cuenta y ya puedes acceder a la plataforma para comenzar a
+            trabajar.
+          </p>
+
+          <div class="info-section">
+            <div class="info-label">Detalles de tu cuenta</div>
+
+            <div class="info-item">
+              <div class="info-icon">👤</div>
+              <div class="info-text">
+                <div class="label">Nombre</div>
+                <div class="value">{{name}}</div>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">📧</div>
+              <div class="info-text">
+                <div class="label">Email de acceso</div>
+                <div class="value">{{email}}</div>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">🏢</div>
+              <div class="info-text">
+                <div class="label">Empresa</div>
+                <div class="value">{{companyName}}</div>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <div class="info-icon">🎯</div>
+              <div class="info-text">
+                <div class="label">Rol asignado</div>
+                <div class="value">{{role}}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-box">
+            <p>
+              <strong>✅ Cuenta activa:</strong> Tu cuenta está completamente
+              activa y puedes iniciar sesión inmediatamente usando tu email y la
+              contraseña que te proporcionó el administrador.
+            </p>
+          </div>
+
+          <p style="text-align: center">
+            <a href="{{loginUrl}}" class="cta-button">Iniciar sesión ahora</a>
+          </p>
+
+          <div class="divider"></div>
+
+          <div class="warning-box">
+            <p>
+              <strong>🔒 Seguridad:</strong> Te recomendamos cambiar tu
+              contraseña la primera vez que inicies sesión. Puedes hacerlo desde
+              la configuración de tu perfil.
+            </p>
+          </div>
+
+          <p style="color: #6b7280; font-size: 0.9rem; margin-top: 24px">
+            ¿Necesitas ayuda? Contáctanos en
+            <a
+              href="mailto:soporte@erpsolutions.com"
+              style="color: #2563eb; text-decoration: none"
+              >soporte@erpsolutions.com</a
+            >
+          </p>
+        </div>
+
+        <div class="footer">
+          <div class="footer-brand">ERPSolutions</div>
+          <div class="footer-text">
+            La solución integral para la gestión empresarial<br />
+            © 2025 ERPSolutions. Todos los derechos reservados.
+          </div>
+          <div class="social-links">
+            <a href="#">Ayuda</a> • <a href="#">Privacidad</a> •
+            <a href="#">Términos</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -13,10 +13,28 @@ import {
   ICompanyListResponse,
   ICompanyActionResult,
   ICompanyStatistics
-} from '@/interfaces/EnhancedCompany'
+} from '@/interfaces/EnhanchedCompany/EnhancedCompany'
 
 export class EnhancedCompanyAPI {
-  private static baseURL = '/enhanced-companies'
+  private static baseURL = '/v2/enhanced-companies'
+
+  /**
+   * Obtener todas las empresas para dashboard (Solo Super Admin)
+   * Usa el mismo endpoint que getAllCompanies pero optimizado para dashboard
+   */
+  static async getAllCompaniesForDashboard(): Promise<ICompanyListResponse> {
+    try {
+      // Usar el endpoint existente con límite alto para dashboard
+      const response = await api.get(`${this.baseURL}?limit=100`)
+      console.log(
+        '📊 Dashboard: Usando endpoint principal /v2/enhanced-companies'
+      )
+      return response.data
+    } catch (error) {
+      console.error('Error al obtener empresas para dashboard:', error)
+      throw error
+    }
+  }
 
   /**
    * Obtener todas las empresas (Solo Super Admin)
@@ -117,9 +135,41 @@ export class EnhancedCompanyAPI {
     companyData: IUpdateCompanyFormData
   ): Promise<ICompanyActionResult> {
     try {
+      // Transformar datos del frontend al formato del backend (igual que en createCompany)
+      const backendData = {
+        _id: companyData._id,
+        name: companyData.name,
+        email: companyData.email,
+        description: companyData.description,
+        website: companyData.website,
+        phone: companyData.phone,
+        address: companyData.address,
+        // Mapear subscription.plan a plan
+        plan: companyData.subscription?.plan,
+        // Mapear settings con todos los campos necesarios
+        settings: companyData.settings
+          ? {
+              ...companyData.settings,
+              // Asegurar que los features estén en settings
+              features: companyData.features,
+              // Mapear branding dentro de settings
+              branding: companyData.branding
+            }
+          : undefined
+      }
+
+      // Remover campos undefined para evitar sobrescribir con valores vacíos
+      Object.keys(backendData).forEach(key => {
+        if (backendData[key as keyof typeof backendData] === undefined) {
+          delete backendData[key as keyof typeof backendData]
+        }
+      })
+
+      console.log('📤 Datos transformados para actualización:', backendData)
+
       const response = await api.put(
         `${this.baseURL}/${companyId}`,
-        companyData
+        backendData
       )
       return {
         success: true,

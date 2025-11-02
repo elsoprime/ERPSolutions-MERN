@@ -1,0 +1,198 @@
+{
+  "empresa_basica": {
+    "descripcion": "Ejemplo mínimo para crear una empresa",
+    "json": {
+      "name": "Mi Nueva Empresa SPA",
+      "email": "contacto@minuevaempresa.cl",
+      "address": {
+        "street": "Av. Providencia 1234",
+        "city": "Santiago",
+        "state": "Región Metropolitana",
+        "country": "Chile",
+        "postalCode": "7500000"
+      },
+      "settings": {
+        "taxId": "76.123.456-7"
+      }
+    }
+  },
+
+  "empresa_tecnologia": {
+    "descripcion": "Empresa de tecnología con configuración completa",
+    "json": {
+      "name": "TechSolutions Chile SPA",
+      "slug": "techsolutions-chile",
+      "description": "Desarrollo de software y soluciones tecnológicas",
+      "website": "https://techsolutions.cl",
+      "email": "contacto@techsolutions.cl",
+      "phone": "+56 9 8888 7777",
+      "address": {
+        "street": "Av. Vitacura 2909, Piso 8",
+        "city": "Santiago",
+        "state": "Región Metropolitana",
+        "country": "Chile",
+        "postalCode": "7550000"
+      },
+      "plan": "enterprise",
+      "settings": {
+        "businessType": "technology",
+        "industry": "Desarrollo de Software",
+        "taxId": "77.888.999-0",
+        "currency": "CLP",
+        "fiscalYear": {
+          "startMonth": 1,
+          "endMonth": 12
+        },
+        "features": {
+          "inventory": false,
+          "accounting": true,
+          "hrm": true,
+          "crm": true,
+          "projects": true
+        },
+        "branding": {
+          "primaryColor": "#3B82F6",
+          "secondaryColor": "#1E40AF"
+        }
+      }
+    }
+  },
+
+  "empresa_construccion": {
+    "descripcion": "Empresa de construcción con plan profesional",
+    "json": {
+      "name": "Constructora del Sur LTDA",
+      "slug": "constructora-del-sur",
+      "description": "Construcción residencial y comercial",
+      "website": "https://constructoradelsur.cl",
+      "email": "proyectos@constructoradelsur.cl",
+      "phone": "+56 9 5555 4444",
+      "address": {
+        "street": "Av. Américo Vespucio 1501",
+        "city": "Santiago",
+        "state": "Región Metropolitana",
+        "country": "Chile",
+        "postalCode": "8150000"
+      },
+      "plan": "professional",
+      "settings": {
+        "businessType": "construction",
+        "industry": "Construcción e Inmobiliaria",
+        "taxId": "76.444.555-6",
+        "currency": "CLP",
+        "fiscalYear": {
+          "startMonth": 1,
+          "endMonth": 12
+        },
+        "features": {
+          "inventory": true,
+          "accounting": true,
+          "hrm": true,
+          "crm": true,
+          "projects": true
+        }
+      }
+    }
+  },
+
+  "empresa_turismo": {
+    "descripcion": "Empresa de turismo con configuraciones personalizadas",
+    "json": {
+      "name": "Aventuras Patagonia Tours",
+      "slug": "aventuras-patagonia",
+      "description": "Turismo aventura y ecoturismo en la Patagonia chilena",
+      "website": "https://aventuraspatagonia.cl",
+      "email": "reservas@aventuraspatagonia.cl",
+      "phone": "+56 9 3333 2222",
+      "address": {
+        "street": "Av. Costanera 789",
+        "city": "Puerto Natales",
+        "state": "Región de Magallanes",
+        "country": "Chile",
+        "postalCode": "6160000"
+      },
+      "plan": "basic",
+      "settings": {
+        "businessType": "tourism",
+        "industry": "Turismo y Recreación",
+        "taxId": "77.222.333-4",
+        "currency": "CLP",
+        "fiscalYear": {
+          "startMonth": 10,
+          "endMonth": 9
+        },
+        "features": {
+          "inventory": true,
+          "accounting": true,
+          "hrm": false,
+          "crm": true,
+          "projects": false
+        },
+        "branding": {
+          "primaryColor": "#059669",
+          "secondaryColor": "#047857"
+        }
+      }
+    }
+  },
+
+  "empresa_startup": {
+    "descripcion": "Startup con plan gratuito para comenzar",
+    "json": {
+      "name": "InnovateLab Startup",
+      "slug": "innovatelab-startup",
+      "description": "Innovación en productos digitales y aplicaciones móviles",
+      "email": "hello@innovatelab.cl",
+      "phone": "+56 9 7777 6666",
+      "address": {
+        "street": "Co-working Space, Av. Providencia 2222",
+        "city": "Santiago",
+        "state": "Región Metropolitana",
+        "country": "Chile",
+        "postalCode": "7500000"
+      },
+      "plan": "free",
+      "settings": {
+        "businessType": "technology",
+        "industry": "Tecnología Emergente",
+        "taxId": "76.999.888-7",
+        "currency": "USD",
+        "fiscalYear": {
+          "startMonth": 1,
+          "endMonth": 12
+        }
+      }
+    }
+  },
+
+  "notas_importantes": {
+    "descripcion": "Información importante para el uso de la API",
+    "endpoint": "POST /api/companies",
+    "headers_requeridos": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer YOUR_JWT_TOKEN"
+    },
+    "campos_requeridos": [
+      "name",
+      "email",
+      "address (completa)",
+      "settings.taxId"
+    ],
+    "respuesta_exitosa": {
+      "status": 201,
+      "ejemplo": {
+        "success": true,
+        "message": "Empresa creada exitosamente",
+        "data": {
+          "_id": "64f123abc456def789012345",
+          "name": "Mi Nueva Empresa SPA",
+          "slug": "mi-nueva-empresa-spa",
+          "email": "contacto@minuevaempresa.cl",
+          "status": "trial",
+          "plan": "free",
+          "createdAt": "2025-10-28T12:00:00.000Z"
+        }
+      }
+    }
+  }
+}

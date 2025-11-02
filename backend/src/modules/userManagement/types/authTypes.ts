@@ -5,7 +5,7 @@
  */
 
 import type {Request} from 'express'
-import type {IUser} from '../models/User'
+import type {IUser} from '../models/EnhancedUser'
 import mongoose from 'mongoose'
 
 // ========================================
@@ -22,7 +22,10 @@ export interface AuthenticatedUser {
   status: string
   confirmed: boolean
   role: string
-  companyId: mongoose.Types.ObjectId
+  roleType: 'global' | 'company'
+  companyId: mongoose.Types.ObjectId | null
+  companies: mongoose.Types.ObjectId[]
+  hasGlobalRole: boolean
   iat?: number // Token issued at
   exp?: number // Token expiration
 }

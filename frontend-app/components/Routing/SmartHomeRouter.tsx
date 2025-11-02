@@ -8,16 +8,12 @@
 
 import React, {useEffect, useState} from 'react'
 import {useAuth} from '@/hooks/useAuth'
-import {
-  getHighestRole,
-  getCompanyContext,
-  getDefaultRoute
-} from '@/utils/roleRouting'
-import {UserRole} from '@/interfaces/MultiCompany'
+import {getHighestRole} from '@/utils/roleRouting'
+import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
 import {
   SuperAdminDashboard,
   CompanyAdminDashboard
-} from '@/components/Modules/UserManagement'
+} from '@/components/Modules/SuperAdmin'
 import DashboardHeader from '@/components/Layout/DashboardHeader'
 import ModuleNavigationCards from '@/components/Shared/ModuleNavigationCards'
 import {useRouter} from 'next/navigation'
@@ -36,9 +32,9 @@ const SmartHomeRouter: React.FC<SmartHomeRouterProps> = ({children}) => {
     const handleRouting = async () => {
       try {
         // Verificar si está autenticado
-        console.log('SmartHomeRouter - Checking authentication...')
+        //console.log('SmartHomeRouter - Checking authentication...')
         if (!isAuthenticated()) {
-          console.log('SmartHomeRouter - Not authenticated, redirecting to /')
+          //console.log('SmartHomeRouter - Not authenticated, redirecting to /')
           router.push('/')
           return
         }
@@ -161,13 +157,6 @@ const SmartHomeRouter: React.FC<SmartHomeRouterProps> = ({children}) => {
                 </div>
               </div>
             </div>
-
-            {/* Navigation Modules */}
-            <ModuleNavigationCards
-              currentModule='home'
-              showAllModules={true}
-              maxColumns={3}
-            />
           </div>
         )}
       </>

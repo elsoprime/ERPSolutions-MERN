@@ -17,7 +17,7 @@ import {
   ICompanyStats,
   CompanyPlan,
   CompanyStatus
-} from '@/interfaces/MultiCompany'
+} from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 // ====== QUERY KEYS ======
 export const COMPANY_QUERY_KEYS = {

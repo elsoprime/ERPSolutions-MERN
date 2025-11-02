@@ -3,7 +3,7 @@
  */
 
 import {UserRole, Permission} from '../types/roles'
-import {UserRole as EnhancedUserRole} from './MultiCompany'
+import {UserRole as EnhancedUserRole} from './EnhanchedCompany/MultiCompany'
 
 /** Definiendo Interface para los Campos del Formulario */
 export interface IFormField {
@@ -22,6 +22,7 @@ export interface IFormField {
     | 'image'
     | 'radio'
     | 'hidden'
+    | 'url'
   placeholder?: string
   required?: boolean
   isChecked?: boolean
@@ -44,6 +45,22 @@ export interface IPageBody {
   DataAOS?: string
   Link?: string
   IAction?: IAction[]
+}
+
+/**
+ * @description: Definición de Interface Tabs de la Aplicación
+ * @requires: React
+ * @exports: ITab
+ * @Author Esteban Soto Ojeda [elsoprimeDev]
+ */
+export interface ITab {
+  id: string
+  title: string
+  content: JSX.Element | string
+  isActive?: boolean
+  disabled?: boolean
+  icon?: JSX.Element
+  DataAOS?: string
 }
 
 /** Definiendo Interface para Actions */

@@ -6,7 +6,7 @@
 
 import {Router} from 'express'
 import userRoutes from './userRoutes'
-import companyRoutes from './companyRoutes'
+import companyRoutes from '@/modules/companiesManagement/routes/enhancedCompanyRoutes'
 
 const router = Router()
 

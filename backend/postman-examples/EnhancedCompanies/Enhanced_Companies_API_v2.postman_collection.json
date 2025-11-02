@@ -1,0 +1,234 @@
+{
+  "info": {
+    "name": "Enhanced Companies API v2.0 - Crear Empresas",
+    "description": "Colección de ejemplos para crear empresas usando la API Enhanced Companies v2.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Crear Empresa Startup Tech",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 201\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Response has company ID\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('_id');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"TechStart Innovations\",\n  \"description\": \"Startup de desarrollo de aplicaciones móviles con inteligencia artificial\",\n  \"industry\": \"Tecnología\",\n  \"type\": \"startup\",\n  \"size\": \"pequeña\",\n  \"contactInfo\": {\n    \"address\": {\n      \"street\": \"Av. Insurgentes 123\",\n      \"city\": \"Ciudad de México\",\n      \"state\": \"CDMX\",\n      \"zipCode\": \"06100\",\n      \"country\": \"México\"\n    },\n    \"phone\": \"+52 55 1234 5678\",\n    \"email\": \"contacto@techstart.mx\",\n    \"website\": \"https://techstart.mx\"\n  },\n  \"financialInfo\": {\n    \"revenue\": 500000,\n    \"employees\": 15,\n    \"foundedYear\": 2022,\n    \"currency\": \"MXN\"\n  },\n  \"socialMedia\": {\n    \"linkedin\": \"https://linkedin.com/company/techstart-innovations\",\n    \"twitter\": \"@TechStartMX\"\n  },\n  \"tags\": [\"startup\", \"tecnología\", \"IA\", \"móvil\"],\n  \"status\": \"active\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v2/enhanced-companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v2", "enhanced-companies"]
+        }
+      }
+    },
+    {
+      "name": "2. Crear Empresa Tecnología",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Digital Solutions Pro\",\n  \"description\": \"Empresa de soluciones digitales y desarrollo de software empresarial\",\n  \"industry\": \"Tecnología\",\n  \"type\": \"corporación\",\n  \"size\": \"mediana\",\n  \"contactInfo\": {\n    \"address\": {\n      \"street\": \"Blvd. Tecnológico 456\",\n      \"city\": \"Guadalajara\",\n      \"state\": \"Jalisco\",\n      \"zipCode\": \"44100\",\n      \"country\": \"México\"\n    },\n    \"phone\": \"+52 33 9876 5432\",\n    \"email\": \"info@digitalsolutions.mx\",\n    \"website\": \"https://digitalsolutions.mx\"\n  },\n  \"financialInfo\": {\n    \"revenue\": 15000000,\n    \"employees\": 150,\n    \"foundedYear\": 2015,\n    \"currency\": \"MXN\"\n  },\n  \"socialMedia\": {\n    \"linkedin\": \"https://linkedin.com/company/digital-solutions-pro\",\n    \"twitter\": \"@DigitalSolPro\",\n    \"facebook\": \"https://facebook.com/DigitalSolutionsPro\"\n  },\n  \"tags\": [\"software\", \"enterprise\", \"digital\", \"consultoría\"],\n  \"status\": \"active\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v2/enhanced-companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v2", "enhanced-companies"]
+        }
+      }
+    },
+    {
+      "name": "3. Crear Empresa Construcción",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Constructora Moderna S.A.\",\n  \"description\": \"Empresa constructora especializada en edificios residenciales y comerciales\",\n  \"industry\": \"Construcción\",\n  \"type\": \"sociedad anónima\",\n  \"size\": \"grande\",\n  \"contactInfo\": {\n    \"address\": {\n      \"street\": \"Av. Construcción 789\",\n      \"city\": \"Monterrey\",\n      \"state\": \"Nuevo León\",\n      \"zipCode\": \"64000\",\n      \"country\": \"México\"\n    },\n    \"phone\": \"+52 81 5555 7890\",\n    \"email\": \"contacto@constructoramoderna.mx\",\n    \"website\": \"https://constructoramoderna.mx\"\n  },\n  \"financialInfo\": {\n    \"revenue\": 85000000,\n    \"employees\": 500,\n    \"foundedYear\": 1995,\n    \"currency\": \"MXN\"\n  },\n  \"certifications\": [\"ISO 9001\", \"ISO 14001\", \"OHSAS 18001\"],\n  \"socialMedia\": {\n    \"linkedin\": \"https://linkedin.com/company/constructora-moderna\",\n    \"facebook\": \"https://facebook.com/ConstructoraModerna\"\n  },\n  \"tags\": [\"construcción\", \"inmobiliaria\", \"infraestructura\"],\n  \"status\": \"active\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v2/enhanced-companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v2", "enhanced-companies"]
+        }
+      }
+    },
+    {
+      "name": "4. Crear Empresa Turismo",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Viajes y Experiencias del Caribe\",\n  \"description\": \"Agencia de viajes especializada en turismo del Caribe mexicano\",\n  \"industry\": \"Turismo\",\n  \"type\": \"empresa\",\n  \"size\": \"pequeña\",\n  \"contactInfo\": {\n    \"address\": {\n      \"street\": \"Zona Hotelera Km 9.5\",\n      \"city\": \"Cancún\",\n      \"state\": \"Quintana Roo\",\n      \"zipCode\": \"77500\",\n      \"country\": \"México\"\n    },\n    \"phone\": \"+52 998 123 4567\",\n    \"email\": \"info@viajescaribe.mx\",\n    \"website\": \"https://viajescaribe.mx\"\n  },\n  \"financialInfo\": {\n    \"revenue\": 3500000,\n    \"employees\": 25,\n    \"foundedYear\": 2018,\n    \"currency\": \"MXN\"\n  },\n  \"socialMedia\": {\n    \"instagram\": \"@viajescaribemx\",\n    \"facebook\": \"https://facebook.com/ViajesCaribeMX\",\n    \"twitter\": \"@ViajesCaribeMX\"\n  },\n  \"tags\": [\"turismo\", \"caribe\", \"vacaciones\", \"experiencias\"],\n  \"specialties\": [\"Tours\", \"Hoteles\", \"Actividades acuáticas\"],\n  \"status\": \"active\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v2/enhanced-companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v2", "enhanced-companies"]
+        }
+      }
+    },
+    {
+      "name": "5. Crear Empresa Básica",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Mi Empresa Ejemplo\",\n  \"description\": \"Descripción básica de la empresa\",\n  \"industry\": \"Servicios\",\n  \"contactInfo\": {\n    \"email\": \"contacto@miempresa.com\",\n    \"phone\": \"+52 55 1234 5678\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v2/enhanced-companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v2", "enhanced-companies"]
+        }
+      }
+    },
+    {
+      "name": "6. Crear Empresa E-commerce",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"MercadoDigital MX\",\n  \"description\": \"Plataforma de e-commerce para productos mexicanos artesanales\",\n  \"industry\": \"E-commerce\",\n  \"type\": \"empresa\",\n  \"size\": \"mediana\",\n  \"contactInfo\": {\n    \"address\": {\n      \"street\": \"Av. Revolución 1000\",\n      \"city\": \"Ciudad de México\",\n      \"state\": \"CDMX\",\n      \"zipCode\": \"03100\",\n      \"country\": \"México\"\n    },\n    \"phone\": \"+52 55 4567 8901\",\n    \"email\": \"ventas@mercadodigital.mx\",\n    \"website\": \"https://mercadodigital.mx\"\n  },\n  \"financialInfo\": {\n    \"revenue\": 8500000,\n    \"employees\": 75,\n    \"foundedYear\": 2019,\n    \"currency\": \"MXN\"\n  },\n  \"socialMedia\": {\n    \"instagram\": \"@mercadodigitalmx\",\n    \"facebook\": \"https://facebook.com/MercadoDigitalMX\",\n    \"tiktok\": \"@mercadodigitalmx\"\n  },\n  \"tags\": [\"e-commerce\", \"artesanías\", \"mexicano\", \"online\"],\n  \"specialties\": [\"Marketplace\", \"Logística\", \"Pagos digitales\"],\n  \"status\": \"active\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v2/enhanced-companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v2", "enhanced-companies"]
+        }
+      }
+    },
+    {
+      "name": "7. Obtener Todas las Empresas",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2/enhanced-companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v2", "enhanced-companies"]
+        }
+      }
+    },
+    {
+      "name": "8. Obtener Empresa por ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2/enhanced-companies/:companyId",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v2", "enhanced-companies", ":companyId"],
+          "variable": [
+            {
+              "key": "companyId",
+              "value": "{{companyId}}",
+              "description": "ID de la empresa a consultar"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "your-jwt-token-here",
+      "type": "string"
+    },
+    {
+      "key": "companyId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

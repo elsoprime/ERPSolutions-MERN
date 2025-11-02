@@ -6,8 +6,8 @@
 
 import {Request, Response} from 'express'
 import {Types} from 'mongoose'
-import EnhancedCompany from '../../../models/EnhancedCompany'
-import EnhancedUser from '../../../models/EnhancedUser'
+import EnhancedCompany from '../../companiesManagement/models/EnhancedCompany'
+import EnhancedUser from '@/modules/userManagement/models/EnhancedUser'
 
 export class MultiCompanyController {
   /**

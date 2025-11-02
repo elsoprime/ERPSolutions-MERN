@@ -1,6 +1,6 @@
 import {Router} from 'express'
 import {body, param} from 'express-validator'
-import {handleInputErrors} from '@/middleware/validation'
+import {handleInputErrors} from '@/middleware/handleInputErrorsMiddleware'
 import {AuthControllers} from '../controllers/AuthControllers'
 import {routesMiddleware} from '@/middleware/routesMiddleware'
 import {authMiddleware} from '../middleware/authMiddleware'

@@ -1,0 +1,27 @@
+/**
+ * ⚠️  ARCHIVO DEPRECADO - NO USAR EN DESARROLLO NUEVO
+ * 
+ * Este modelo User.ts ha sido reemplazado por EnhancedUser.ts
+ * Mantiene funcionalidad solo para scripts de migración legacy.
+ * 
+ * @deprecated desde octubre 2025
+ * @replacement EnhancedUser.ts
+ * @migration migrateToEnhancedUser.ts
+ * 
+ * NUEVA ARQUITECTURA:
+ * - ✅ EnhancedUser: Soporte multi-empresa, roles jerárquicos
+ * - ✅ Tipos de rol: global | company 
+ * - ✅ Roles: super_admin, admin_empresa, manager, employee, viewer
+ * - ✅ Sistema de permisos granular
+ * - ✅ Acceso a múltiples empresas
+ * 
+ * ARCHIVOS QUE TODAVÍA LO USAN (Solo migración):
+ * - scripts/migrateToEnhancedUser.ts
+ * - scripts/migrateUsers.ts  
+ * - scripts/migrateToEnhancedCompany.ts
+ * 
+ * NO CREAR NUEVAS REFERENCIAS A ESTE MODELO
+ */
+
+// El modelo original se mantiene en User.ts para scripts de migración
+// Todo nuevo desarrollo debe usar EnhancedUser.ts

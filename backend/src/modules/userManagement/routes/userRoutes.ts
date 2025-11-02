@@ -7,7 +7,7 @@
 import {Router} from 'express'
 import MultiCompanyUserController from '../controllers/MultiCompanyUserController'
 import {authMiddleware} from '../../../modules/userManagement/middleware/authMiddleware'
-import MultiCompanyMiddleware from '../../../middleware/multiCompanyMiddleware'
+import MultiCompanyMiddleware from '../../companiesManagement/middleware/multiCompanyMiddleware'
 import {userValidation} from '../middleware/userValidation'
 
 const router = Router()
@@ -15,6 +15,14 @@ const router = Router()
 /**
  * Rutas para Super Admin (gestión global de usuarios)
  */
+
+// Obtener estadísticas de usuarios del sistema
+router.get(
+  '/stats',
+  authMiddleware.authenticate,
+  MultiCompanyMiddleware.requireGlobalPermission('companies.list_all'),
+  MultiCompanyUserController.getUsersStats
+)
 
 // Obtener todos los usuarios del sistema
 router.get(

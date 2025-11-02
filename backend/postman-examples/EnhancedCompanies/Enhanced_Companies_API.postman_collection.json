@@ -1,0 +1,219 @@
+{
+  "info": {
+    "name": "Enhanced Companies API - Crear Empresas",
+    "description": "Colección de ejemplos para crear empresas usando la API Enhanced Companies v2.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/api/v2",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Crear Empresa - Básica (Mínima)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Mi Nueva Empresa SPA\",\n  \"email\": \"contacto@minuevaempresa.cl\",\n  \"address\": {\n    \"street\": \"Av. Providencia 1234\",\n    \"city\": \"Santiago\",\n    \"state\": \"Región Metropolitana\",\n    \"country\": \"Chile\",\n    \"postalCode\": \"7500000\"\n  },\n  \"settings\": {\n    \"taxId\": \"76.123.456-7\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["companies"]
+        },
+        "description": "Crear empresa con los campos mínimos requeridos"
+      }
+    },
+    {
+      "name": "Crear Empresa - Industrial Completa",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Industrias del Norte LTDA\",\n  \"slug\": \"industrias-norte\",\n  \"description\": \"Empresa industrial especializada en manufactura y producción\",\n  \"website\": \"https://industriasdelnorte.cl\",\n  \"email\": \"admin@industriasdelnorte.cl\",\n  \"phone\": \"+56 9 8765 4321\",\n  \"address\": {\n    \"street\": \"Parque Industrial Los Andes 567\",\n    \"city\": \"Antofagasta\",\n    \"state\": \"Región de Antofagasta\",\n    \"country\": \"Chile\",\n    \"postalCode\": \"1240000\"\n  },\n  \"plan\": \"professional\",\n  \"settings\": {\n    \"businessType\": \"manufacturing\",\n    \"industry\": \"Manufactura e Industria\",\n    \"taxId\": \"77.456.789-0\",\n    \"currency\": \"CLP\",\n    \"fiscalYear\": {\n      \"startMonth\": 1,\n      \"endMonth\": 12\n    },\n    \"features\": {\n      \"inventory\": true,\n      \"accounting\": true,\n      \"hrm\": true,\n      \"crm\": true,\n      \"projects\": false\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["companies"]
+        },
+        "description": "Crear empresa industrial con configuración completa"
+      }
+    },
+    {
+      "name": "Crear Empresa - Servicios/Consultoría",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Consultora Estratégica SPA\",\n  \"slug\": \"consultora-estrategica\",\n  \"description\": \"Consultoría empresarial y estrategia de negocios\",\n  \"website\": \"https://consultoraes.cl\",\n  \"email\": \"info@consultoraes.cl\",\n  \"phone\": \"+56 2 2234 5678\",\n  \"address\": {\n    \"street\": \"Av. Apoquindo 3000, Of. 501\",\n    \"city\": \"Santiago\",\n    \"state\": \"Región Metropolitana\",\n    \"country\": \"Chile\",\n    \"postalCode\": \"7550000\"\n  },\n  \"plan\": \"enterprise\",\n  \"settings\": {\n    \"businessType\": \"consulting\",\n    \"industry\": \"Consultoría y Servicios Profesionales\",\n    \"taxId\": \"76.789.012-3\",\n    \"currency\": \"CLP\",\n    \"fiscalYear\": {\n      \"startMonth\": 3,\n      \"endMonth\": 2\n    },\n    \"features\": {\n      \"inventory\": false,\n      \"accounting\": true,\n      \"hrm\": true,\n      \"crm\": true,\n      \"projects\": true\n    },\n    \"branding\": {\n      \"primaryColor\": \"#2563EB\",\n      \"secondaryColor\": \"#64748B\"\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["companies"]
+        },
+        "description": "Crear empresa de consultoría con plan enterprise"
+      }
+    },
+    {
+      "name": "Crear Empresa - Retail/Comercio",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"TecnoStore Chile\",\n  \"slug\": \"tecnostore-chile\",\n  \"description\": \"Venta de equipos tecnológicos y electrónicos\",\n  \"website\": \"https://tecnostore.cl\",\n  \"email\": \"ventas@tecnostore.cl\",\n  \"phone\": \"+56 9 1111 2222\",\n  \"address\": {\n    \"street\": \"Mall Plaza Norte, Local 205\",\n    \"city\": \"Santiago\",\n    \"state\": \"Región Metropolitana\",\n    \"country\": \"Chile\",\n    \"postalCode\": \"8580000\"\n  },\n  \"plan\": \"basic\",\n  \"settings\": {\n    \"businessType\": \"retail\",\n    \"industry\": \"Tecnología y Electrónicos\",\n    \"taxId\": \"77.345.678-9\",\n    \"currency\": \"CLP\",\n    \"fiscalYear\": {\n      \"startMonth\": 1,\n      \"endMonth\": 12\n    },\n    \"features\": {\n      \"inventory\": true,\n      \"accounting\": true,\n      \"hrm\": false,\n      \"crm\": true,\n      \"projects\": false\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["companies"]
+        },
+        "description": "Crear empresa de retail con plan básico"
+      }
+    },
+    {
+      "name": "Crear Empresa - Salud",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Centro Médico Integral\",\n  \"slug\": \"centro-medico-integral\",\n  \"description\": \"Centro de atención médica integral y especializada\",\n  \"website\": \"https://centromedicointegral.cl\",\n  \"email\": \"administracion@centromedicointegral.cl\",\n  \"phone\": \"+56 2 2345 6789\",\n  \"address\": {\n    \"street\": \"Av. Las Condes 12000\",\n    \"city\": \"Santiago\",\n    \"state\": \"Región Metropolitana\",\n    \"country\": \"Chile\",\n    \"postalCode\": \"7550000\"\n  },\n  \"plan\": \"professional\",\n  \"settings\": {\n    \"businessType\": \"healthcare\",\n    \"industry\": \"Salud y Medicina\",\n    \"taxId\": \"76.567.890-1\",\n    \"currency\": \"CLP\",\n    \"fiscalYear\": {\n      \"startMonth\": 1,\n      \"endMonth\": 12\n    },\n    \"features\": {\n      \"inventory\": true,\n      \"accounting\": true,\n      \"hrm\": true,\n      \"crm\": true,\n      \"projects\": false\n    },\n    \"branding\": {\n      \"primaryColor\": \"#059669\",\n      \"secondaryColor\": \"#6B7280\"\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["companies"]
+        },
+        "description": "Crear empresa del sector salud"
+      }
+    },
+    {
+      "name": "Crear Empresa - Educación",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Instituto Técnico Superior\",\n  \"slug\": \"instituto-tecnico-superior\",\n  \"description\": \"Formación técnica profesional y capacitación empresarial\",\n  \"website\": \"https://institutotech.cl\",\n  \"email\": \"admision@institutotech.cl\",\n  \"phone\": \"+56 9 9999 8888\",\n  \"address\": {\n    \"street\": \"Av. Libertador Bernardo O'Higgins 1500\",\n    \"city\": \"Santiago\",\n    \"state\": \"Región Metropolitana\",\n    \"country\": \"Chile\",\n    \"postalCode\": \"8320000\"\n  },\n  \"plan\": \"professional\",\n  \"settings\": {\n    \"businessType\": \"education\",\n    \"industry\": \"Educación y Capacitación\",\n    \"taxId\": \"77.111.222-3\",\n    \"currency\": \"CLP\",\n    \"fiscalYear\": {\n      \"startMonth\": 3,\n      \"endMonth\": 2\n    },\n    \"features\": {\n      \"inventory\": false,\n      \"accounting\": true,\n      \"hrm\": true,\n      \"crm\": true,\n      \"projects\": true\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["companies"]
+        },
+        "description": "Crear institución educativa"
+      }
+    },
+    {
+      "name": "Obtener Todas las Empresas",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/companies",
+          "host": ["{{baseUrl}}"],
+          "path": ["companies"]
+        },
+        "description": "Obtener lista de todas las empresas"
+      }
+    },
+    {
+      "name": "Obtener Empresa por ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/companies/:companyId",
+          "host": ["{{baseUrl}}"],
+          "path": ["companies", ":companyId"],
+          "variable": [
+            {
+              "key": "companyId",
+              "value": "COMPANY_ID_HERE"
+            }
+          ]
+        },
+        "description": "Obtener empresa específica por ID"
+      }
+    }
+  ]
+}

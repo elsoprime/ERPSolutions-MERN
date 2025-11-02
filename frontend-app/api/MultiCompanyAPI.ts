@@ -20,7 +20,7 @@ import {
   IUserFilters,
   ICompanyFilters,
   IApiResponse
-} from '@/interfaces/MultiCompany'
+} from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 export class MultiCompanyAPI {
   private static readonly BASE_URL = '/v2'
@@ -158,7 +158,7 @@ export class MultiCompanyAPI {
     if (filters?.limit) params.append('limit', filters.limit.toString())
 
     const response = await api.get(
-      `${this.BASE_URL}/companies/all?${params.toString()}`
+      `${this.BASE_URL}/enhanced-companies?${params.toString()}`
     )
     return response.data
   }

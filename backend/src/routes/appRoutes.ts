@@ -1,6 +1,7 @@
 import {Router} from 'express'
 import authRoutes from '@/modules/userManagement/routes/authRoutes'
-import companyRoutes from '@/routes/companyRoutes'
+import userManagementRoutes from '@/modules/userManagement/routes'
+import enhancedCompanyRoutes from '@/modules/companiesManagement/routes/enhancedCompanyRoutes'
 import warehouseRoutes from '@/modules/warehouseManagement/routes/warehouseRoutes'
 import domainsRoutes from '@/routes/domainRoutes'
 
@@ -13,10 +14,16 @@ import domainsRoutes from '@/routes/domainRoutes'
 
 const router = Router()
 
-// Agrega aquí otras rutas globales si es necesario
+// Rutas de los módulos principales
 router.use('/auth', authRoutes) // Rutas de autenticación de usuario
+
 router.use('/dashboard', domainsRoutes) // Rutas de inicio
-router.use('/companies', companyRoutes) // Rutas de gestión de empresas
-router.use('/warehouse', warehouseRoutes)
+
+// Rutas del Módulo de Gestión de Usuarios Multiempresa [v2.0]
+router.use('/v2', userManagementRoutes)
+
+// Rutas Protegidas de Gestión de EnhancedCompany [v2.0]
+router.use('/v2/enhanced-companies', enhancedCompanyRoutes) // Rutas de gestión de empresas Enhanced
+router.use('/v2/warehouse', warehouseRoutes)
 
 export default router

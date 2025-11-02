@@ -13,7 +13,7 @@ import {
   getActiveModules,
   updateActiveModules
 } from '../controllers/ActiveControllerController'
-import {handleInputErrors} from '../middleware/validation'
+import {handleInputErrors} from '../middleware/handleInputErrorsMiddleware'
 import {param} from 'express-validator'
 
 // 🔒 SEGURIDAD AVANZADA - Middleware JWT

@@ -1,3 +1,0 @@
-/**
- * Autor: Esteban Soto @elsoprimeDev
- */

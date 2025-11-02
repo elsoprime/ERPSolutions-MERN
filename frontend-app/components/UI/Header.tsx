@@ -10,9 +10,10 @@ import React, {useEffect, useState} from 'react'
 import Logo from '@/components/Shared/Logo'
 import UserProfile from './UserProfile'
 import MobileMenu from './MobileMenu'
-import {MenuItems} from '@/data/Menu'
+import {getMenuByRole} from '@/data/Menu'
 import {IUserProfile, IMenu} from '@/interfaces/IComponents'
 import {getUserData} from '@/api/AuthAPI'
+import {getHighestRole} from '@/utils/roleRouting'
 
 import {
   createDemoUserFromToken,
@@ -106,6 +107,10 @@ export default function Header({
   // Usar el perfil pasado como prop, el cargado del estado, o el fallback
   const profileToUse = userProfile || currentUserProfile
 
+  // Obtener el menú apropiado según el rol del usuario
+  const userRole = getHighestRole(profileToUse)
+  const menuForRole = getMenuByRole(userRole)
+
   return (
     <header className='py-4 px-6 bg-gradient-to-br from-gray-50 to-gray-100 border-b border-gray-200 '>
       <div className='flex items-center justify-between xl:justify-end mx-auto'>
@@ -118,7 +123,10 @@ export default function Header({
             onUserMenuClick={onUserMenuClick}
           />
 
-          <MobileMenu menuItems={MenuItems} onMenuItemClick={onMenuItemClick} />
+          <MobileMenu
+            menuItems={menuForRole}
+            onMenuItemClick={onMenuItemClick}
+          />
         </div>
       </div>
     </header>

@@ -6,7 +6,7 @@ import Image from 'next/image'
 import {useEffect, useState} from 'react'
 import AOS from 'aos'
 import AuthView from '@/components/Modules/Auth/Views/AuthView'
-import AuthGuard from '@/components/Auth/AuthGuard'
+import AuthGuard from '@/components/Modules/Auth/Protected/AuthGuard'
 
 import RegisterView from '@/components/Modules/Auth/Views/RegisterView'
 import LoginLayout from '@/components/Layout/LoginLayout'

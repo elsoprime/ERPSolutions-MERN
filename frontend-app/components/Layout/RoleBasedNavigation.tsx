@@ -16,7 +16,7 @@ import {
   getCompanyContext
 } from '@/utils/roleRouting'
 import {RoleBadge} from '@/components/UI/MultiCompanyBadges'
-import {UserRole} from '@/interfaces/MultiCompany'
+import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 interface NavigationItem {
   name: string

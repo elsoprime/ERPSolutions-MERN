@@ -3,18 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --font-noto-sans: "Noto Sans", sans-serif;
-  --font-roboto-light: "Roboto-Light", sans-serif;
-  --font-roboto-regular: "Roboto-Regular", sans-serif;
-  --font-roboto-bold: "Roboto-Bold", sans-serif;
-  --font-poppins: "Poppins", sans-serif;
+  --font-noto-sans: 'Noto Sans', sans-serif;
+  --font-roboto-light: 'Roboto-Light', sans-serif;
+  --font-roboto-regular: 'Roboto-Regular', sans-serif;
+  --font-roboto-bold: 'Roboto-Bold', sans-serif;
+  --font-poppins: 'Poppins', sans-serif;
 }
 
 body {
   font-family: var(--font-roboto-regular);
 }
 
-h1,
+h1 {
+  font-family: var(--font-roboto-bold);
+}
 h2,
 h3,
 h4,

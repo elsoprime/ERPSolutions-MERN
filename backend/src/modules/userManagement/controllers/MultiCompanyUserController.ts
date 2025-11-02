@@ -1,16 +1,17 @@
 /**
  * Multi-Company User Management Controllers
- * @description: Controladores para gestión de usuarios en arquitectura multiempresa
+ * @description: Controladores para gestión de usuarios en arquitectura multicompañía
  * @author: Esteban Soto Ojeda @elsoprimeDev
  */
 
 import {Request, Response} from 'express'
 import {Types} from 'mongoose'
-import EnhancedUser from '../../../models/EnhancedUser'
-import EnhancedCompany from '../../../models/EnhancedCompany'
+import EnhancedUser from '../models/EnhancedUser'
+import EnhancedCompany from '../../companiesManagement/models/EnhancedCompany'
 import MultiCompanyPermissionChecker from '../../../utils/multiCompanyPermissions'
 import {hashPassword} from '../../../utils/authUtils'
 import {generateJWT} from '../../../utils/jwt'
+import {AuthEmail} from '../../../email/AuthEmail'
 
 export class MultiCompanyUserController {
   /**
@@ -57,7 +58,7 @@ export class MultiCompanyUserController {
       ])
 
       res.status(200).json({
-        users,
+        data: users, // ✅ Cambiado de "users" a "data" para consistencia
         pagination: {
           page,
           limit,
@@ -130,7 +131,7 @@ export class MultiCompanyUserController {
       ])
 
       res.status(200).json({
-        users,
+        data: users, // ✅ Cambiado de "users" a "data" para consistencia
         pagination: {
           page,
           limit,
@@ -163,11 +164,18 @@ export class MultiCompanyUserController {
         permissions = []
       } = req.body
 
-      // Validar que el email no exista
+      console.log('📋 Permisos recibidos:', permissions)
+
+      // Normalizar email
+      const normalizedEmail = email.toLowerCase().trim()
+
+      // Validar que el email no exista (case-insensitive)
       const existingUser = await EnhancedUser.findOne({
-        email: email.toLowerCase()
+        email: {$regex: new RegExp(`^${normalizedEmail}$`, 'i')}
       })
+
       if (existingUser) {
+        console.log(`❌ Email duplicado: ${normalizedEmail}`)
         return res.status(409).json({
           error: 'Ya existe un usuario con este correo electrónico'
         })
@@ -190,8 +198,12 @@ export class MultiCompanyUserController {
 
         // Verificar si la empresa puede agregar más usuarios
         if (!company.canAddUser()) {
+          console.log(`❌ Límite de usuarios alcanzado para ${company.name}:`, {
+            totalUsers: company.stats.totalUsers,
+            maxUsers: company.settings.limits.maxUsers
+          })
           return res.status(400).json({
-            error: 'La empresa ha alcanzado el límite de usuarios'
+            error: `La empresa ha alcanzado el límite de usuarios (${company.stats.totalUsers}/${company.settings.limits.maxUsers})`
           })
         }
       }
@@ -199,15 +211,17 @@ export class MultiCompanyUserController {
       // Crear el usuario
       const hashedPassword = await hashPassword(password)
 
+      console.log('💾 Guardando usuario con permisos:', permissions)
+
       const newUser = new EnhancedUser({
         name,
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         password: hashedPassword,
         phone,
         status: 'active',
         confirmed: true,
         emailVerified: true,
-        createdBy: req.user?.id,
+        createdBy: req.authUser?.id,
         roles: [
           {
             roleType,
@@ -219,7 +233,9 @@ export class MultiCompanyUserController {
             permissions,
             isActive: true,
             assignedAt: new Date(),
-            assignedBy: new Types.ObjectId(req.user!.id)
+            assignedBy: req.authUser?.id
+              ? new Types.ObjectId(req.authUser.id)
+              : undefined
           }
         ],
         primaryCompanyId:
@@ -228,12 +244,46 @@ export class MultiCompanyUserController {
 
       await newUser.save()
 
+      console.log(
+        '✅ Usuario guardado con permisos:',
+        newUser.roles[0].permissions
+      )
+
       // Actualizar estadísticas de la empresa
       if (roleType === 'company') {
         await EnhancedCompany.findByIdAndUpdate(companyId, {
           $inc: {'stats.totalUsers': 1},
           $set: {'stats.lastActivity': new Date()}
         })
+      }
+
+      // Enviar email de bienvenida
+      try {
+        let companyName = 'ERPSolutions Platform'
+        if (roleType === 'company' && companyId) {
+          const company = await EnhancedCompany.findById(companyId).select(
+            'name'
+          )
+          if (company) {
+            companyName = company.name
+          }
+        }
+
+        await AuthEmail.sendWelcomeEmail({
+          email: newUser.email,
+          name: newUser.name,
+          companyName,
+          role
+        })
+        console.log(
+          `✅ Email de bienvenida enviado via Resend a: ${newUser.email}`
+        )
+      } catch (emailError) {
+        console.error(
+          '⚠️ Error al enviar email de bienvenida (Resend):',
+          emailError
+        )
+        // No fallar la creación del usuario si el email falla
       }
 
       // Devolver usuario sin password
@@ -276,7 +326,7 @@ export class MultiCompanyUserController {
       }
 
       // Verificar permisos para editar este usuario
-      const currentUser = req.user
+      const currentUser = req.authUser
       const companyId = req.companyContext?.id
 
       if (!currentUser) {
@@ -383,7 +433,9 @@ export class MultiCompanyUserController {
         permissions,
         isActive: true,
         assignedAt: new Date(),
-        assignedBy: new Types.ObjectId(req.user!.id)
+        assignedBy: req.authUser?.id
+          ? new Types.ObjectId(req.authUser.id)
+          : undefined
       })
 
       // Si es el primer rol de empresa, establecerlo como primario
@@ -505,7 +557,7 @@ export class MultiCompanyUserController {
    */
   static getProfile = async (req: Request, res: Response) => {
     try {
-      const userId = req.user?.id
+      const userId = req.authUser?.id
 
       if (!userId) {
         return res.status(401).json({
@@ -530,6 +582,180 @@ export class MultiCompanyUserController {
     } catch (error) {
       console.error('Error al obtener perfil:', error)
       res.status(500).json({
+        error: 'Error interno del servidor'
+      })
+    }
+  }
+
+  /**
+   * Obtener estadísticas de usuarios (Solo Super Admin)
+   */
+  static getUsersStats = async (req: Request, res: Response) => {
+    try {
+      // Total de usuarios
+      const totalUsers = await EnhancedUser.countDocuments()
+
+      // Usuarios por estado
+      const [activeUsers, inactiveUsers, suspendedUsers] = await Promise.all([
+        EnhancedUser.countDocuments({status: 'active'}),
+        EnhancedUser.countDocuments({status: 'inactive'}),
+        EnhancedUser.countDocuments({status: 'suspended'})
+      ])
+
+      // Distribución por roles
+      const allUsers = await EnhancedUser.find({status: {$ne: 'inactive'}})
+      const roleDistribution: Record<string, number> = {}
+
+      allUsers.forEach(user => {
+        user.roles
+          .filter(r => r.isActive)
+          .forEach(r => {
+            const roleName = r.role || 'sin_rol'
+            roleDistribution[roleName] = (roleDistribution[roleName] || 0) + 1
+          })
+      })
+
+      // Distribución por empresa
+      const companyDistribution: Record<string, number> = {}
+      const companies = await EnhancedCompany.find({status: 'active'}).select(
+        'name'
+      )
+
+      for (const company of companies) {
+        const count = await EnhancedUser.countDocuments({
+          'roles.companyId': company._id,
+          'roles.isActive': true
+        })
+        if (count > 0) {
+          companyDistribution[company.name] = count
+        }
+      }
+
+      // Usuarios sin empresa (solo roles globales)
+      const usersWithoutCompany = await EnhancedUser.countDocuments({
+        primaryCompanyId: null,
+        status: {$ne: 'inactive'}
+      })
+      if (usersWithoutCompany > 0) {
+        companyDistribution['Sin empresa'] = usersWithoutCompany
+      }
+
+      // Actividad reciente (últimos 10 usuarios activos)
+      const recentUsers = await EnhancedUser.find({status: {$ne: 'inactive'}})
+        .select('name email lastLogin createdAt')
+        .sort({lastLogin: -1})
+        .limit(10)
+        .lean()
+
+      const recentActivity = recentUsers.map((user: any) => ({
+        userId: user._id.toString(),
+        userName: user.name,
+        action: user.lastLogin ? 'Inició sesión' : 'Cuenta creada',
+        timestamp: user.lastLogin || user.createdAt
+      }))
+
+      // Crecimiento mensual
+      const currentDate = new Date()
+      const firstDayOfMonth = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        1
+      )
+
+      const newUsersThisMonth = await EnhancedUser.countDocuments({
+        createdAt: {$gte: firstDayOfMonth}
+      })
+
+      // Usuarios activados este mes (cambiados de inactive a active)
+      const activationsThisMonth = await EnhancedUser.countDocuments({
+        status: 'active',
+        updatedAt: {$gte: firstDayOfMonth}
+      })
+
+      // Usuarios desactivados este mes
+      const deactivationsThisMonth = await EnhancedUser.countDocuments({
+        status: 'inactive',
+        updatedAt: {$gte: firstDayOfMonth}
+      })
+
+      // Tendencias mensuales (últimos 6 meses)
+      const monthlyTrends = []
+      const monthNames = [
+        'Ene',
+        'Feb',
+        'Mar',
+        'Abr',
+        'May',
+        'Jun',
+        'Jul',
+        'Ago',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dic'
+      ]
+
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth() - i,
+          1
+        )
+        const nextDate = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth() - i + 1,
+          1
+        )
+
+        const [totalInMonth, activeInMonth, inactiveInMonth, newInMonth] =
+          await Promise.all([
+            EnhancedUser.countDocuments({
+              createdAt: {$lt: nextDate}
+            }),
+            EnhancedUser.countDocuments({
+              status: 'active',
+              createdAt: {$lt: nextDate}
+            }),
+            EnhancedUser.countDocuments({
+              status: 'inactive',
+              createdAt: {$lt: nextDate}
+            }),
+            EnhancedUser.countDocuments({
+              createdAt: {$gte: date, $lt: nextDate}
+            })
+          ])
+
+        monthlyTrends.push({
+          month: monthNames[date.getMonth()],
+          total: totalInMonth,
+          active: activeInMonth,
+          inactive: inactiveInMonth,
+          newUsers: newInMonth
+        })
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          total: totalUsers,
+          active: activeUsers,
+          inactive: inactiveUsers,
+          suspended: suspendedUsers,
+          byRole: roleDistribution,
+          byCompany: companyDistribution,
+          recent: recentActivity,
+          monthlyGrowth: {
+            newUsers: newUsersThisMonth,
+            activations: activationsThisMonth,
+            deactivations: deactivationsThisMonth
+          },
+          monthlyTrends
+        }
+      })
+    } catch (error) {
+      console.error('Error al obtener estadísticas de usuarios:', error)
+      res.status(500).json({
+        success: false,
         error: 'Error interno del servidor'
       })
     }

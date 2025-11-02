@@ -5,13 +5,13 @@
  */
 
 import {NextRequest} from 'next/server'
-import {UserRole} from '@/interfaces/MultiCompany'
+import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 export interface ServerUserData {
   id: string
   email: string
   name: string
-  role: UserRole | string  // 🔥 COMPATIBLE: Acepta tanto roles legacy como nuevos
+  role: UserRole | string // 🔥 COMPATIBLE: Acepta tanto roles legacy como nuevos
   companyId?: string
   companies?: Array<{
     id: string
@@ -48,14 +48,14 @@ export function getHighestRoleFromUserData(userData: ServerUserData): UserRole {
   if (userData.role && typeof userData.role === 'string') {
     // Mapear roles legacy del backend a enums del frontend
     const roleMappingLegacy: Record<string, UserRole> = {
-      'super_admin': UserRole.SUPER_ADMIN,
-      'admin_empresa': UserRole.ADMIN_EMPRESA,
-      'manager': UserRole.MANAGER,
-      'employee': UserRole.EMPLOYEE,
-      'viewer': UserRole.VIEWER,
-      'admin': UserRole.ADMIN_EMPRESA, // Compatibilidad
+      super_admin: UserRole.SUPER_ADMIN,
+      admin_empresa: UserRole.ADMIN_EMPRESA,
+      manager: UserRole.MANAGER,
+      employee: UserRole.EMPLOYEE,
+      viewer: UserRole.VIEWER,
+      admin: UserRole.ADMIN_EMPRESA // Compatibilidad
     }
-    
+
     return roleMappingLegacy[userData.role] || UserRole.VIEWER
   }
 
@@ -89,8 +89,8 @@ export function getHighestRoleFromUserData(userData: ServerUserData): UserRole {
  */
 export function getDefaultRouteForRole(role: UserRole): string {
   const roleRoutes = {
-    [UserRole.SUPER_ADMIN]: '/dashboard/super-admin',
-    [UserRole.ADMIN_EMPRESA]: '/dashboard/company-admin',
+    [UserRole.SUPER_ADMIN]: '/dashboard/mismodulossuperadmin',
+    [UserRole.ADMIN_EMPRESA]: '/home/miempresa',
     [UserRole.MANAGER]: '/dashboard/manager',
     [UserRole.EMPLOYEE]: '/dashboard/employee',
     [UserRole.VIEWER]: '/dashboard/viewer'
@@ -110,7 +110,9 @@ export function hasAccessToRoute(
 
   // Mapeo de rutas y roles mínimos requeridos
   const routeAccess = {
+    '/dashboard/mismodulossuperadmin': [UserRole.SUPER_ADMIN],
     '/dashboard/super-admin': [UserRole.SUPER_ADMIN],
+    '/home/miempresa': [UserRole.SUPER_ADMIN, UserRole.ADMIN_EMPRESA],
     '/dashboard/company-admin': [UserRole.SUPER_ADMIN, UserRole.ADMIN_EMPRESA],
     '/dashboard/manager': [
       UserRole.SUPER_ADMIN,
@@ -178,7 +180,9 @@ export function isDashboardRoute(pathname: string): boolean {
  */
 export function getRoleFromDashboardPath(pathname: string): UserRole | null {
   const roleMap = {
+    '/dashboard/mismodulossuperadmin': UserRole.SUPER_ADMIN,
     '/dashboard/super-admin': UserRole.SUPER_ADMIN,
+    '/home/miempresa': UserRole.ADMIN_EMPRESA,
     '/dashboard/company-admin': UserRole.ADMIN_EMPRESA,
     '/dashboard/manager': UserRole.MANAGER,
     '/dashboard/employee': UserRole.EMPLOYEE,

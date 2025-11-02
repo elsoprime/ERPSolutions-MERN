@@ -5,14 +5,18 @@
  */
 
 // Main Page Component
-export {default as UserManagementPage} from './UserManagementPage'
+export {default as UserManagementPage} from './Views/UserManagementPage'
 
 // Dashboard Components
-export {default as SuperAdminDashboard} from './SuperAdminDashboard'
-export {default as CompanyAdminDashboard} from './CompanyAdminDashboard'
+export {default as UserOverviewDashboard} from './Views/UserOverviewDashboard'
+export {default as UsersAdminDashboard} from './Views/UsersAdminDashboard'
 
 // Form Components
-export {UserForm, RoleAssignmentForm, PermissionSelector} from './UserForms'
+export {
+  UserForm,
+  RoleAssignmentForm,
+  PermissionSelector
+} from './Forms/UserForms'
 
 // Table Components
-export {default as UserTable} from './UserTable'
+export {default as UserTable} from './UI/UserTable'

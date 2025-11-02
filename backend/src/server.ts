@@ -7,10 +7,13 @@ import appRoutes from './routes/appRoutes'
 import settingsRoutes from './routes/settingsRoutes'
 import locationRoutes from './routes/locationRoutes'
 import servicesRoutes from './routes/servicesRoutes'
-import companyRoutes from './routes/companyRoutes'
-import userManagementRoutes from './modules/userManagement/routes'
+
 import {connectDB} from './config/database'
 import {globalErrorHandler} from './middleware/global'
+
+// Importar modelos explícitamente para asegurar registro en Mongoose
+import '@/modules/userManagement/models/EnhancedUser'
+import '@/modules/companiesManagement/models/EnhancedCompany'
 
 dotenv.config()
 
@@ -27,7 +30,9 @@ app.use(express.json())
 // 🧪 RUTAS DE TESTING JWT (solo en desarrollo)
 if (process.env.NODE_ENV !== 'production') {
   try {
-    const {registerTestingRoutes} = require('./scripts/registerTestingRoutes')
+    const {
+      registerTestingRoutes
+    } = require('./scripts/utilities/registerTestingRoutes')
     registerTestingRoutes(app, {
       enabled: true,
       basePath: '/api/testing/auth',
@@ -35,6 +40,12 @@ if (process.env.NODE_ENV !== 'production') {
       logRequests: true
     })
     console.log('🧪 Rutas de testing JWT activadas en: /api/testing/auth')
+
+    // Verificar registro de modelos
+    const {
+      testModelRegistration
+    } = require('./scripts/utilities/testModelRegistration')
+    testModelRegistration()
   } catch (error) {
     console.log('⚠️ No se pudieron cargar las rutas de testing:', error.message)
   }
@@ -45,13 +56,7 @@ app.use('/api/settings', settingsRoutes)
 app.use('/api/location', locationRoutes)
 app.use('/api/services', servicesRoutes)
 
-// Routes Enhanced Companies (Super Admin)
-app.use('/api/enhanced-companies', companyRoutes)
-
-// Rutas del Módulo de Gestión de Usuarios Multiempresa
-app.use('/api/v2', userManagementRoutes)
-
-// Rutas Globales de los Módulos de la aplicación
+// Rutas Globales de los Módulos de la aplicación (incluye rutas protegidas)
 app.use('/api/', appRoutes)
 
 // Middleware para manejar rutas no definidas

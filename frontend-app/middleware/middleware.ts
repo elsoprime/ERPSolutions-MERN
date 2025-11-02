@@ -5,8 +5,10 @@ import {
   hasAccessToRoute,
   getRedirectRoute,
   isDashboardRoute,
-  getRoleFromDashboardPath
+  getRoleFromDashboardPath,
+  getHighestRoleFromUserData
 } from '@/utils/serverSideAuth'
+import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 export function middleware(request: NextRequest) {
   const authToken = request.cookies.get('AUTH_TOKEN_VALIDATE')?.value
@@ -114,7 +116,14 @@ export function middleware(request: NextRequest) {
     const userData = getUserDataFromCookies(request)
 
     if (userData) {
-      // Verificar acceso a rutas específicas de dashboard
+      // 🔥 REDIRECCIÓN ESPECIAL: Super Admin en /home debe ir a /dashboard
+      if (pathname === '/home' || pathname.startsWith('/home/')) {
+        const userRole = getHighestRoleFromUserData(userData)
+
+        if (userRole === UserRole.SUPER_ADMIN) {
+          return NextResponse.redirect(new URL('/dashboard', request.url))
+        }
+      } // Verificar acceso a rutas específicas de dashboard
       if (isDashboardRoute(pathname)) {
         const requiredRole = getRoleFromDashboardPath(pathname)
         if (requiredRole && !hasAccessToRoute(userData, pathname)) {

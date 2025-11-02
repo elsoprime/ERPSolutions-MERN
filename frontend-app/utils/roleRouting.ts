@@ -4,12 +4,15 @@
  * @author: Esteban Soto Ojeda @elsoprimeDev
  */
 
-import {UserRole, IEnhancedUser} from '@/interfaces/MultiCompany'
+import {
+  UserRole,
+  IEnhancedUser
+} from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 // Definir rutas por defecto para cada rol
 export const DEFAULT_ROUTES = {
-  [UserRole.SUPER_ADMIN]: '/home',
-  [UserRole.ADMIN_EMPRESA]: '/home',
+  [UserRole.SUPER_ADMIN]: '/dashboard/',
+  [UserRole.ADMIN_EMPRESA]: '/home/miempresa',
   [UserRole.MANAGER]: '/home',
   [UserRole.EMPLOYEE]: '/home',
   [UserRole.VIEWER]: '/home'
@@ -19,16 +22,17 @@ export const DEFAULT_ROUTES = {
 export const ALLOWED_ROUTES = {
   [UserRole.SUPER_ADMIN]: [
     '/home',
-    '/dashboard/super-admin',
-    '/users',
-    '/companies',
-    '/system',
-    '/analytics',
-    '/billing'
+    '/dashboard',
+    '/dashboard/settings',
+    '/dashboard/users',
+    '/dashboard/companies',
+    '/dashboard/system',
+    '/dashboard/analytics',
+    '/dashboard/billing'
   ],
   [UserRole.ADMIN_EMPRESA]: [
     '/home',
-    '/dashboard/company-admin',
+    '/home/miempresa',
     '/users',
     '/settings',
     '/reports',
@@ -185,41 +189,50 @@ export function generateBreadcrumbs(
   user: IEnhancedUser | any | null
 ) {
   const segments = pathname.split('/').filter(Boolean)
-  const breadcrumbs: Array<{label: string; href: string; isActive?: boolean}> =
-    [{label: 'Inicio', href: '/home'}]
+  const breadcrumbs: Array<{
+    label: string
+    href: string
+    isActive?: boolean
+    icon?: string
+  }> = []
 
   if (segments.length === 0) return breadcrumbs
 
-  // Mapeo de rutas a etiquetas
-  const routeLabels: Record<string, string> = {
-    dashboard: 'Dashboard',
-    'super-admin': 'Super Administrador',
-    'company-admin': 'Admin Empresa',
-    manager: 'Manager',
-    employee: 'Empleado',
-    viewer: 'Visualizador',
-    users: 'Gestión de Usuarios',
-    companies: 'Gestión de Empresas',
-    inventory: 'Inventario',
-    sales: 'Ventas',
-    purchases: 'Compras',
-    reports: 'Reportes',
-    settings: 'Configuraciones',
-    billing: 'Facturación',
-    system: 'Sistema',
-    analytics: 'Analytics'
+  // Mapeo de rutas a etiquetas e iconos
+  const routeConfig: Record<string, {label: string; icon: string}> = {
+    dashboard: {label: 'Dashboard', icon: 'ChartPieIcon'},
+    'super-admin': {label: 'Super Administrador', icon: 'ShieldCheckIcon'},
+    'company-admin': {label: 'Admin Empresa', icon: 'BuildingOfficeIcon'},
+    manager: {label: 'Manager', icon: 'UserGroupIcon'},
+    employee: {label: 'Empleado', icon: 'UserIcon'},
+    viewer: {label: 'Visualizador', icon: 'EyeIcon'},
+    users: {label: 'Gestión de Usuarios', icon: 'UsersIcon'},
+    companies: {label: 'Gestión de Empresas', icon: 'BuildingOffice2Icon'},
+    inventory: {label: 'Inventario', icon: 'CubeIcon'},
+    sales: {label: 'Ventas', icon: 'ShoppingCartIcon'},
+    purchases: {label: 'Compras', icon: 'ShoppingBagIcon'},
+    reports: {label: 'Reportes', icon: 'DocumentChartBarIcon'},
+    settings: {label: 'Configuraciones', icon: 'Cog6ToothIcon'},
+    billing: {label: 'Facturación', icon: 'CreditCardIcon'},
+    system: {label: 'Sistema', icon: 'CommandLineIcon'},
+    analytics: {label: 'Analytics', icon: 'ChartBarIcon'},
+    home: {label: 'Inicio', icon: 'HomeIcon'},
+    miempresa: {label: 'Mi Empresa', icon: 'BuildingStorefrontIcon'}
   }
 
   let currentPath = ''
   segments.forEach((segment, index) => {
     currentPath += `/${segment}`
-    const label =
-      routeLabels[segment] || segment.charAt(0).toUpperCase() + segment.slice(1)
+    const config = routeConfig[segment] || {
+      label: segment.charAt(0).toUpperCase() + segment.slice(1),
+      icon: 'FolderIcon'
+    }
 
     breadcrumbs.push({
-      label,
+      label: config.label,
       href: currentPath,
-      isActive: index === segments.length - 1
+      isActive: index === segments.length - 1,
+      icon: config.icon
     })
   })
 
