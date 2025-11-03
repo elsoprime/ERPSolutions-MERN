@@ -9,12 +9,12 @@ import ProtectedLayout from '@/components/Layout/ProtectedLayout'
 import DashboardHeader from '@/components/Layout/DashboardHeader'
 import DevelopmentBlock from '@/components/UI/DevelopmentBlock'
 
-export default function SuperAdminPage() {
+export default function SuperAdminRolesPage() {
   return (
     <>
       <DashboardHeader
         title='Dashboard Super Admin'
-        subtitle='Panel de Configuración Global'
+        subtitle='Panel de Configuración Roles del Sistema'
         description='Accede y gestiona las configuraciones globales del sistema ERP Solutions.'
       />
       <div className='relative'>

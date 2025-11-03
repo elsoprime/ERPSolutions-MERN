@@ -201,6 +201,31 @@ export class UserAPI {
       throw error
     }
   }
+
+  /**
+   * Cambiar contraseña de un usuario
+   * @param userId - ID del usuario
+   * @param passwords - Objeto con currentPassword, newPassword, confirmPassword
+   */
+  static async changePassword(
+    userId: string,
+    passwords: {
+      currentPassword: string
+      newPassword: string
+      confirmPassword: string
+    }
+  ): Promise<{success: boolean; message: string}> {
+    try {
+      const response = await api.put(
+        `${this.baseURL}/${userId}/password`,
+        passwords
+      )
+      return response.data
+    } catch (error: any) {
+      console.error('Error al cambiar contraseña:', error)
+      throw error
+    }
+  }
 }
 
 export default UserAPI

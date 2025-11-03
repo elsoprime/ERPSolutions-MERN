@@ -6,7 +6,8 @@
 
 'use client'
 
-import React, {useState} from 'react'
+import React, {useState, useEffect} from 'react'
+import {useQueryClient} from '@tanstack/react-query'
 import {UserTable} from '@/components/Modules/UserManagement'
 import {useAuth} from '@/hooks/useAuth'
 import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
@@ -23,7 +24,16 @@ type ViewMode = 'dashboard' | 'users'
 export const UserManagementPage: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewMode>('dashboard')
   const {getUserData} = useAuth()
+  const queryClient = useQueryClient()
   const user = getUserData() // Obtener datos del usuario autenticado
+
+  // ✅ Refrescar lista de usuarios cuando se cambia al tab "users"
+  useEffect(() => {
+    if (currentView === 'users') {
+      // Invalidar queries de usuarios para forzar refetch
+      queryClient.invalidateQueries({queryKey: ['users']})
+    }
+  }, [currentView, queryClient])
 
   if (!user) {
     return (

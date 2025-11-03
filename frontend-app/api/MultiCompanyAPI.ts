@@ -223,15 +223,17 @@ export class MultiCompanyAPI {
   }
 
   /**
-   * Suspender empresa
+   * Suspender empresa (usa DELETE endpoint por compatibilidad)
    */
   static async suspendCompany(
     companyId: string,
     reason?: string
   ): Promise<IApiResponse<void>> {
-    const response = await api.post(
-      `${this.BASE_URL}/companies/${companyId}/suspend`,
-      {reason}
+    const response = await api.delete(
+      `${this.BASE_URL}/enhanced-companies/${companyId}`,
+      {
+        data: {reason: reason || 'manual_admin'}
+      }
     )
     return response.data
   }
@@ -243,7 +245,7 @@ export class MultiCompanyAPI {
     companyId: string
   ): Promise<IApiResponse<void>> {
     const response = await api.post(
-      `${this.BASE_URL}/companies/${companyId}/reactivate`
+      `${this.BASE_URL}/enhanced-companies/${companyId}/reactivate`
     )
     return response.data
   }
@@ -294,6 +296,24 @@ export class MultiCompanyAPI {
         company: response.data.user?.permissions?.company || []
       }
     }
+  }
+
+  /**
+   * Cambiar contraseña de un usuario
+   */
+  static async changeUserPassword(
+    userId: string,
+    passwords: {
+      currentPassword: string
+      newPassword: string
+      confirmPassword: string
+    }
+  ): Promise<IApiResponse<{message: string}>> {
+    const response = await api.put(
+      `${this.BASE_URL}/users/${userId}/password`,
+      passwords
+    )
+    return response.data
   }
 }
 

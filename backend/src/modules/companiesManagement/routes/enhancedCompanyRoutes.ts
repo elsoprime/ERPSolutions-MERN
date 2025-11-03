@@ -91,4 +91,11 @@ router.put(
   EnhancedCompanyController.changeCompanyPlan
 )
 
+// Ruta de reactivación de empresas (Super Admin only)
+router.post(
+  '/:id/reactivate',
+  CompanyValidationMiddleware.validateCompanyId,
+  EnhancedCompanyController.reactivateCompany
+)
+
 export default router

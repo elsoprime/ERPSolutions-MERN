@@ -91,7 +91,10 @@ export function useCompanyMutations() {
     mutationFn: (companyData: ICreateCompanyRequest) =>
       MultiCompanyAPI.createCompany(companyData),
     onSuccess: data => {
+      // ✅ Invalidar todas las queries de empresas (incluyendo listas con filtros)
       queryClient.invalidateQueries({queryKey: COMPANY_QUERY_KEYS.all})
+      // ✅ Refetch inmediato de la lista principal
+      queryClient.refetchQueries({queryKey: COMPANY_QUERY_KEYS.lists()})
       toast.success(data.message || 'Empresa creada exitosamente')
     },
     onError: (error: any) => {
@@ -110,6 +113,7 @@ export function useCompanyMutations() {
     }) => MultiCompanyAPI.updateCompany(companyId, companyData),
     onSuccess: data => {
       queryClient.invalidateQueries({queryKey: COMPANY_QUERY_KEYS.all})
+      queryClient.refetchQueries({queryKey: COMPANY_QUERY_KEYS.lists()})
       toast.success(data.message || 'Empresa actualizada exitosamente')
     },
     onError: (error: any) => {
@@ -156,6 +160,8 @@ export function useCompanyMutations() {
       MultiCompanyAPI.suspendCompany(companyId, reason),
     onSuccess: data => {
       queryClient.invalidateQueries({queryKey: COMPANY_QUERY_KEYS.all})
+      // ✅ Invalidar también las queries de usuarios para refrescar su estado
+      queryClient.invalidateQueries({queryKey: ['users']})
       toast.success(data.message || 'Empresa suspendida exitosamente')
     },
     onError: (error: any) => {
@@ -169,6 +175,8 @@ export function useCompanyMutations() {
       MultiCompanyAPI.reactivateCompany(companyId),
     onSuccess: data => {
       queryClient.invalidateQueries({queryKey: COMPANY_QUERY_KEYS.all})
+      // ✅ Invalidar también las queries de usuarios para refrescar su estado
+      queryClient.invalidateQueries({queryKey: ['users']})
       toast.success(data.message || 'Empresa reactivada exitosamente')
     },
     onError: (error: any) => {
@@ -386,39 +394,27 @@ export function useCompanyActions() {
   )
 
   const handleSuspendCompany = useCallback(
-    async (companyId: string, companyName: string, reason?: string) => {
-      if (
-        window.confirm(
-          `¿Estás seguro de suspender la empresa "${companyName}"?`
-        )
-      ) {
-        try {
-          await mutations.suspendCompany.mutateAsync({companyId, reason})
-          return true
-        } catch (error) {
-          return false
-        }
+    async (companyId: string, companyName?: string, reason?: string) => {
+      try {
+        await mutations.suspendCompany.mutateAsync({companyId, reason})
+        return true
+      } catch (error) {
+        console.error('Error suspendiendo empresa:', error)
+        return false
       }
-      return false
     },
     [mutations.suspendCompany]
   )
 
   const handleReactivateCompany = useCallback(
-    async (companyId: string, companyName: string) => {
-      if (
-        window.confirm(
-          `¿Estás seguro de reactivar la empresa "${companyName}"?`
-        )
-      ) {
-        try {
-          await mutations.reactivateCompany.mutateAsync(companyId)
-          return true
-        } catch (error) {
-          return false
-        }
+    async (companyId: string, companyName?: string) => {
+      try {
+        await mutations.reactivateCompany.mutateAsync(companyId)
+        return true
+      } catch (error) {
+        console.error('Error reactivando empresa:', error)
+        return false
       }
-      return false
     },
     [mutations.reactivateCompany]
   )

@@ -136,10 +136,21 @@ export class UserValidation {
       .isLength({min: 2, max: 50})
       .withMessage('El nombre debe tener entre 2 y 50 caracteres'),
 
+    body('email')
+      .optional()
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Email inválido'),
+
     body('phone')
       .optional()
       .isMobilePhone('es-CL')
       .withMessage('Número de teléfono inválido'),
+
+    body('password')
+      .optional()
+      .isLength({min: 8})
+      .withMessage('La contraseña debe tener al menos 8 caracteres'),
 
     body('status')
       .optional()
@@ -150,6 +161,41 @@ export class UserValidation {
       .optional()
       .isObject()
       .withMessage('Las preferencias deben ser un objeto'),
+
+    // Validaciones para actualización de rol (opcionales)
+    body('roleType')
+      .optional()
+      .isIn(['global', 'company'])
+      .withMessage('Tipo de rol debe ser global o company'),
+
+    body('role')
+      .optional()
+      .isIn(['super_admin', 'admin_empresa', 'manager', 'employee', 'viewer'])
+      .withMessage('Rol inválido'),
+
+    body('companyId')
+      .optional()
+      .custom((value, {req}) => {
+        // Si roleType es 'company', companyId es obligatorio
+        if (req.body.roleType === 'company') {
+          if (!value) {
+            throw new Error('ID de empresa requerido para roles de empresa')
+          }
+          if (!Types.ObjectId.isValid(value)) {
+            throw new Error('ID de empresa inválido')
+          }
+        }
+        // Si se proporciona companyId sin roleType, debe ser válido
+        if (value && !Types.ObjectId.isValid(value)) {
+          throw new Error('ID de empresa inválido')
+        }
+        return true
+      }),
+
+    body('permissions')
+      .optional()
+      .isArray()
+      .withMessage('Los permisos deben ser un array'),
 
     UserValidation.handleValidationErrors
   ]

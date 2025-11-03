@@ -15,7 +15,6 @@ import {
   CompanyAdminDashboard
 } from '@/components/Modules/SuperAdmin'
 import DashboardHeader from '@/components/Layout/DashboardHeader'
-import ModuleNavigationCards from '@/components/Shared/ModuleNavigationCards'
 import {useRouter} from 'next/navigation'
 
 interface SmartHomeRouterProps {

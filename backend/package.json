@@ -8,6 +8,8 @@
     "clean:db": "ts-node -r tsconfig-paths/register src/scripts/utilities/cleanDatabase.ts",
     "verify:db": "ts-node -r tsconfig-paths/register src/scripts/utilities/verifyDatabase.ts",
     "verify:enhanced": "ts-node -r tsconfig-paths/register src/scripts/utilities/verifyEnhancedDatabase.ts",
+    "verify:links": "ts-node -r tsconfig-paths/register src/scripts/runVerification.ts",
+    "verify:links:repair": "ts-node -r tsconfig-paths/register src/scripts/runVerification.ts -- --repair",
     "fix:indexes": "ts-node -r tsconfig-paths/register src/scripts/utilities/fixIndexes.ts",
     "fix:duplicate-emails": "ts-node -r tsconfig-paths/register src/scripts/fixDuplicateEmails.ts",
     "fix:user-stats": "ts-node -r tsconfig-paths/register src/scripts/syncCompanyUserStats.ts",

@@ -5,11 +5,11 @@
  */
 
 import Image from 'next/image'
-import bgImage from '@/public/LogoERP.webp'
+import bgImage from '@/public/LogoSolutions.webp'
 
 export default function DevelopmentBlock() {
   return (
-    <section className='max-w-5xl mx-auto -mt-60 relative rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-indigo-900 via-slate-800 to-gray-900 py-16 px-6 sm:px-12 lg:px-24 border border-indigo-400'>
+    <section className='max-w-5xl mx-auto relative rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-indigo-900 via-slate-800 to-gray-900 py-16 px-6 sm:px-12 lg:px-24 border border-indigo-400'>
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-12 items-center'>
         {/* Mensaje principal */}
         <div className='flex flex-col justify-center h-full'>
@@ -48,9 +48,6 @@ export default function DevelopmentBlock() {
             className='object-contain opacity-90'
             priority
           />
-          <div className='absolute bottom-4 right-4 bg-indigo-700/80 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-lg'>
-            ERP Solutions - Innovando para tu empresa
-          </div>
         </div>
       </div>
     </section>

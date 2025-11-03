@@ -1,16 +1,19 @@
 /**
- * User Management Forms Component
- * @description: Formularios para crear, editar y gestionar usuarios multi-empresa
+ * User Management Forms Component (Enhanced)
+ * @description: Formulario completo para crear/editar usuarios con diseño mejorado
+ * Rediseñado siguiendo el patrón de CreateCompanyForm con FormStepper y validaciones visuales
  * @author: Esteban Soto Ojeda @elsoprimeDev
- * @version: 3.0.0 - Refactored with FormModal and Multi-Step
+ * @version: 4.0.0 - Enhanced UI/UX with FormStepper and Visual Validation
  */
 
 'use client'
 
-import React, {useState, useEffect, useMemo} from 'react'
+import React, {useState, useEffect, useMemo, useRef, useCallback} from 'react'
 import {useUserForm, useUserActions} from '@/hooks/useUserManagement'
 import {useCompanies} from '@/hooks/useCompanyManagement'
-import {RoleBadge, StatusBadge} from '@/components/UI/MultiCompanyBadges'
+import {RoleBadge} from '@/components/UI/MultiCompanyBadges'
+import ChangePasswordForm from './ChangePasswordForm'
+import {rolesTranslate} from '@/locale/es'
 import {
   PermissionUtils,
   GlobalPermission,
@@ -26,23 +29,29 @@ import {
   RoleType
 } from '@/interfaces/EnhanchedCompany/MultiCompany'
 import FormModal from '@/components/Shared/FormModal'
+import ConfirmationDialog, {
+  ConfirmationDialogAction
+} from '@/components/Shared/ConfirmationDialog'
 import {
   UserIcon,
   BuildingOfficeIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
+import {CheckIcon} from '@heroicons/react/24/solid'
 
 // ====== TYPES & CONSTANTS ======
 type UserFormStep = 1 | 2 | 3
 
-interface StepConfig {
+interface UserStepConfig {
   number: UserFormStep
   title: string
   description: string
   icon: React.ComponentType<{className?: string}>
 }
 
-const USER_FORM_STEPS: StepConfig[] = [
+const USER_FORM_STEPS: UserStepConfig[] = [
   {
     number: 1,
     title: 'Información Básica',
@@ -68,19 +77,12 @@ interface UserFormProps {
   isOpen: boolean
   onClose: () => void
   onSuccess?: () => void
-  mode: 'create' | 'edit' | 'invite'
+  mode: 'create' | 'edit'
   companyScope?: boolean
 }
 
-interface RoleAssignmentProps {
-  userId: string
-  currentRoles: IEnhancedUser['roles']
-  isOpen: boolean
-  onClose: () => void
-  onSuccess?: () => void
-}
-
 interface PermissionSelectorProps {
+  className?: string
   selectedPermissions: string[]
   availablePermissions: string[]
   onPermissionChange: (permissions: string[]) => void
@@ -89,6 +91,7 @@ interface PermissionSelectorProps {
 
 // ====== PERMISSION SELECTOR COMPONENT ======
 export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
+  className,
   selectedPermissions,
   availablePermissions,
   onPermissionChange,
@@ -99,7 +102,6 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
       ? PermissionUtils.getAllGlobalPermissions()
       : PermissionUtils.getAllCompanyPermissions()
 
-    // Agrupar permisos por categoría
     return PermissionUtils.groupPermissionsByCategory(permissions)
   }, [isGlobal])
 
@@ -127,12 +129,10 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
     )
 
     if (allSelected) {
-      // Deseleccionar todos los permisos de la categoría
       onPermissionChange(
         selectedPermissions.filter(p => !categoryPermissions.includes(p))
       )
     } else {
-      // Seleccionar todos los permisos de la categoría
       const newPermissions = [...selectedPermissions]
       categoryPermissions.forEach(p => {
         if (!newPermissions.includes(p)) {
@@ -154,7 +154,11 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
         </span>
       </div>
 
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+      <div
+        className={`${
+          className || 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+        } `}
+      >
         {Object.entries(permissionGroups).map(([category, permissions]) => {
           const allSelected = permissions.every(p =>
             selectedPermissions.includes(p)
@@ -169,7 +173,7 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
               className='border border-gray-200 rounded-lg p-3'
             >
               <div className='flex items-center justify-between mb-2'>
-                <label className='flex items-center'>
+                <label className='flex items-center cursor-pointer'>
                   <input
                     type='checkbox'
                     checked={allSelected}
@@ -177,7 +181,11 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
                       if (input)
                         input.indeterminate = someSelected && !allSelected
                     }}
-                    onChange={() => handleCategoryToggle(category)}
+                    onChange={e => {
+                      e.stopPropagation()
+                      handleCategoryToggle(category)
+                    }}
+                    onClick={e => e.stopPropagation()}
                     className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
                   />
                   <span className='ml-2 text-sm font-medium text-gray-700'>
@@ -195,11 +203,18 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 
               <div className='ml-6 space-y-1'>
                 {permissions.map(permission => (
-                  <label key={permission} className='flex items-center'>
+                  <label
+                    key={permission}
+                    className='flex items-center cursor-pointer'
+                  >
                     <input
                       type='checkbox'
                       checked={selectedPermissions.includes(permission)}
-                      onChange={() => handlePermissionToggle(permission)}
+                      onChange={e => {
+                        e.stopPropagation()
+                        handlePermissionToggle(permission)
+                      }}
+                      onClick={e => e.stopPropagation()}
                       className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
                     />
                     <span className='ml-2 text-sm text-gray-600'>
@@ -216,7 +231,7 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
   )
 }
 
-// ====== USER FORM COMPONENT ======
+// ====== USER FORM COMPONENT (ENHANCED) ======
 export const UserForm: React.FC<UserFormProps> = ({
   user,
   isOpen,
@@ -239,6 +254,30 @@ export const UserForm: React.FC<UserFormProps> = ({
   const [selectedCompany, setSelectedCompany] = useState<string>('')
   const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.VIEWER)
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
+  const [isCurrentStepValid, setIsCurrentStepValid] = useState(false)
+  const [validationInProgress, setValidationInProgress] = useState(false)
+
+  // ✅ Ref para rastrear si el usuario hizo clic explícitamente en el botón de submit
+  const isExplicitSubmitRef = useRef(false)
+
+  // Dialog state
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean
+    action: ConfirmationDialogAction
+    title: string
+    message: string
+    confirmText?: string
+    onConfirm?: () => void
+  }>({
+    isOpen: false,
+    action: 'error',
+    title: '',
+    message: ''
+  })
+
+  const closeDialog = () => {
+    setDialogState(prev => ({...prev, isOpen: false}))
+  }
 
   // Load user data for editing
   useEffect(() => {
@@ -252,7 +291,12 @@ export const UserForm: React.FC<UserFormProps> = ({
         setSelectedRole(primaryRole.role)
         setSelectedPermissions(primaryRole.permissions || [])
         if (primaryRole.companyId) {
-          setSelectedCompany(primaryRole.companyId)
+          const companyIdValue =
+            typeof primaryRole.companyId === 'object'
+              ? (primaryRole.companyId as any)._id ||
+                (primaryRole.companyId as any).toString()
+              : primaryRole.companyId
+          setSelectedCompany(companyIdValue)
         }
       }
     }
@@ -266,79 +310,204 @@ export const UserForm: React.FC<UserFormProps> = ({
       setSelectedCompany('')
       setSelectedRole(UserRole.VIEWER)
       setSelectedPermissions([])
+      updateField('password', '')
+      updateField('email', '')
+      setIsCurrentStepValid(false)
+      setValidationInProgress(false)
     }
-  }, [isOpen, resetForm])
+  }, [isOpen, resetForm, updateField])
 
   // Step validation
-  const canProceedToNextStep = useMemo(() => {
-    switch (currentStep) {
-      case 1: // Información básica
-        const {name, email, password, phone} = formData
+  const validateStep = useCallback(
+    async (
+      step: UserFormStep
+    ): Promise<{isValid: boolean; missingFields: string[]}> => {
+      const missingFields: string[] = []
 
-        // Validar campos básicos
-        if (!name?.trim() || !email?.trim()) return false
+      switch (step) {
+        case 1: // Información básica
+          const {name, email, password, phone} = formData
 
-        // En modo crear, validar password con requisitos completos
-        if (mode === 'create') {
-          if (!password || password.length < 8) return false
+          if (!name?.trim()) missingFields.push('Nombre completo')
+          if (!email?.trim()) missingFields.push('Email')
 
-          // Validar requisitos de password: mayúscula, minúscula, número
-          const hasUpperCase = /[A-Z]/.test(password)
-          const hasLowerCase = /[a-z]/.test(password)
-          const hasNumber = /\d/.test(password)
+          // Validación de contraseña según el modo
+          if (mode === 'create') {
+            // En modo creación, la contraseña es obligatoria
+            if (!password || password.length < 8) {
+              missingFields.push('Contraseña (mínimo 8 caracteres)')
+            } else {
+              const hasUpperCase = /[A-Z]/.test(password)
+              const hasLowerCase = /[a-z]/.test(password)
+              const hasNumber = /\d/.test(password)
 
-          if (!hasUpperCase || !hasLowerCase || !hasNumber) return false
-        }
+              if (!hasUpperCase)
+                missingFields.push('Contraseña (falta mayúscula)')
+              if (!hasLowerCase)
+                missingFields.push('Contraseña (falta minúscula)')
+              if (!hasNumber) missingFields.push('Contraseña (falta número)')
+            }
+          } else if (mode === 'edit' && password && password.trim()) {
+            // En modo edición, solo validar si el usuario decidió cambiar la contraseña
+            if (password.length < 8) {
+              missingFields.push('Contraseña (mínimo 8 caracteres)')
+            } else {
+              const hasUpperCase = /[A-Z]/.test(password)
+              const hasLowerCase = /[a-z]/.test(password)
+              const hasNumber = /\d/.test(password)
 
-        // Validar teléfono si está presente (formato chileno)
-        if (phone && phone.trim()) {
-          // Formato: +569XXXXXXXX o 9XXXXXXXX
-          const phoneRegex = /^(\+?56)?9\d{8}$/
-          if (!phoneRegex.test(phone.replace(/\s/g, ''))) return false
-        }
+              if (!hasUpperCase)
+                missingFields.push('Contraseña (falta mayúscula)')
+              if (!hasLowerCase)
+                missingFields.push('Contraseña (falta minúscula)')
+              if (!hasNumber) missingFields.push('Contraseña (falta número)')
+            }
+            // Si está vacía en modo edición, es válido (no se cambiará)
+          }
 
-        return true
+          if (phone && phone.trim()) {
+            const phoneRegex = /^(\+?56)?9\d{8}$/
+            if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+              missingFields.push('Teléfono (formato inválido)')
+            }
+          }
 
-      case 2: // Empresa y rol
-        return Boolean(
-          selectedRole &&
-            (selectedRole === UserRole.SUPER_ADMIN ||
-              companyScope ||
-              selectedCompany)
-        )
-      case 3: // Permisos (requiere al menos un permiso seleccionado)
-        return selectedPermissions.length > 0
-      default:
-        return false
-    }
-  }, [
-    currentStep,
+          return {isValid: missingFields.length === 0, missingFields}
+
+        case 2: // Empresa y rol
+          if (!selectedRole) missingFields.push('Rol')
+          if (
+            selectedRole !== UserRole.SUPER_ADMIN &&
+            !companyScope &&
+            !selectedCompany
+          ) {
+            missingFields.push('Empresa')
+          }
+
+          return {isValid: missingFields.length === 0, missingFields}
+
+        case 3: // Permisos
+          if (selectedPermissions.length === 0) {
+            missingFields.push('Al menos un permiso')
+          }
+
+          return {isValid: missingFields.length === 0, missingFields}
+
+        default:
+          return {isValid: false, missingFields}
+      }
+    },
+    [
+      formData,
+      mode,
+      selectedRole,
+      selectedCompany,
+      companyScope,
+      selectedPermissions
+    ]
+  )
+
+  // Real-time validation with debounce
+  const formValues = {
     formData,
-    mode,
     selectedRole,
     selectedCompany,
-    companyScope,
     selectedPermissions
-  ])
+  }
+  const lastValidationTimeRef = useRef(0)
+
+  useEffect(() => {
+    const now = Date.now()
+    const shouldValidate = now - lastValidationTimeRef.current > 500
+
+    if (!shouldValidate) return
+
+    let isMounted = true
+    setValidationInProgress(true)
+
+    const timeoutId = setTimeout(async () => {
+      if (!isMounted) return
+
+      try {
+        const validation = await validateStep(currentStep)
+        if (isMounted) {
+          setIsCurrentStepValid(validation.isValid)
+          lastValidationTimeRef.current = Date.now()
+        }
+      } catch (error) {
+        console.error('Error en validación:', error)
+        if (isMounted) {
+          setIsCurrentStepValid(false)
+        }
+      } finally {
+        if (isMounted) {
+          setValidationInProgress(false)
+        }
+      }
+    }, 300)
+
+    return () => {
+      isMounted = false
+      clearTimeout(timeoutId)
+    }
+  }, [formValues, currentStep, validateStep])
+
+  // Reset validation state when opening
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStep(1)
+      setIsCurrentStepValid(false)
+      setValidationInProgress(false)
+    }
+  }, [isOpen])
 
   // Step navigation
-  const handleNext = () => {
-    if (canProceedToNextStep && currentStep < 3) {
-      setCurrentStep(prev => (prev + 1) as UserFormStep)
+  const nextStep = async (e?: React.MouseEvent) => {
+    e?.preventDefault()
+    e?.stopPropagation()
+
+    try {
+      setValidationInProgress(true)
+      const validation = await validateStep(currentStep)
+
+      if (validation.isValid) {
+        const newStep = Math.min(currentStep + 1, 3) as UserFormStep
+        setCurrentStep(newStep)
+      } else {
+        const missingFieldsList = validation.missingFields.join(', ')
+        const message =
+          validation.missingFields.length === 1
+            ? `Por favor complete el campo requerido: ${missingFieldsList}`
+            : `Por favor complete los siguientes campos: ${missingFieldsList}`
+
+        setDialogState({
+          isOpen: true,
+          action: 'warning',
+          title: 'Campos requeridos incompletos',
+          message,
+          confirmText: 'Entendido',
+          onConfirm: closeDialog
+        })
+      }
+    } catch (error) {
+      console.error('Error en nextStep:', error)
+    } finally {
+      setValidationInProgress(false)
     }
   }
 
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(prev => (prev - 1) as UserFormStep)
-    }
+  const prevStep = (e?: React.MouseEvent) => {
+    e?.preventDefault()
+    e?.stopPropagation()
+    setCurrentStep(prev => Math.max(prev - 1, 1) as UserFormStep)
   }
 
-  const handleStepClick = (step: UserFormStep) => {
-    // Solo permitir navegar a pasos anteriores o al siguiente si es válido
+  const handleStepClick = (step: UserFormStep, e?: React.MouseEvent) => {
+    e?.preventDefault()
+    e?.stopPropagation()
     if (
       step < currentStep ||
-      (step === currentStep + 1 && canProceedToNextStep)
+      (step === currentStep + 1 && isCurrentStepValid)
     ) {
       setCurrentStep(step)
     }
@@ -348,12 +517,21 @@ export const UserForm: React.FC<UserFormProps> = ({
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
 
-    if (!validateForm()) return
+    if (!isExplicitSubmitRef.current) {
+      console.log(
+        `🚫 Submit bloqueado (modo ${mode}): No fue un submit explícito`
+      )
+      return
+    }
+
+    isExplicitSubmitRef.current = false
+
+    // No usar validateForm() del hook porque ya tenemos validación por pasos
+    // y el hook no conoce el modo (create/edit)
 
     let userData: any = {
       name: formData.name!,
       email: formData.email!,
-      // Solo enviar phone si no está vacío (backend requiere formato chileno si se envía)
       ...(formData.phone?.trim() && {phone: formData.phone.trim()}),
       role: selectedRole,
       permissions: selectedPermissions,
@@ -367,15 +545,15 @@ export const UserForm: React.FC<UserFormProps> = ({
           : RoleType.COMPANY
     }
 
-    // Solo agregar password para crear usuarios
-    if (mode === 'create' && formData.password) {
-      userData.password = formData.password
+    if (formData.password && formData.password.trim()) {
+      userData.password = formData.password.trim()
     }
 
-    console.log('📤 Datos a enviar (frontend):', {
+    console.log(`📤 Datos a enviar (modo ${mode}):`, {
       ...userData,
       password: userData.password ? '***hidden***' : undefined,
-      permissionsCount: userData.permissions?.length || 0
+      permissionsCount: userData.permissions?.length || 0,
+      willUpdatePassword: Boolean(userData.password)
     })
 
     const success =
@@ -391,7 +569,6 @@ export const UserForm: React.FC<UserFormProps> = ({
 
   const getAvailableRoles = () => {
     if (companyScope) {
-      // En scope de empresa, no mostrar SUPER_ADMIN
       return [
         UserRole.ADMIN_EMPRESA,
         UserRole.MANAGER,
@@ -408,348 +585,535 @@ export const UserForm: React.FC<UserFormProps> = ({
       : PermissionUtils.getAllCompanyPermissions()
   }
 
-  // Get modal title
   const modalTitle = useMemo(() => {
     if (mode === 'create') return 'Crear Nuevo Usuario'
     if (mode === 'edit') return 'Editar Usuario'
-    return 'Invitar Usuario'
+    return 'Usuario'
   }, [mode])
 
-  return (
-    <FormModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={modalTitle}
-      size='3xl'
-      enableOverlayClose={false}
-    >
-      <div className='px-6 py-6'>
-        {/* Step Indicator */}
-        <div className='mb-8'>
-          <div className='flex items-center justify-between'>
-            {USER_FORM_STEPS.map((step, index) => {
-              const StepIcon = step.icon
-              const isCompleted = currentStep > step.number
-              const isCurrent = currentStep === step.number
-              const isClickable =
-                step.number < currentStep ||
-                (step.number === currentStep + 1 && canProceedToNextStep)
+  const handleClose = () => {
+    resetForm()
+    setCurrentStep(1)
+    setIsCurrentStepValid(false)
+    setValidationInProgress(false)
+    onClose()
+  }
 
-              return (
-                <React.Fragment key={step.number}>
-                  <div className='relative flex flex-col items-center'>
-                    <button
-                      type='button'
-                      onClick={() => handleStepClick(step.number)}
-                      disabled={!isClickable}
-                      className={`
-                        flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all
-                        ${
-                          isCompleted
-                            ? 'bg-green-600 border-green-600 text-white'
-                            : isCurrent
-                            ? 'bg-blue-600 border-blue-600 text-white ring-4 ring-blue-600/20'
-                            : 'bg-white border-gray-300 text-gray-400'
-                        }
-                        ${
-                          isClickable
-                            ? 'cursor-pointer hover:scale-105'
-                            : 'cursor-default'
-                        }
-                      `}
-                    >
-                      <StepIcon className='h-5 w-5' />
-                    </button>
-                    <div className='mt-2 text-center max-w-24'>
-                      <div
-                        className={`text-xs font-medium ${
-                          isCurrent
-                            ? 'text-blue-600'
-                            : isCompleted
-                            ? 'text-green-600'
-                            : 'text-gray-500'
-                        }`}
-                      >
-                        {step.title}
-                      </div>
-                    </div>
-                  </div>
-
-                  {index < USER_FORM_STEPS.length - 1 && (
-                    <div className='flex-1 flex items-center px-2 pb-8'>
-                      <div
-                        className={`h-0.5 w-full ${
-                          isCompleted ? 'bg-green-600' : 'bg-gray-300'
-                        }`}
-                      />
-                    </div>
-                  )}
-                </React.Fragment>
-              )
-            })}
+  // Validation indicator
+  const renderValidationIndicator = () => {
+    if (isCurrentStepValid) {
+      return (
+        <div className='bg-green-50 border border-green-200 rounded-lg p-4'>
+          <div className='flex items-center'>
+            <CheckCircleIcon className='w-5 h-5 text-green-600 mr-2' />
+            <p className='text-sm text-green-800'>
+              {currentStep === 1 && mode === 'edit'
+                ? 'Información básica completa. Puedes continuar sin cambiar la contraseña.'
+                : 'Todos los campos requeridos están completos'}
+            </p>
           </div>
         </div>
+      )
+    }
 
-        {/* Form Content */}
-        <form onSubmit={handleSubmit}>
-          <div className='min-h-[400px]'>
-            {/* STEP 1: Información Básica */}
-            {currentStep === 1 && (
-              <div className='space-y-6'>
-                <div className='bg-blue-50 border-l-4 border-blue-600 p-4 mb-6'>
-                  <p className='text-sm text-blue-700'>
-                    Completa la información personal básica del usuario
+    return (
+      <div className='bg-amber-50 border border-amber-200 rounded-lg p-4'>
+        <div className='flex items-center'>
+          <ExclamationTriangleIcon className='w-5 h-5 text-amber-600 mr-2' />
+          <p className='text-sm text-amber-800'>
+            {currentStep === 1 && mode === 'edit'
+              ? 'Complete los campos obligatorios (nombre y email). La contraseña es opcional.'
+              : 'Complete todos los campos obligatorios para continuar al siguiente paso'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <>
+      <FormModal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title={modalTitle}
+        size='3xl'
+      >
+        <form
+          onSubmit={e => {
+            e.preventDefault()
+            if (currentStep === 3) {
+              handleSubmit(e)
+            }
+          }}
+          className='p-6'
+        >
+          {/* Custom User Form Stepper */}
+          <div className='mb-8'>
+            <div className='relative'>
+              {/* Steps Container */}
+              <div className='flex items-center justify-between relative'>
+                {USER_FORM_STEPS.map((step, index) => {
+                  const status =
+                    step.number < currentStep
+                      ? 'completed'
+                      : step.number === currentStep
+                      ? 'current'
+                      : 'pending'
+                  const Icon = step.icon
+
+                  return (
+                    <React.Fragment key={step.number}>
+                      {/* Step Circle */}
+                      <div className='flex flex-col items-center relative z-10 flex-1'>
+                        <button
+                          type='button'
+                          onClick={e => handleStepClick(step.number, e)}
+                          className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                            status === 'completed'
+                              ? 'bg-gradient-to-br from-green-500 to-green-600 border-green-500 text-white shadow-lg'
+                              : status === 'current'
+                              ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-600 text-white shadow-xl ring-4 ring-blue-600/20 scale-110'
+                              : 'bg-white border-gray-300 text-gray-400'
+                          }`}
+                          disabled={status === 'pending'}
+                        >
+                          {status === 'completed' ? (
+                            <CheckIcon className='w-6 h-6' />
+                          ) : (
+                            <Icon className='w-6 h-6' />
+                          )}
+                        </button>
+
+                        <div className='mt-2 text-center'>
+                          <p
+                            className={`text-xs sm:text-sm font-medium ${
+                              status === 'current'
+                                ? 'text-blue-600'
+                                : status === 'completed'
+                                ? 'text-green-600'
+                                : 'text-gray-500'
+                            }`}
+                          >
+                            {step.title}
+                          </p>
+                          <p className='text-xs text-gray-500 mt-0.5 hidden sm:block'>
+                            {step.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Connector Line */}
+                      {index < USER_FORM_STEPS.length - 1 && (
+                        <div className='flex-1 h-0.5 mx-2 -mt-12'>
+                          <div
+                            className={`h-full transition-all duration-300 ${
+                              step.number < currentStep
+                                ? 'bg-gradient-to-r from-green-500 to-green-400'
+                                : 'bg-gray-300'
+                            }`}
+                          />
+                        </div>
+                      )}
+                    </React.Fragment>
+                  )
+                })}
+              </div>
+
+              {/* Progress Bar */}
+              <div className='mt-6 h-2 bg-gray-200 rounded-full overflow-hidden'>
+                <div
+                  className='h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500 ease-out'
+                  style={{
+                    width: `${
+                      ((currentStep - 1) / (USER_FORM_STEPS.length - 1)) * 100
+                    }%`
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* STEP 1: Información Básica */}
+          {currentStep === 1 && (
+            <div className='space-y-6'>
+              {renderValidationIndicator()}
+
+              <div className='bg-blue-50 border-l-4 border-blue-600 p-4'>
+                <p className='text-sm text-blue-700'>
+                  Completa la información personal básica del usuario
+                </p>
+              </div>
+
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-1'>
+                    Nombre completo *
+                  </label>
+                  <input
+                    type='text'
+                    value={formData.name || ''}
+                    onChange={e => updateField('name', e.target.value)}
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                    placeholder='Juan Pérez González'
+                  />
+                </div>
+
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-1'>
+                    Email *
+                  </label>
+                  <input
+                    type='email'
+                    value={formData.email || ''}
+                    onChange={e => updateField('email', e.target.value)}
+                    autoComplete='off'
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                    placeholder='juan.perez@empresa.com'
+                  />
+                </div>
+
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-1'>
+                    Teléfono
+                  </label>
+                  <input
+                    type='tel'
+                    value={formData.phone || ''}
+                    onChange={e => updateField('phone', e.target.value)}
+                    autoComplete='off'
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                    placeholder='+56912345678 (formato chileno)'
+                  />
+                  <p className='mt-1 text-xs text-gray-500'>
+                    Formato: +569XXXXXXXX (opcional)
                   </p>
                 </div>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-1'>
-                      Nombre completo *
-                    </label>
-                    <input
-                      type='text'
-                      value={formData.name || ''}
-                      onChange={e => updateField('name', e.target.value)}
-                      className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                      placeholder='Ej: Juan Pérez'
-                    />
-                  </div>
-
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-1'>
-                      Email *
-                    </label>
-                    <input
-                      type='email'
-                      value={formData.email || ''}
-                      onChange={e => updateField('email', e.target.value)}
-                      className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                      placeholder='juan.perez@empresa.com'
-                    />
-                  </div>
-
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-1'>
-                      Teléfono
-                    </label>
-                    <input
-                      type='tel'
-                      value={formData.phone || ''}
-                      onChange={e => updateField('phone', e.target.value)}
-                      className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                      placeholder='+56912345678 (formato chileno)'
-                    />
-                    <p className='mt-1 text-xs text-gray-500'>
-                      Formato: +569XXXXXXXX (opcional, deja vacío si no aplica)
-                    </p>
-                  </div>
-
-                  {mode === 'create' && (
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-1'>
-                        Contraseña *
-                      </label>
-                      <input
-                        type='password'
-                        value={formData.password || ''}
-                        onChange={e => updateField('password', e.target.value)}
-                        className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        placeholder='Mínimo 8 caracteres'
-                        minLength={8}
-                      />
-                      <p className='mt-1 text-xs text-gray-500'>
-                        Debe contener: 8+ caracteres, 1 mayúscula, 1 minúscula,
-                        1 número
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-1'>
+                    Contraseña {mode === 'create' ? '*' : '(opcional)'}
+                  </label>
+                  <input
+                    type='password'
+                    value={formData.password || ''}
+                    onChange={e => updateField('password', e.target.value)}
+                    autoComplete='new-password'
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                    placeholder={
+                      mode === 'edit'
+                        ? 'Dejar vacío para mantener la actual'
+                        : 'Mínimo 8 caracteres'
+                    }
+                    minLength={mode === 'create' ? 8 : undefined}
+                  />
+                  {mode === 'edit' && !formData.password && (
+                    <div className='mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md'>
+                      <p className='text-xs text-blue-700 flex items-center'>
+                        <svg
+                          className='w-4 h-4 mr-1.5 flex-shrink-0'
+                          fill='none'
+                          stroke='currentColor'
+                          viewBox='0 0 24 24'
+                        >
+                          <path
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                            strokeWidth={2}
+                            d='M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+                          />
+                        </svg>
+                        La contraseña actual se mantendrá sin cambios. Puedes
+                        continuar al siguiente paso sin modificarla.
                       </p>
                     </div>
                   )}
-                </div>
-              </div>
-            )}
-
-            {/* STEP 2: Empresa y Rol */}
-            {currentStep === 2 && (
-              <div className='space-y-6'>
-                <div className='bg-blue-50 border-l-4 border-blue-600 p-4 mb-6'>
-                  <p className='text-sm text-blue-700'>
-                    Asigna el rol y empresa correspondiente al usuario
-                  </p>
-                </div>
-
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-1'>
-                      Rol *
-                    </label>
-                    <select
-                      value={selectedRole}
-                      onChange={e =>
-                        setSelectedRole(e.target.value as UserRole)
-                      }
-                      className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                    >
-                      {getAvailableRoles().map(role => (
-                        <option key={role} value={role}>
-                          {role
-                            .split('_')
-                            .map(
-                              word =>
-                                word.charAt(0).toUpperCase() +
-                                word.slice(1).toLowerCase()
-                            )
-                            .join(' ')}
-                        </option>
-                      ))}
-                    </select>
-                    <div className='mt-2'>
-                      <RoleBadge role={selectedRole} size='sm' />
-                    </div>
-                  </div>
-
-                  {!companyScope && selectedRole !== UserRole.SUPER_ADMIN && (
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-1'>
-                        Empresa *
-                      </label>
-                      <select
-                        value={selectedCompany}
-                        onChange={e => setSelectedCompany(e.target.value)}
-                        className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        disabled={companiesLoading}
-                      >
-                        <option value=''>
-                          {companiesLoading
-                            ? 'Cargando empresas...'
-                            : 'Seleccionar empresa...'}
-                        </option>
-                        {companies.map(company => (
-                          <option key={company._id} value={company._id}>
-                            {company.name}
-                          </option>
-                        ))}
-                      </select>
-                      {companies.length === 0 && !companiesLoading && (
-                        <p className='mt-1 text-xs text-amber-600'>
-                          {companiesError
-                            ? `Error al cargar empresas: ${
-                                companiesError.message || 'Error desconocido'
-                              }`
-                            : 'No hay empresas disponibles. Crea una empresa primero.'}
-                        </p>
-                      )}
-                      {!companiesLoading && companies.length > 0 && (
-                        <p className='mt-1 text-xs text-gray-500'>
-                          {companies.length} empresa(s) disponible(s)
-                        </p>
-                      )}
+                  {(mode === 'create' || formData.password) && (
+                    <div className='mt-2 space-y-1'>
+                      <p className='text-xs text-gray-600 font-medium'>
+                        Requisitos de contraseña:
+                      </p>
+                      <div className='flex items-center space-x-2'>
+                        <span
+                          className={`text-xs ${
+                            formData.password && formData.password.length >= 8
+                              ? 'text-green-600'
+                              : 'text-gray-500'
+                          }`}
+                        >
+                          {formData.password && formData.password.length >= 8
+                            ? '✓'
+                            : '○'}{' '}
+                          Mínimo 8 caracteres
+                        </span>
+                      </div>
+                      <div className='flex items-center space-x-2'>
+                        <span
+                          className={`text-xs ${
+                            formData.password && /[A-Z]/.test(formData.password)
+                              ? 'text-green-600'
+                              : 'text-gray-500'
+                          }`}
+                        >
+                          {formData.password && /[A-Z]/.test(formData.password)
+                            ? '✓'
+                            : '○'}{' '}
+                          Una mayúscula
+                        </span>
+                      </div>
+                      <div className='flex items-center space-x-2'>
+                        <span
+                          className={`text-xs ${
+                            formData.password && /[a-z]/.test(formData.password)
+                              ? 'text-green-600'
+                              : 'text-gray-500'
+                          }`}
+                        >
+                          {formData.password && /[a-z]/.test(formData.password)
+                            ? '✓'
+                            : '○'}{' '}
+                          Una minúscula
+                        </span>
+                      </div>
+                      <div className='flex items-center space-x-2'>
+                        <span
+                          className={`text-xs ${
+                            formData.password && /\d/.test(formData.password)
+                              ? 'text-green-600'
+                              : 'text-gray-500'
+                          }`}
+                        >
+                          {formData.password && /\d/.test(formData.password)
+                            ? '✓'
+                            : '○'}{' '}
+                          Un número
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* STEP 3: Permisos */}
-            {currentStep === 3 && (
-              <div className='space-y-6'>
-                <div className='bg-blue-50 border-l-4 border-blue-600 p-4 mb-6'>
-                  <div className='flex items-center justify-between'>
-                    <p className='text-sm text-blue-700'>
-                      Configura los permisos específicos para este usuario
-                    </p>
-                    <span className='text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded'>
-                      {selectedPermissions.length} permiso
-                      {selectedPermissions.length !== 1 ? 's' : ''} seleccionado
-                      {selectedPermissions.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
+          {/* STEP 2: Empresa y Rol */}
+          {currentStep === 2 && (
+            <div className='space-y-6'>
+              {renderValidationIndicator()}
+
+              <div className='bg-blue-50 border-l-4 border-blue-600 p-4'>
+                <p className='text-sm text-blue-700'>
+                  Selecciona la empresa y el rol que tendrá este usuario
+                </p>
+              </div>
+
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-1'>
+                    Rol *
+                  </label>
+                  <select
+                    value={selectedRole}
+                    onChange={e => setSelectedRole(e.target.value as UserRole)}
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  >
+                    {getAvailableRoles().map(role => (
+                      <option key={role} value={role}>
+                        {rolesTranslate[role] || role}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <PermissionSelector
-                  selectedPermissions={selectedPermissions}
-                  availablePermissions={getAvailablePermissions()}
-                  onPermissionChange={setSelectedPermissions}
-                  isGlobal={selectedRole === UserRole.SUPER_ADMIN}
-                />
-
-                {/* Mensaje de advertencia si no hay permisos seleccionados */}
-                {selectedPermissions.length === 0 && (
-                  <div className='bg-yellow-50 border-l-4 border-yellow-400 p-4'>
-                    <div className='flex items-center'>
-                      <div className='flex-shrink-0'>
-                        <svg
-                          className='h-5 w-5 text-yellow-400'
-                          viewBox='0 0 20 20'
-                          fill='currentColor'
-                        >
-                          <path
-                            fillRule='evenodd'
-                            d='M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z'
-                            clipRule='evenodd'
-                          />
-                        </svg>
-                      </div>
-                      <div className='ml-3'>
-                        <p className='text-sm text-yellow-700'>
-                          Debes seleccionar al menos un permiso para continuar
-                        </p>
-                      </div>
-                    </div>
+                {selectedRole !== UserRole.SUPER_ADMIN && !companyScope && (
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 mb-1'>
+                      Empresa *
+                    </label>
+                    <select
+                      value={selectedCompany}
+                      onChange={e => setSelectedCompany(e.target.value)}
+                      disabled={companiesLoading}
+                      className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100'
+                    >
+                      <option value=''>Seleccionar empresa</option>
+                      {companies?.map((company: IEnhancedCompany) => (
+                        <option key={company._id} value={company._id}>
+                          {company.name}
+                        </option>
+                      ))}
+                    </select>
+                    {companiesLoading && (
+                      <p className='mt-1 text-xs text-gray-500'>
+                        Cargando empresas...
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
+
+              {selectedRole !== UserRole.SUPER_ADMIN && companyScope && (
+                <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
+                  <p className='text-sm text-blue-800'>
+                    Este usuario será asignado a tu empresa automáticamente
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STEP 3: Permisos */}
+          {currentStep === 3 && (
+            <div className='space-y-6'>
+              {renderValidationIndicator()}
+
+              <div className='bg-blue-50 border-l-4 border-blue-600 p-4'>
+                <div className='flex items-center justify-between'>
+                  <p className='text-sm text-blue-700'>
+                    Configura los permisos específicos para este usuario
+                  </p>
+                  <span className='text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded'>
+                    {selectedPermissions.length} permiso
+                    {selectedPermissions.length !== 1 ? 's' : ''} seleccionado
+                    {selectedPermissions.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              </div>
+
+              <PermissionSelector
+                selectedPermissions={selectedPermissions}
+                availablePermissions={getAvailablePermissions()}
+                onPermissionChange={setSelectedPermissions}
+                isGlobal={selectedRole === UserRole.SUPER_ADMIN}
+              />
+
+              {selectedPermissions.length === 0 && (
+                <div className='bg-yellow-50 border-l-4 border-yellow-400 p-4'>
+                  <div className='flex items-center'>
+                    <ExclamationTriangleIcon className='h-5 w-5 text-yellow-400 mr-2' />
+                    <p className='text-sm text-yellow-700'>
+                      Debes seleccionar al menos un permiso para continuar
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Resumen */}
+              <div className='bg-gray-50 rounded-lg p-4 space-y-3'>
+                <h4 className='text-sm font-semibold text-gray-900'>
+                  Resumen de Usuario
+                </h4>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-3 text-sm'>
+                  <div>
+                    <strong>Nombre:</strong> {formData.name}
+                  </div>
+                  <div>
+                    <strong>Email:</strong> {formData.email}
+                  </div>
+                  <div>
+                    <strong>Rol:</strong>{' '}
+                    {rolesTranslate[selectedRole] || selectedRole}
+                  </div>
+                  {selectedRole !== UserRole.SUPER_ADMIN && selectedCompany && (
+                    <div>
+                      <strong>Empresa:</strong>{' '}
+                      {
+                        companies?.find(
+                          (c: IEnhancedCompany) => c._id === selectedCompany
+                        )?.name
+                      }
+                    </div>
+                  )}
+                  <div className='md:col-span-2'>
+                    <strong>Permisos:</strong> {selectedPermissions.length}{' '}
+                    seleccionados
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Navigation Buttons */}
-          <div className='flex items-center justify-between pt-6 mt-6 border-t border-gray-200'>
-            <button
-              type='button'
-              onClick={handlePrevious}
-              disabled={currentStep === 1}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                currentStep === 1
-                  ? 'text-gray-400 cursor-not-allowed'
-                  : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
-              }`}
-            >
-              Anterior
-            </button>
+          <div className='flex justify-between mt-8 pt-6 border-t border-gray-200'>
+            <div>
+              {currentStep > 1 && (
+                <button
+                  type='button'
+                  onClick={e => prevStep(e)}
+                  className='px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors'
+                >
+                  Anterior
+                </button>
+              )}
+            </div>
 
-            <span className='text-sm text-gray-500'>
-              Paso {currentStep} de 3
-            </span>
-
-            {currentStep === 3 ? (
-              <button
-                type='submit'
-                disabled={isLoading || !canProceedToNextStep}
-                className='px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-              >
-                {isLoading
-                  ? 'Procesando...'
-                  : mode === 'edit'
-                  ? 'Actualizar'
-                  : 'Crear Usuario'}
-              </button>
-            ) : (
-              <button
-                type='button'
-                onClick={handleNext}
-                disabled={!canProceedToNextStep}
-                className='px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-              >
-                Siguiente
-              </button>
-            )}
+            <div>
+              {currentStep < 3 ? (
+                <button
+                  type='button'
+                  onClick={e => nextStep(e)}
+                  disabled={!isCurrentStepValid || validationInProgress}
+                  className={`px-6 py-2 rounded-md transition-colors ${
+                    isCurrentStepValid && !validationInProgress
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  title={
+                    !isCurrentStepValid
+                      ? 'Complete todos los campos requeridos para continuar'
+                      : ''
+                  }
+                >
+                  {validationInProgress ? 'Validando...' : 'Siguiente'}
+                </button>
+              ) : (
+                <button
+                  type='submit'
+                  onClick={() => {
+                    isExplicitSubmitRef.current = true
+                  }}
+                  disabled={isLoading || !isCurrentStepValid}
+                  className={`px-6 py-2 rounded-md transition-colors ${
+                    !isLoading && isCurrentStepValid
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {isLoading
+                    ? 'Procesando...'
+                    : mode === 'edit'
+                    ? 'Actualizar Usuario'
+                    : 'Crear Usuario'}
+                </button>
+              )}
+            </div>
           </div>
         </form>
-      </div>
-    </FormModal>
+      </FormModal>
+
+      <ConfirmationDialog
+        isOpen={dialogState.isOpen}
+        action={dialogState.action}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        onConfirm={dialogState.onConfirm || closeDialog}
+        onClose={closeDialog}
+      />
+    </>
   )
 }
 
 // ====== ROLE ASSIGNMENT COMPONENT ======
+interface RoleAssignmentProps {
+  userId: string
+  currentRoles: IEnhancedUser['roles']
+  isOpen: boolean
+  onClose: () => void
+  onSuccess?: () => void
+}
+
 export const RoleAssignmentForm: React.FC<RoleAssignmentProps> = ({
   userId,
   currentRoles,
@@ -767,8 +1131,8 @@ export const RoleAssignmentForm: React.FC<RoleAssignmentProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className='fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50'>
-      <div className='relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white'>
+    <div className='fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto w-full h-full z-50'>
+      <div className='relative top-20 mx-auto p-5 border w-full max-w-5xl shadow-lg rounded-md bg-white'>
         <div className='mt-3'>
           <div className='flex items-center justify-between mb-4'>
             <h3 className='text-lg font-medium text-gray-900'>
@@ -796,7 +1160,7 @@ export const RoleAssignmentForm: React.FC<RoleAssignmentProps> = ({
           </div>
 
           {/* Roles actuales */}
-          <div className='mb-6'>
+          <div className='mb-6 '>
             <h4 className='text-sm font-medium text-gray-700 mb-2'>
               Roles Actuales
             </h4>
@@ -875,6 +1239,7 @@ export const RoleAssignmentForm: React.FC<RoleAssignmentProps> = ({
             </div>
 
             <PermissionSelector
+              className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
               selectedPermissions={selectedPermissions}
               availablePermissions={PermissionUtils.getAllCompanyPermissions()}
               onPermissionChange={setSelectedPermissions}
@@ -903,8 +1268,6 @@ export const RoleAssignmentForm: React.FC<RoleAssignmentProps> = ({
   )
 }
 
-export default {
-  UserForm,
-  RoleAssignmentForm,
-  PermissionSelector
-}
+// Exportar componentes
+export {ChangePasswordForm}
+export default UserForm

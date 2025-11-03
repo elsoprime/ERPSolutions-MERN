@@ -214,6 +214,17 @@ export interface IEnhancedCompany {
   trialEndsAt?: Date
   subscriptionEndsAt?: Date
 
+  // Tracking de suspensión
+  suspendedAt?: Date
+  suspendedBy?: Types.ObjectId
+  suspensionReason?:
+    | 'payment_failed'
+    | 'manual_admin'
+    | 'policy_violation'
+    | 'user_request'
+    | 'subscription_ended'
+    | null
+
   // Fechas del sistema
   createdAt: Date
   updatedAt: Date

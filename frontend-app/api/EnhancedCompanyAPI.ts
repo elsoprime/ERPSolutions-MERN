@@ -188,22 +188,20 @@ export class EnhancedCompanyAPI {
 
   /**
    * Suspender empresa (Solo Super Admin)
-   * NOTA: Esta funcionalidad requiere implementación en backend
+   * Usa DELETE endpoint por compatibilidad con backend
    */
   static async suspendCompany(
     companyId: string,
     reason?: string
   ): Promise<ICompanyActionResult> {
     try {
-      // Por ahora, actualizar el status a suspended
-      const response = await api.put(`${this.baseURL}/${companyId}`, {
-        status: 'suspended',
-        suspensionReason: reason
+      const response = await api.delete(`${this.baseURL}/${companyId}`, {
+        data: {reason: reason || 'manual_admin'}
       })
       return {
         success: true,
-        message: 'Empresa suspendida exitosamente',
-        company: response.data.company
+        message: response.data.message || 'Empresa suspendida exitosamente',
+        company: response.data.data
       }
     } catch (error: any) {
       console.error('Error al suspender empresa:', error)
@@ -217,20 +215,16 @@ export class EnhancedCompanyAPI {
 
   /**
    * Reactivar empresa (Solo Super Admin)
-   * NOTA: Esta funcionalidad requiere implementación en backend
    */
   static async reactivateCompany(
     companyId: string
   ): Promise<ICompanyActionResult> {
     try {
-      // Por ahora, actualizar el status a active
-      const response = await api.put(`${this.baseURL}/${companyId}`, {
-        status: 'active'
-      })
+      const response = await api.post(`${this.baseURL}/${companyId}/reactivate`)
       return {
         success: true,
-        message: 'Empresa reactivada exitosamente',
-        company: response.data.company
+        message: response.data.message || 'Empresa reactivada exitosamente',
+        company: response.data.data
       }
     } catch (error: any) {
       console.error('Error al reactivar empresa:', error)

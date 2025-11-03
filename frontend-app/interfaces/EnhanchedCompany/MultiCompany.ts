@@ -90,9 +90,16 @@ export interface ICreateUserRequest {
 
 export interface IUpdateUserRequest {
   name?: string
+  email?: string
   phone?: string
   status?: UserStatus
+  password?: string
   preferences?: Partial<IEnhancedUser['preferences']>
+  // Campos de rol (opcionales, para actualizar rol y permisos)
+  role?: UserRole
+  roleType?: RoleType
+  companyId?: string
+  permissions?: string[]
 }
 
 export interface IAssignRoleRequest {

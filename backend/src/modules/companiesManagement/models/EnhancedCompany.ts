@@ -40,6 +40,8 @@ export interface IEnhancedCompanyDocument
   updateStats(): Promise<void>
   upgradeToTrialExtended(days: number): Promise<void>
   changeSubscriptionPlan(newPlan: SubscriptionPlan): Promise<void>
+  suspendCompany(reason: string, suspendedBy: Types.ObjectId): Promise<void>
+  reactivateCompany(): Promise<void>
 }
 
 // ============ ESQUEMAS ANIDADOS ============
@@ -481,6 +483,32 @@ const EnhancedCompanySchema = new Schema<IEnhancedCompanyDocument>(
     subscriptionEndsAt: {
       type: Date,
       default: null
+    },
+
+    // Tracking de suspensión
+    suspendedAt: {
+      type: Date,
+      default: null
+    },
+    suspendedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'EnhancedUser',
+      default: null
+    },
+    suspensionReason: {
+      type: String,
+      enum: {
+        values: [
+          null,
+          'payment_failed',
+          'manual_admin',
+          'policy_violation',
+          'user_request',
+          'subscription_ended'
+        ],
+        message: 'Razón de suspensión no válida'
+      },
+      default: null
     }
   },
   {
@@ -554,13 +582,22 @@ EnhancedCompanySchema.methods.updateStats = async function (): Promise<void> {
 
   try {
     const [userCount, productCount] = await Promise.all([
-      EnhancedUser.countDocuments({primaryCompanyId: this._id}),
+      // Solo contar usuarios activos vinculados a esta empresa
+      EnhancedUser.countDocuments({
+        primaryCompanyId: this._id,
+        status: 'active' // ✅ Filtrar solo usuarios activos
+      }),
       Product?.countDocuments?.({companyId: this._id}) || 0
     ])
 
     this.stats.totalUsers = userCount
     this.stats.totalProducts = productCount
     this.stats.lastActivity = new Date()
+
+    console.log(`📊 Stats actualizadas para empresa ${this._id}:`, {
+      totalUsers: this.stats.totalUsers,
+      totalProducts: this.stats.totalProducts
+    })
 
     await this.save()
   } catch (error) {
@@ -591,17 +628,13 @@ EnhancedCompanySchema.methods.upgradeToTrialExtended = async function (
 EnhancedCompanySchema.methods.changeSubscriptionPlan = async function (
   newPlan: SubscriptionPlan
 ): Promise<void> {
-  // Actualizar plan
+  console.log('🔄 changeSubscriptionPlan llamado:', {
+    planActual: this.plan,
+    planNuevo: newPlan
+  })
+
+  // Actualizar plan (el middleware pre-save se encargará de actualizar límites y features)
   this.plan = newPlan
-
-  // Actualizar límites según el nuevo plan
-  this.settings.limits = DEFAULT_PLAN_LIMITS[newPlan]
-
-  // Actualizar funcionalidades según el nuevo plan
-  this.settings.features = {
-    ...this.settings.features,
-    ...DEFAULT_PLAN_FEATURES[newPlan]
-  }
 
   // Si no es plan gratuito, activar la empresa
   if (newPlan !== SubscriptionPlan.FREE) {
@@ -610,7 +643,118 @@ EnhancedCompanySchema.methods.changeSubscriptionPlan = async function (
   }
 
   await this.save()
+
+  console.log('✅ changeSubscriptionPlan completado:', {
+    plan: this.plan,
+    limits: this.settings.limits,
+    features: this.settings.features
+  })
 }
+
+/**
+ * Suspender empresa y desactivar usuarios
+ */
+EnhancedCompanySchema.methods.suspendCompany = async function (
+  reason: string,
+  suspendedBy: Types.ObjectId
+): Promise<void> {
+  const EnhancedUser = mongoose.model('EnhancedUser')
+
+  console.log('⏸️ Suspendiendo empresa:', {
+    companyId: this._id,
+    companyName: this.name,
+    reason
+  })
+
+  // Actualizar estado de la empresa
+  this.status = CompanyStatus.SUSPENDED
+  this.suspendedAt = new Date()
+  this.suspendedBy = suspendedBy
+  this.suspensionReason = reason
+
+  await this.save()
+
+  // Desactivar TODOS los usuarios de la empresa (activos e inactivos)
+  const result = await EnhancedUser.updateMany(
+    {primaryCompanyId: this._id},
+    {
+      $set: {
+        status: 'inactive',
+        'roles.$[].isActive': false,
+        deactivatedReason: 'company_suspended',
+        deactivatedAt: new Date()
+      }
+    }
+  )
+
+  console.log('✅ Empresa suspendida:', {
+    companyId: this._id,
+    usuariosDesactivados: result.modifiedCount,
+    matchedCount: result.matchedCount
+  })
+
+  // Verificar que los usuarios realmente se actualizaron
+  const verifyUsers = await EnhancedUser.find({
+    primaryCompanyId: this._id
+  }).select('email status deactivatedReason')
+
+  console.log('📊 Estado de usuarios después de suspensión:')
+  verifyUsers.forEach(u => {
+    console.log(
+      `   - ${u.email}: status=${u.status}, reason=${u.deactivatedReason}`
+    )
+  })
+
+  // Actualizar estadísticas
+  await this.updateStats()
+}
+
+/**
+ * Reactivar empresa y usuarios que estaban activos
+ */
+EnhancedCompanySchema.methods.reactivateCompany =
+  async function (): Promise<void> {
+    const EnhancedUser = mongoose.model('EnhancedUser')
+
+    console.log('▶️ Reactivando empresa:', {
+      companyId: this._id,
+      companyName: this.name
+    })
+
+    // Cambiar estado de empresa
+    this.status = CompanyStatus.ACTIVE
+    this.suspendedAt = null
+    this.suspendedBy = null
+    this.suspensionReason = null
+
+    await this.save()
+
+    // Reactivar usuarios que pertenecen a esta empresa
+    // Solo reactivamos los que fueron desactivados por la suspensión
+    const result = await EnhancedUser.updateMany(
+      {
+        primaryCompanyId: this._id,
+        status: 'inactive'
+      },
+      {
+        $set: {
+          status: 'active',
+          'roles.$[elem].isActive': true
+        }
+      },
+      {
+        arrayFilters: [{'elem.companyId': this._id}]
+      }
+    )
+
+    console.log('✅ Empresa reactivada:', {
+      companyId: this._id,
+      usuariosReactivados: result.modifiedCount
+    })
+
+    // Actualizar estadísticas
+    await this.updateStats()
+  }
 
 // ============ MIDDLEWARES ============
 
@@ -640,16 +784,21 @@ EnhancedCompanySchema.pre('save', function (next) {
     const newLimits = DEFAULT_PLAN_LIMITS[this.plan as SubscriptionPlan]
     const newFeatures = DEFAULT_PLAN_FEATURES[this.plan as SubscriptionPlan]
 
-    // Solo actualizar si los límites actuales son menores (no downgrade automático)
-    if (newLimits.maxUsers >= this.settings.limits.maxUsers) {
-      this.settings.limits = newLimits
-    }
+    console.log('🔧 Middleware pre-save: Plan modificado', {
+      plan: this.plan,
+      newLimits,
+      currentLimits: this.settings.limits
+    })
 
-    // Actualizar funcionalidades (solo habilitar, no deshabilitar)
-    Object.keys(newFeatures).forEach(feature => {
-      if (newFeatures[feature as keyof ICompanyFeatures]) {
-        this.settings.features[feature as keyof ICompanyFeatures] = true
-      }
+    // Actualizar límites según el nuevo plan (permitir tanto upgrades como downgrades)
+    this.settings.limits = {...newLimits}
+
+    // Actualizar funcionalidades según el nuevo plan
+    this.settings.features = {...newFeatures}
+
+    console.log('✅ Middleware pre-save: Límites actualizados', {
+      newLimits: this.settings.limits,
+      newFeatures: this.settings.features
     })
   }
   next()

@@ -27,3 +27,17 @@ export const businessTypeTranslate: {[key: string]: string} = {
   consulting: 'Consultoría',
   other: 'Otro'
 }
+
+export const rolesTranslate: {[key: string]: string} = {
+  super_admin: 'Súper Administrador',
+  SUPER_ADMIN: 'Súper Administrador',
+  admin_empresa: 'Administrador de Empresa',
+  ADMIN_EMPRESA: 'Administrador de Empresa',
+  admin: 'Administrador',
+  manager: 'Gerente',
+  MANAGER: 'Gerente',
+  employee: 'Empleado',
+  EMPLOYEE: 'Empleado',
+  viewer: 'Visualizador',
+  VIEWER: 'Visualizador'
+}

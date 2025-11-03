@@ -216,9 +216,30 @@ export function useUserForm(initialUser?: IEnhancedUser) {
       toast.error('El email es requerido')
       return false
     }
+    // En modo creación, la contraseña es obligatoria
+    // En modo edición, es opcional (solo se valida si el usuario la proporciona)
     if (!isEditing && !formData.password?.trim()) {
-      toast.error('La contraseña es requerida')
+      toast.error('La contraseña es requerida para crear un usuario')
       return false
+    }
+    // Si está editando Y proporcionó una contraseña, validarla
+    if (isEditing && formData.password && formData.password.trim()) {
+      if (formData.password.length < 8) {
+        toast.error('La contraseña debe tener al menos 8 caracteres')
+        return false
+      }
+      if (!/[A-Z]/.test(formData.password)) {
+        toast.error('La contraseña debe contener al menos una mayúscula')
+        return false
+      }
+      if (!/[a-z]/.test(formData.password)) {
+        toast.error('La contraseña debe contener al menos una minúscula')
+        return false
+      }
+      if (!/\d/.test(formData.password)) {
+        toast.error('La contraseña debe contener al menos un número')
+        return false
+      }
     }
     if (!formData.role) {
       toast.error('El rol es requerido')
@@ -244,7 +265,7 @@ export function useUserFilters() {
     role: undefined,
     status: undefined,
     page: 1,
-    limit: 10
+    limit: 5
   })
 
   const updateFilter = useCallback((key: keyof IUserFilters, value: any) => {
@@ -257,7 +278,7 @@ export function useUserFilters() {
       role: undefined,
       status: undefined,
       page: 1,
-      limit: 10
+      limit: 5
     })
   }, [])
 
@@ -307,18 +328,14 @@ export function useUserActions() {
   )
 
   const handleDeleteUser = useCallback(
-    async (userId: string, userName: string) => {
-      if (
-        window.confirm(`¿Estás seguro de eliminar al usuario "${userName}"?`)
-      ) {
-        try {
-          await mutations.deleteUser.mutateAsync(userId)
-          return true
-        } catch (error) {
-          return false
-        }
+    async (userId: string, userName?: string) => {
+      try {
+        await mutations.deleteUser.mutateAsync(userId)
+        return true
+      } catch (error) {
+        console.error('Error eliminando usuario:', error)
+        return false
       }
-      return false
     },
     [mutations.deleteUser]
   )

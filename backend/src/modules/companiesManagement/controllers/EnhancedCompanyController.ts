@@ -42,17 +42,6 @@ declare global {
   }
 }
 
-interface CreateCompanyRequestBody extends ICreateCompanyRequest {
-  settings: {
-    taxId: string
-    businessType?: BusinessType
-    industry?: string
-    currency?: Currency
-  }
-}
-
-interface UpdateCompanyRequestBody extends IUpdateCompanyRequest {}
-
 // ============ CLASE CONTROLADOR ============
 
 export class EnhancedCompanyController {
@@ -63,7 +52,7 @@ export class EnhancedCompanyController {
    */
   static createCompany = async (req: Request, res: Response): Promise<void> => {
     try {
-      const companyData: CreateCompanyRequestBody = req.body
+      const companyData: ICreateCompanyRequest = req.body
       const currentUser = req.authUser // Obtener usuario autenticado
 
       if (!currentUser) {
@@ -567,11 +556,12 @@ export class EnhancedCompanyController {
   static updateCompany = async (req: Request, res: Response): Promise<void> => {
     try {
       const {id} = req.params
-      const updateData: UpdateCompanyRequestBody = req.body
+      const updateData: IUpdateCompanyRequest = req.body
 
       console.log('🔧 BACKEND - updateCompany recibiendo datos:', {
         id,
-        updateData: JSON.stringify(updateData, null, 2)
+        plan: updateData.plan,
+        settings: updateData.settings
       })
 
       if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -638,20 +628,10 @@ export class EnhancedCompanyController {
 
       // ============ ACTUALIZACIÓN ============
 
-      const updatedCompany = await EnhancedCompany.findByIdAndUpdate(
-        id,
-        updateData,
-        {
-          new: true,
-          runValidators: true,
-          populate: [
-            {path: 'createdBy', select: 'name email'},
-            {path: 'ownerId', select: 'name email'}
-          ]
-        }
-      )
+      // Obtener la empresa actual para comparar el plan
+      const currentCompany = await EnhancedCompany.findById(id)
 
-      if (!updatedCompany) {
+      if (!currentCompany) {
         res.status(404).json({
           success: false,
           message: 'Empresa no encontrada',
@@ -660,19 +640,101 @@ export class EnhancedCompanyController {
         return
       }
 
+      // Si el plan cambió, usar el método changeSubscriptionPlan
+      if (updateData.plan && updateData.plan !== currentCompany.plan) {
+        console.log('🔄 BACKEND - Cambio de plan detectado:', {
+          planAnterior: currentCompany.plan,
+          planNuevo: updateData.plan
+        })
+
+        // Cambiar el plan usando el método que actualiza límites y features
+        await currentCompany.changeSubscriptionPlan(updateData.plan)
+
+        // Actualizar los demás campos (excepto plan y settings.limits, ya actualizados)
+        const {plan, settings, ...restUpdateData} = updateData
+
+        // Si hay settings, actualizarlos pero SIN sobrescribir limits y features
+        if (settings) {
+          console.log(
+            '⚠️ BACKEND - Settings recibidos, preservando limits y features'
+          )
+
+          // Actualizar solo los campos de settings que NO sean limits ni features
+          // Usamos Object.assign pero excluyendo limits y features
+          const {limits, features, ...safeSettings} = settings as any
+          Object.assign(currentCompany.settings, safeSettings)
+        }
+
+        // Actualizar otros campos
+        Object.assign(currentCompany, restUpdateData)
+
+        // Guardar cambios
+        await currentCompany.save()
+
+        // Repoblar los campos necesarios
+        await currentCompany.populate([
+          {path: 'createdBy', select: 'name email'},
+          {path: 'ownerId', select: 'name email'}
+        ])
+
+        console.log('✅ BACKEND - Plan actualizado con nuevos límites:', {
+          plan: currentCompany.plan,
+          limits: currentCompany.settings.limits
+        })
+      } else {
+        console.log('📝 BACKEND - Actualización sin cambio de plan')
+
+        // Si no cambió el plan, verificar que no se estén enviando limits manualmente
+        if (updateData.settings?.limits) {
+          console.warn(
+            '⚠️ BACKEND - Se intentó actualizar limits manualmente, ignorando...'
+          )
+          const settingsWithoutLimits = {...updateData.settings}
+          delete (settingsWithoutLimits as any).limits
+          updateData.settings = settingsWithoutLimits
+        }
+
+        // Actualizar normalmente
+        const updatedCompany = await EnhancedCompany.findByIdAndUpdate(
+          id,
+          updateData,
+          {
+            new: true,
+            runValidators: true,
+            populate: [
+              {path: 'createdBy', select: 'name email'},
+              {path: 'ownerId', select: 'name email'}
+            ]
+          }
+        )
+
+        if (!updatedCompany) {
+          res.status(404).json({
+            success: false,
+            message: 'Empresa no encontrada',
+            error: 'NOT_FOUND'
+          })
+          return
+        }
+
+        // Reasignar currentCompany para usar en la respuesta
+        Object.assign(currentCompany, updatedCompany.toObject())
+      }
+
       console.log('✅ BACKEND - Empresa actualizada:', {
-        id: updatedCompany._id,
-        plan: updatedCompany.plan,
+        id: currentCompany._id,
+        plan: currentCompany.plan,
+        maxUsers: currentCompany.settings.limits.maxUsers,
         updatedFields: Object.keys(updateData)
       })
 
       const companyResponse: ICompanyResponse = {
-        ...updatedCompany.toObject(),
-        _id: updatedCompany._id.toString(), // Convertir ObjectId a string
-        usage: updatedCompany.getUsagePercentage(),
-        isActiveComputed: updatedCompany.isActive(),
-        canAddUserComputed: updatedCompany.canAddUser(),
-        isTrialExpiredComputed: updatedCompany.isTrialExpired()
+        ...currentCompany.toObject(),
+        _id: currentCompany._id.toString(), // Convertir ObjectId a string
+        usage: currentCompany.getUsagePercentage(),
+        isActiveComputed: currentCompany.isActive(),
+        canAddUserComputed: currentCompany.canAddUser(),
+        isTrialExpiredComputed: currentCompany.isTrialExpired()
       }
 
       res.json({
@@ -819,29 +881,18 @@ export class EnhancedCompanyController {
   // ============ MÉTODOS ADICIONALES ============
 
   /**
-   * Eliminar una empresa (con validaciones de seguridad)
+   * Suspender una empresa (cambio de eliminar a suspender)
    */
   static deleteCompany = async (req: Request, res: Response): Promise<void> => {
     try {
       const {id} = req.params
+      const {reason = 'manual_admin'} = req.body
 
       if (!mongoose.Types.ObjectId.isValid(id)) {
         res.status(400).json({
           success: false,
           message: 'ID de empresa inválido',
           error: 'INVALID_ID'
-        })
-        return
-      }
-
-      // Verificar si la empresa tiene usuarios asociados
-      const userCount = await EnhancedUser.countDocuments({companyId: id})
-
-      if (userCount > 0) {
-        res.status(400).json({
-          success: false,
-          message: `No se puede eliminar la empresa porque tiene ${userCount} usuario(s) asociado(s)`,
-          error: 'HAS_USERS'
         })
         return
       }
@@ -857,17 +908,49 @@ export class EnhancedCompanyController {
         return
       }
 
-      await company.deleteOne()
+      // Verificar si la empresa ya está suspendida
+      if (company.status === CompanyStatus.SUSPENDED) {
+        res.status(400).json({
+          success: false,
+          message: 'La empresa ya está suspendida',
+          error: 'ALREADY_SUSPENDED'
+        })
+        return
+      }
+
+      // Contar usuarios para informar al admin
+      const EnhancedUser = mongoose.model('EnhancedUser')
+      const activeUsers = await EnhancedUser.countDocuments({
+        primaryCompanyId: id,
+        status: 'active'
+      })
+      const inactiveUsers = await EnhancedUser.countDocuments({
+        primaryCompanyId: id,
+        status: 'inactive'
+      })
+
+      // Suspender empresa y usuarios
+      await company.suspendCompany(
+        reason,
+        new mongoose.Types.ObjectId(req.authUser?.id)
+      )
 
       res.json({
         success: true,
-        message: 'Empresa eliminada correctamente'
+        message: 'Empresa suspendida correctamente',
+        data: {
+          companyId: company._id,
+          companyName: company.name,
+          usersDeactivated: activeUsers + inactiveUsers,
+          activeUsers,
+          inactiveUsers
+        }
       } as ICompanyActionResult)
     } catch (error) {
-      console.error('Error eliminando empresa:', error)
+      console.error('Error suspendiendo empresa:', error)
       res.status(500).json({
         success: false,
-        message: 'Error al eliminar la empresa',
+        message: 'Error al suspender la empresa',
         error: 'INTERNAL_ERROR'
       })
     }
@@ -1002,6 +1085,113 @@ export class EnhancedCompanyController {
       res.status(500).json({
         success: false,
         message: 'Error al cambiar el plan de la empresa',
+        error: 'INTERNAL_ERROR'
+      })
+    }
+  }
+
+  /**
+   * Reactivar una empresa suspendida
+   * @route POST /api/companies/:id/reactivate
+   * @access Super Admin only
+   */
+  static async reactivateCompany(req: Request, res: Response): Promise<void> {
+    try {
+      const {id} = req.params
+      const currentUser = req.authUser
+
+      // Solo Super Admin puede reactivar empresas
+      if (!currentUser || currentUser.role !== 'super_admin') {
+        res.status(403).json({
+          success: false,
+          message: 'No tienes permisos para reactivar empresas',
+          error: 'INSUFFICIENT_PERMISSIONS'
+        })
+        return
+      }
+
+      // Buscar la empresa
+      const company = await EnhancedCompany.findById(id)
+      if (!company) {
+        res.status(404).json({
+          success: false,
+          message: 'Empresa no encontrada',
+          error: 'COMPANY_NOT_FOUND'
+        })
+        return
+      }
+
+      // Verificar que la empresa esté suspendida
+      if (company.status !== 'suspended') {
+        res.status(400).json({
+          success: false,
+          message: `La empresa no está suspendida (estado actual: ${company.status})`,
+          error: 'INVALID_STATUS'
+        })
+        return
+      }
+
+      // Reactivar la empresa usando el método del modelo
+      await company.reactivateCompany()
+
+      // Reactivar usuarios que estaban activos antes de la suspensión
+      const usersToReactivate = await EnhancedUser.find({
+        primaryCompanyId: company._id,
+        status: 'inactive',
+        // Solo reactivar usuarios que fueron desactivados por la suspensión de la empresa
+        deactivatedReason: 'company_suspended'
+      })
+
+      console.log(
+        `🔍 Usuarios encontrados para reactivar: ${usersToReactivate.length}`
+      )
+
+      let usersReactivated = 0
+      for (const user of usersToReactivate) {
+        user.status = 'active'
+
+        // Reactivar roles de la empresa
+        user.roles.forEach(role => {
+          if (role.companyId?.toString() === company._id.toString()) {
+            role.isActive = true
+          }
+        })
+
+        // Limpiar metadata de desactivación
+        user.deactivatedReason = undefined
+        user.deactivatedAt = undefined
+
+        await user.save()
+        usersReactivated++
+
+        console.log(`   ✅ Usuario reactivado: ${user.email}`)
+      }
+
+      // Actualizar estadísticas de la empresa
+      await company.updateStats()
+      await company.save()
+
+      console.log(
+        `✅ Empresa ${company.name} reactivada por ${currentUser.name}`
+      )
+      console.log(`   - Usuarios reactivados: ${usersReactivated}`)
+
+      res.json({
+        success: true,
+        message: `Empresa ${company.name} reactivada exitosamente`,
+        data: {
+          companyId: company._id,
+          companyName: company.name,
+          status: company.status,
+          usersReactivated,
+          totalActiveUsers: company.stats.totalUsers
+        }
+      })
+    } catch (error) {
+      console.error('Error reactivando empresa:', error)
+      res.status(500).json({
+        success: false,
+        message: 'Error al reactivar la empresa',
         error: 'INTERNAL_ERROR'
       })
     }

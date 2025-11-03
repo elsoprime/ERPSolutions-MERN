@@ -126,13 +126,24 @@ export class MultiCompanyMiddleware {
         else if (req.params.companyId) {
           companyId = req.params.companyId
         }
-        // 3. Desde query parameters
+        // 3. Desde el body (para operaciones de actualización)
+        else if (req.body.companyId) {
+          companyId = req.body.companyId
+        }
+        // 4. Desde query parameters
         else if (req.query.companyId) {
           companyId = req.query.companyId as string
         }
-        // 4. Desde headers
+        // 5. Desde headers
         else if (req.headers['x-company-id']) {
           companyId = req.headers['x-company-id'] as string
+        }
+
+        // Si no hay companyId y el usuario es super_admin, permitir continuar sin contexto
+        if (!companyId && req.authUser.role === 'super_admin') {
+          // Super admin puede operar sin contexto de empresa
+          next()
+          return
         }
 
         if (!companyId) {
@@ -157,8 +168,22 @@ export class MultiCompanyMiddleware {
           })
         }
 
-        // Verificar acceso del usuario a la empresa
+        // Verificar que la empresa no esté suspendida
+        // Solo Super Admin puede acceder a empresas suspendidas
         const userRole = req.authUser.role || 'viewer'
+        const isSuperAdmin = userRole === 'super_admin'
+
+        if (company.status === 'suspended' && !isSuperAdmin) {
+          return res.status(403).json({
+            error: 'Esta empresa se encuentra suspendida',
+            reason: company.suspensionReason || 'No especificado',
+            suspendedAt: company.suspendedAt,
+            message:
+              'Contacte al administrador del sistema para más información'
+          })
+        }
+
+        // Verificar acceso del usuario a la empresa
         const roleMapping: Record<string, string> = {
           super_admin: 'super_admin',
           admin_empresa: 'admin_empresa',

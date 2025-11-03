@@ -7,6 +7,7 @@ import HeaderNavigation from '@/components/UI/HeaderNavigation'
 import Sidebar from '@/components/UI/Sidebar'
 import AuthGuard from '@/components/Modules/Auth/Protected/AuthGuard'
 import TokenRefreshProvider from '@/components/Modules/Auth/Protected/TokenRefreshProvider'
+import AuthLoadingScreen from '@/components/Shared/AuthLoadingScreen'
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
 import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
 
@@ -19,17 +20,7 @@ export default function HomeLayout({
   return (
     <QueryClientProvider client={queryClient}>
       <ReactQueryDevtools />
-      <AuthGuard
-        requireAuth={true}
-        fallback={
-          <div className='min-h-screen flex items-center justify-center'>
-            <div className='text-center'>
-              <div className='animate-spin rounded-full h-32 w-32 border-b-2 border-sky-600 mx-auto'></div>
-              <p className='mt-4 text-gray-600'>Verificando autenticación...</p>
-            </div>
-          </div>
-        }
-      >
+      <AuthGuard requireAuth={true} fallback={<AuthLoadingScreen />}>
         <TokenRefreshProvider>
           <div className='min-h-screen grid grid-cols-1 xl:grid-cols-6'>
             <Sidebar />

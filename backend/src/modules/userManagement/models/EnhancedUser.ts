@@ -5,6 +5,7 @@
  */
 
 import mongoose, {Schema, Document, Types} from 'mongoose'
+import bcrypt from 'bcrypt'
 // Importar EnhancedCompany para asegurar que el modelo esté registrado antes de usarlo en refs
 import '../../companiesManagement/models/EnhancedCompany'
 
@@ -43,6 +44,12 @@ export interface IUser extends Document {
   lastLogin?: Date
   loginCount: number
   createdBy?: Types.ObjectId
+  deactivatedReason?:
+    | 'manual'
+    | 'company_suspended'
+    | 'policy_violation'
+    | 'other'
+  deactivatedAt?: Date
 
   // Configuraciones personales
   preferences: {
@@ -62,6 +69,7 @@ export interface IUser extends Document {
   getHighestRoleInCompany(companyId: Types.ObjectId): CompanyRole | null
   canAccessCompany(companyId: Types.ObjectId): boolean
   getAllCompanies(): Types.ObjectId[]
+  checkPassword(candidatePassword: string): Promise<boolean>
 }
 
 const UserRoleSchema = new Schema<IUserRole>(
@@ -184,6 +192,15 @@ const UserSchema = new Schema<IUser>(
       ref: 'User',
       default: null
     },
+    deactivatedReason: {
+      type: String,
+      enum: ['manual', 'company_suspended', 'policy_violation', 'other'],
+      default: null
+    },
+    deactivatedAt: {
+      type: Date,
+      default: null
+    },
 
     // Configuraciones personales
     preferences: {
@@ -289,6 +306,17 @@ UserSchema.methods.getAllCompanies = function (): Types.ObjectId[] {
         index ===
         self.findIndex(otherId => otherId.toString() === id.toString())
     ) // Eliminar duplicados
+}
+
+UserSchema.methods.checkPassword = async function (
+  candidatePassword: string
+): Promise<boolean> {
+  try {
+    return await bcrypt.compare(candidatePassword, this.password)
+  } catch (error) {
+    console.error('Error al verificar contraseña:', error)
+    return false
+  }
 }
 
 // Índices para optimización

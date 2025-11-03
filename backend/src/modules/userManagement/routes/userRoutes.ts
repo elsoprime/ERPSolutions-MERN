@@ -75,7 +75,14 @@ router.get(
   MultiCompanyUserController.getProfile
 )
 
-// Actualizar usuario específico
+// Cambiar contraseña de usuario (requiere contraseña actual)
+router.put(
+  '/:id/password',
+  authMiddleware.authenticate,
+  MultiCompanyUserController.changePassword
+)
+
+// Actualizar usuario específico (NO incluye contraseña)
 router.put(
   '/:userId',
   authMiddleware.authenticate,
@@ -103,12 +110,10 @@ router.delete(
   MultiCompanyUserController.revokeRole
 )
 
-// Eliminar usuario (soft delete)
+// Eliminar usuario (soft delete) - Super Admin
 router.delete(
   '/:userId',
   authMiddleware.authenticate,
-  MultiCompanyMiddleware.setCompanyContext(),
-  MultiCompanyMiddleware.requireCompanyPermission('users.delete'),
   MultiCompanyUserController.deleteUser
 )
 

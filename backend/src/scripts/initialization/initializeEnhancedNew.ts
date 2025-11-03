@@ -33,7 +33,7 @@ const COMPANIES_DATA = [
     industry: 'Technology',
     email: 'admin@erpsolutions.cl',
     plan: SubscriptionPlan.ENTERPRISE,
-    businessType: 'SPA' as const
+    businessType: BusinessType.TECHNOLOGY
   },
   {
     companyName: 'Demo Company SPA',
@@ -41,7 +41,7 @@ const COMPANIES_DATA = [
     industry: 'Comercio y Retail',
     email: 'demo@democompany.cl',
     plan: SubscriptionPlan.PROFESSIONAL,
-    businessType: 'SPA' as const
+    businessType: BusinessType.RETAIL
   },
   {
     companyName: 'Test Industries LTDA',
@@ -49,7 +49,7 @@ const COMPANIES_DATA = [
     industry: 'Manufactura',
     email: 'admin@testindustries.cl',
     plan: SubscriptionPlan.BASIC,
-    businessType: 'LIMITADA' as const
+    businessType: BusinessType.MANUFACTURING
   }
 ] as const
 
@@ -116,6 +116,9 @@ async function initializeEnhancedCompanies(): Promise<
   logProcess('Inicializando empresas...')
   const companyMap = new Map<string, mongoose.Types.ObjectId>()
 
+  // Crear un usuario temporal para asignar como creador/propietario inicial
+  const systemUserId = new mongoose.Types.ObjectId()
+
   for (const companyData of COMPANIES_DATA) {
     try {
       const existingCompany = await EnhancedCompany.findOne({
@@ -133,17 +136,48 @@ async function initializeEnhancedCompanies(): Promise<
         continue
       }
 
+      // Crear slug desde el nombre
+      const slug = companyData.companyName
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim()
+        .substring(0, 50)
+
       const newCompanyData = {
-        companyName: companyData.companyName,
-        businessType: companyData.businessType,
-        industry: companyData.industry,
-        settings: {
-          taxId: companyData.rutOrDni
+        name: companyData.companyName,
+        slug: slug,
+        email: companyData.email,
+        phone: '+56 2 1234 5678', // Teléfono por defecto
+        address: {
+          street: 'Av. Providencia 1234',
+          city: 'Santiago',
+          state: 'Región Metropolitana',
+          country: 'Chile',
+          postalCode: '7500000'
         },
-        subscription: {
-          plan: companyData.plan,
-          status: CompanyStatus.TRIAL,
-          startDate: new Date()
+        status: CompanyStatus.ACTIVE, // Empresas con planes de pago son activas
+        plan: companyData.plan,
+        settings: {
+          businessType: companyData.businessType,
+          industry: companyData.industry,
+          taxId: companyData.rutOrDni,
+          currency: Currency.CLP,
+          fiscalYear: {
+            startMonth: 1,
+            endMonth: 12
+          }
+        },
+        createdBy: systemUserId,
+        ownerId: systemUserId,
+        stats: {
+          totalUsers: 0,
+          totalProducts: 0,
+          lastActivity: new Date(),
+          storageUsed: 0
         }
       }
 
@@ -247,6 +281,22 @@ async function initializeEnhancedUsers(
   }
 
   logInfo('✨ Inicialización de usuarios completada')
+
+  // ✅ Actualizar estadísticas de todas las empresas
+  logProcess('Actualizando estadísticas de empresas...')
+  for (const [rut, companyId] of companyMap.entries()) {
+    try {
+      const company = await EnhancedCompany.findById(companyId)
+      if (company) {
+        await company.updateStats()
+        logInfo(
+          `Estadísticas actualizadas para ${rut}: ${company.stats.totalUsers} usuarios`
+        )
+      }
+    } catch (error) {
+      logError(`Error actualizando estadísticas para empresa ${rut}: ${error}`)
+    }
+  }
 }
 
 /**
