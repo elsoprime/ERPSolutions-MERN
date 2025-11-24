@@ -135,7 +135,7 @@ const PlanListView: React.FC<PlanListViewProps> = ({
     const planTypeLabels: Record<PlanType, string> = {
         [PlanType.FREE]: 'Gratuito',
         [PlanType.BASIC]: 'Básico',
-        [PlanType.PREMIUM]: 'Premium',
+        [PlanType.PROFESSIONAL]: 'Profesional',
         [PlanType.ENTERPRISE]: 'Empresarial',
     };
 
@@ -358,7 +358,7 @@ const PlanFormView: React.FC<PlanFormViewProps> = ({
                         >
                             <option value={PlanType.FREE}>Gratuito</option>
                             <option value={PlanType.BASIC}>Básico</option>
-                            <option value={PlanType.PREMIUM}>Premium</option>
+                            <option value={PlanType.PROFESSIONAL}>Profesional</option>
                             <option value={PlanType.ENTERPRISE}>Empresarial</option>
                         </select>
                     </div>

@@ -3,14 +3,14 @@
  */
 
 import Button from '@/components/Shared/Button'
-import {RequestConfirmationCode} from '@/schemas/userSchema'
-import {useForm} from 'react-hook-form'
+import { RequestConfirmationCodeForm } from '@/schemas/userSchema'
+import { useForm } from 'react-hook-form'
 import RecoveryForm from '../Forms/RecoveryForm'
-import {useMutation} from '@tanstack/react-query'
-import {toast} from 'react-toastify'
-import {ArrowPathIcon} from '@heroicons/react/24/outline'
-import {useRouter} from 'next/navigation'
-import {requestConfirmationCode} from '@/api/AuthAPI'
+import { useMutation } from '@tanstack/react-query'
+import { toast } from 'react-toastify'
+import { ArrowPathIcon } from '@heroicons/react/24/outline'
+import { useRouter } from 'next/navigation'
+import { requestConfirmationCode } from '@/api/AuthAPI'
 
 type RequestCodeProps = {
   onAuthClick: () => void
@@ -22,17 +22,17 @@ export default function RequestNewCodeViews({
   dataAOS
 }: RequestCodeProps) {
   const router = useRouter()
-  const initialData: RequestConfirmationCode = {
+  const initialData: RequestConfirmationCodeForm = {
     email: ''
   }
 
   const {
     register,
     handleSubmit,
-    formState: {errors}
-  } = useForm<RequestConfirmationCode>({defaultValues: initialData})
+    formState: { errors }
+  } = useForm<RequestConfirmationCodeForm>({ defaultValues: initialData })
 
-  const mutation = useMutation<string, Error, RequestConfirmationCode>({
+  const mutation = useMutation<string, Error, RequestConfirmationCodeForm>({
     mutationFn: requestConfirmationCode,
     onError: error => {
       toast.error(error.message)
@@ -47,7 +47,7 @@ export default function RequestNewCodeViews({
     }
   })
 
-  const onSubmit = (data: RequestConfirmationCode) => {
+  const onSubmit = (data: RequestConfirmationCodeForm) => {
     mutation.mutate(data)
   }
 

@@ -25,6 +25,7 @@
       "@/data/*": ["data/*"],
       "@/services/*": ["services/*"],
       "@/interfaces/*": ["interfaces/*"],
+      "@/deprecated/*": ["deprecated/*"],
       "@/utils/*": ["utils/*"],
       "@/locale/*": ["locale/*"],
       "@/schemas/*": ["schemas/*"],
@@ -35,5 +36,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "deprecated/components", "deprecated/utils"]
 }
