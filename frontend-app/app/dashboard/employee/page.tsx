@@ -35,7 +35,7 @@ export default function EmployeeDashboardPage() {
         title='Dashboard Empleado'
         subtitle='Panel de Trabajo Diario'
         description='Herramientas y tareas para el trabajo operativo'
-        backgroundImage='bg-gradient-to-r from-orange-500 to-red-500'
+        backgroundImageUrl='bg-gradient-to-r from-orange-500 to-red-500'
       />
 
       {/* Welcome Card */}

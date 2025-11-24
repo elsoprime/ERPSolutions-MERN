@@ -1,12 +1,12 @@
 'use client'
 
-import {useAuth} from '@/hooks/useAuth'
-import {getHighestRole} from '@/utils/roleRouting'
-import {getMenuByRole} from '@/data/Menu'
-import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
+import { useAuth } from '@/hooks/useAuth'
+import { getHighestRole } from '@/utils/roleRouting'
+import { getMenuByRole } from '@/data/Menu'
+import { UserRole } from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 export default function DebugPage() {
-  const {getUserData} = useAuth()
+  const { getUserData } = useAuth()
   const userData = getUserData()
   const userRole = getHighestRole(userData)
   const menuItems = getMenuByRole(userRole)
