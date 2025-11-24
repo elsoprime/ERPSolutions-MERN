@@ -2,24 +2,22 @@
   # Directorio base donde está el frontend
   base = "frontend-app"
   
-  # Comando para construir la aplicación
+  # Comando para construir la aplicación Next.js
   command = "npm run build"
   
-  # Directorio de publicación (Next.js genera archivos estáticos aquí)
-  publish = ".next"
+  # Para Next.js, no se especifica publish directory
+  # Netlify detecta automáticamente Next.js y usa el plugin
 
 [build.environment]
-  # Versión de Node.js (ajusta según necesites)
+  # Versión de Node.js
   NODE_VERSION = "20"
   
   # Variables de entorno necesarias para Next.js
   NEXT_TELEMETRY_DISABLED = "1"
 
-# Redirecciones para SPA (Single Page Application)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Plugin de Next.js para Netlify
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 # Headers de seguridad recomendados
 [[headers]]
