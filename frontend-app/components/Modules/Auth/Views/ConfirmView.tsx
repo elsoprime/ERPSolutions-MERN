@@ -1,20 +1,20 @@
 'use client'
-import {useEffect, useState} from 'react'
-import {PinInput, PinInputField} from '@chakra-ui/pin-input'
-import {useMutation, useQuery} from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { PinInput, PinInputField } from '@chakra-ui/pin-input'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import bgImage from '@/public/images/BG004.webp'
 import Logo from '@/components/Shared/Logo'
-import {ConfirmToken} from '@/schemas/userSchema'
-import {confirmAccount} from '@/api/AuthAPI'
-import {toast} from 'react-toastify'
-import {useRouter} from 'next/navigation'
+import { ConfirmToken } from '@/schemas/userSchema'
+import { confirmAccount } from '@/api/AuthAPI'
+import { toast } from 'react-toastify'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import {ArrowPathIcon, CheckCircleIcon} from '@heroicons/react/24/outline'
-import {LoadingState} from '../States/LoadingState'
-import {InvalidTokenState} from '../States/InvalidTokenState'
-import {AlreadyConfirmedState} from '../States/AlreadyConfirmedState'
-import {ConfirmationForm} from '../States/ConfirmationForm'
-import {ErrorState} from '../States/ErrorState'
+import { ArrowPathIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { LoadingState } from '../States/LoadingState'
+import { InvalidTokenState } from '../States/InvalidTokenState'
+import { AlreadyConfirmedState } from '../States/AlreadyConfirmedState'
+import { ConfirmationForm } from '../States/ConfirmationForm'
+import { ErrorState } from '../States/ErrorState'
 
 type ConfirmViewProps = {
   token?: string
@@ -39,7 +39,7 @@ interface TokenError {
   }
 }
 
-export default function ConfirmView({token: initialToken}: ConfirmViewProps) {
+export default function ConfirmView({ token: initialToken }: ConfirmViewProps) {
   const {
     data: validationData,
     isLoading,
@@ -50,7 +50,7 @@ export default function ConfirmView({token: initialToken}: ConfirmViewProps) {
       if (!initialToken) return null
       const response = await fetch(`/api/auth/validate-token/${initialToken}`, {
         method: 'GET',
-        headers: {'Content-Type': 'application/json'}
+        headers: { 'Content-Type': 'application/json' }
       })
       if (!response.ok) {
         throw await response.json()
@@ -75,8 +75,8 @@ export default function ConfirmView({token: initialToken}: ConfirmViewProps) {
       return <AlreadyConfirmedState user={validationData.user} />
     }
 
-    if (validationData?.valid) {
-      return <ConfirmationForm user={validationData.user} />
+    if (validationData?.valid && initialToken) {
+      return <ConfirmationForm token={initialToken} user={validationData.user} />
     }
 
     return (
