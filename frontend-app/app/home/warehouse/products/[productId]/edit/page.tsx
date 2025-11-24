@@ -4,14 +4,14 @@
 
 import Header from '@/components/UI/HeaderSection'
 import EditProductData from '@/components/Warehouse/Products/EditProductData'
-import { Product } from '@/schemas/productsSchema'
 
 type EditProductPageProps = {
-  data: Product
-  productId: Product['_id']
+  params: { productId: string }
 }
 
-export default function EditProduct({ data, productId }: EditProductPageProps) {
+export default function EditProduct({ params }: EditProductPageProps) {
+  const { productId } = params
+  
   return (
     <>
       <Header
@@ -20,7 +20,7 @@ export default function EditProduct({ data, productId }: EditProductPageProps) {
         sectionTitle={'Sección Productos'}
       />
       {/* <!-- Sección de Formulario de Producto --> */}
-      <EditProductData data={data} productId={productId} />
+      <EditProductData productId={productId} />
     </>
   )
 }
