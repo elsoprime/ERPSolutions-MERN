@@ -1,0 +1,31 @@
+[build]
+  # Directorio base donde está el frontend
+  base = "frontend-app"
+  
+  # Comando para construir la aplicación
+  command = "npm run build"
+  
+  # Directorio de publicación (Next.js genera archivos estáticos aquí)
+  publish = ".next"
+
+[build.environment]
+  # Versión de Node.js (ajusta según necesites)
+  NODE_VERSION = "20"
+  
+  # Variables de entorno necesarias para Next.js
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Redirecciones para SPA (Single Page Application)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers de seguridad recomendados
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
