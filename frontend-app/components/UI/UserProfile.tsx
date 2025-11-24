@@ -5,7 +5,7 @@
  */
 
 'use client'
-import React, {useState, useRef, useEffect} from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -16,8 +16,9 @@ import {
   UserIcon,
   BellIcon
 } from '@heroicons/react/20/solid'
-import {IUserProfile, IUserMenuOption} from '@/interfaces/IComponents'
-import {useAuth} from '@/hooks/useAuth'
+import { IUserProfile, IUserMenuOption } from '@/interfaces/IComponents'
+import { useAuth } from '@/hooks/useAuth'
+import { AuthLoadingState } from '@/components/Modules/Auth/States/AuthLoadingState'
 
 interface UserProfileProps {
   userProfile: IUserProfile
@@ -63,7 +64,7 @@ export default function UserProfile({
 }: UserProfileProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const {logout, isLoggingOut} = useAuth()
+  const { logout, isLoggingOut } = useAuth()
 
   // Cerrar dropdown al hacer click fuera
   useEffect(() => {
@@ -167,9 +168,8 @@ export default function UserProfile({
 
         {/* Dropdown arrow */}
         <ChevronDownIcon
-          className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
-            isDropdownOpen ? 'rotate-180' : ''
-          }`}
+          className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''
+            }`}
         />
       </button>
 
@@ -220,11 +220,10 @@ export default function UserProfile({
                   key={option.id}
                   onClick={() => handleOptionClick(option)}
                   disabled={option.id === 'logout' && isLoggingOut}
-                  className={`flex items-center w-full px-4 py-2 text-sm transition-colors duration-200 ${
-                    option.id === 'logout' && isLoggingOut
+                  className={`flex items-center w-full px-4 py-2 text-sm transition-colors duration-200 ${option.id === 'logout' && isLoggingOut
                       ? 'text-gray-400 bg-gray-50 cursor-not-allowed'
                       : 'text-gray-700 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   {option.icon && (
                     <span className='mr-3'>
@@ -243,6 +242,11 @@ export default function UserProfile({
             })}
           </div>
         </div>
+      )}
+
+      {/* Overlay de logout */}
+      {isLoggingOut && (
+        <AuthLoadingState type='logout' message='Cerrando sesión...' />
       )}
     </div>
   )

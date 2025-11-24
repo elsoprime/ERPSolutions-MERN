@@ -1,27 +1,27 @@
 /**
- * Edit Company Form Component (Enhanced)
+ * Edit Company Form Component (Enhanced) - FIXED VERSION
  * @description: Formulario para editar empresa existente por Super Administrador
- * Adaptado con FormStepper mejorado e indicadores de validación avanzados
  * @author: Esteban Soto Ojeda @elsoprimeDev
- * @version: 2.0.0 - Enhanced Validation and UX Improvements
+ * @version: 2.0.1 - Bug Fixes for Plan Synchronization
  */
 
 'use client'
-import React, {useState, useEffect, useCallback, useRef} from 'react'
-import {useForm} from 'react-hook-form'
-import {zodResolver} from '@hookform/resolvers/zod'
-import {toast} from 'react-toastify'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'react-toastify'
 import {
   IEnhancedCompany,
   INDUSTRIES,
-  CURRENCIES,
-  SUBSCRIPTION_PLANS
+  CURRENCIES
 } from '@/interfaces/EnhanchedCompany/EnhancedCompany'
 import {
   FORM_STEPS,
   FormStep
 } from '@/interfaces/EnhanchedCompany/CreateCompanyFormTypes'
+import { PlanFeaturesDisplay } from '@/components/Plans/PlanFeaturesDisplay'
 import EnhancedCompanyAPI from '@/api/EnhancedCompanyAPI'
+import PlanAPI, { IPlan } from '@/api/PlanAPI'
 import ConfirmationDialog, {
   ConfirmationDialogAction
 } from '@/components/Shared/ConfirmationDialog'
@@ -30,15 +30,14 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/20/solid'
 import FormStepper from '@/components/Shared/FormStepper'
-import CompanyFormModal from '@/components/Shared/CompanyFormModal'
-import {getTranslatedBusinessTypes} from '@/utils/formOptions'
+import FormModal from '@/components/Shared/FormModal'
+import { getTranslatedBusinessTypes } from '@/utils/formOptions'
 import {
   updateCompanySchema,
   UpdateCompanyFormData,
   convertCompanyToUpdateFormData,
   sanitizeCompanyUpdateData
 } from '@/schemas/EnhancedCompanySchemas'
-
 interface EditCompanyFormProps {
   isOpen: boolean
   company: IEnhancedCompany
@@ -58,6 +57,19 @@ export default function EditCompanyForm({
   const [isCurrentStepValid, setIsCurrentStepValid] = useState(false)
   const [validationInProgress, setValidationInProgress] = useState(false)
 
+  // Estados para gestión de planes desde API
+  const [availablePlans, setAvailablePlans] = useState<IPlan[]>([])
+  const [plansLoading, setPlansLoading] = useState(true)
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('')
+
+  // 🔥 FIX: Flag para controlar la inicialización
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  // 🔍 DEBUG: Monitorear cambios en selectedPlanId
+  useEffect(() => {
+    console.log('🎯 selectedPlanId cambió a:', selectedPlanId, '| Timestamp:', new Date().toISOString())
+  }, [selectedPlanId])
+
   // Estado para el diálogo de confirmación/error
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean
@@ -73,7 +85,6 @@ export default function EditCompanyForm({
     message: ''
   })
 
-  // Función para cerrar el diálogo
   const closeDialog = () => {
     setDialogState(prev => ({
       ...prev,
@@ -86,14 +97,13 @@ export default function EditCompanyForm({
     handleSubmit,
     watch,
     control,
-    formState: {errors},
+    formState: { errors },
     setValue,
     getValues,
     reset,
     trigger
   } = useForm<UpdateCompanyFormData>({
     resolver: zodResolver(updateCompanySchema),
-    // Removido defaultValues para evitar conflictos con el reset() en useEffect
     mode: 'onChange'
   })
 
@@ -111,105 +121,221 @@ export default function EditCompanyForm({
     }
   }, [watchedName])
 
-  // Observar cambios en el plan para actualizar características (optimizado)
-  const watchedPlan = watch('subscription.plan')
-  const prevPlanRef = useRef(company.plan)
+  // 🔥 FIX #1: Reset del formulario PRIMERO (sin el plan)
+  useEffect(() => {
+    if (isOpen && company) {
+      console.log('📄 Resetting form with company data:', company)
+
+      // Convertir datos de empresa a formato de formulario
+      const formData = convertCompanyToUpdateFormData(company as never)
+
+      // 🔥 IMPORTANTE: Reset SIN el plan (se establecerá después)
+      const { subscription, ...restFormData } = formData
+      reset({
+        ...restFormData,
+        subscription: {
+          ...subscription,
+          planId: '' // Se establecerá después
+        }
+      })
+
+      // Marcar como NO inicializado aún
+      setIsInitialized(false)
+    }
+  }, [isOpen, company, reset])
+
+  // FIX #2: Cargar planes y establecer el plan DESPUÉS del reset
+  // ⚠️ IMPORTANTE: Usar useCallback para evitar recursividad infinita
+  const loadPlansAndSetCurrent = useCallback(async () => {
+    if (!isOpen || isInitialized) return
+
+    try {
+      setPlansLoading(true)
+      console.log('Cargando planes desde API...')
+      const response = await PlanAPI.getActivePlans()
+
+      if (response.success && response.data) {
+        console.log('Planes cargados:', response.data)
+        setAvailablePlans(response.data)
+
+        // 🔥 CRÍTICO: Extraer el planId correctamente (puede ser string u objeto populated)
+        let currentPlanId: string
+        let currentPlanType: string | undefined
+
+        if (company.plan) {
+          if (typeof company.plan === 'object' && company.plan !== null) {
+            // Plan viene populated del backend
+            currentPlanId = company.plan._id
+            currentPlanType = company.plan.type
+            console.log('Plan populated detectado:', {
+              id: currentPlanId,
+              name: company.plan.name,
+              type: currentPlanType
+            })
+          } else {
+            // Plan es un string (ObjectId)
+            currentPlanId = company.plan
+            console.log('Plan como ObjectId:', currentPlanId)
+          }
+
+          console.log('Estableciendo plan actual - ID:', currentPlanId)
+
+          const currentPlan = response.data.find((p: IPlan) => p._id === currentPlanId)
+
+          if (currentPlan) {
+            console.log('Plan encontrado:', currentPlan.name, currentPlan.type)
+
+            // 🔥 FIX CRÍTICO: Establecer selectedPlanId INMEDIATAMENTE
+            // Esto asegura que si el usuario NO cambia el plan, se mantenga el original
+            setSelectedPlanId(currentPlanId)
+
+            setValue('subscription.planId', currentPlan.type, {
+              shouldValidate: true,
+              shouldDirty: false // 🔥 Cambiar a false para que no se marque como "modificado"
+            })
+
+            // Actualizar features inmediatamente
+            setValue('features', {
+              inventoryManagement: currentPlan.features.inventoryManagement,
+              accounting: currentPlan.features.accounting,
+              hrm: currentPlan.features.hrm,
+              crm: currentPlan.features.crm,
+              projectManagement: currentPlan.features.projectManagement,
+              reports: currentPlan.features.reports,
+              multiCurrency: currentPlan.features.multiCurrency,
+              apiAccess: currentPlan.features.apiAccess,
+              customBranding: currentPlan.features.customBranding,
+              prioritySupport: currentPlan.features.prioritySupport,
+              advancedAnalytics: currentPlan.features.advancedAnalytics,
+              auditLog: currentPlan.features.auditLog,
+              customIntegrations: currentPlan.features.customIntegrations,
+              dedicatedAccount: currentPlan.features.dedicatedAccount
+            }, { shouldValidate: true })
+
+            console.log('✅ Plan establecido correctamente - selectedPlanId:', currentPlanId)
+
+            // Marcar como inicializado
+            setIsInitialized(true)
+          } else {
+            console.error('❌ Plan no encontrado en la lista de planes disponibles')
+            // 🔥 Aún así, establecer el selectedPlanId para mantener el plan original
+            setSelectedPlanId(currentPlanId)
+            setIsInitialized(true)
+          }
+        } else {
+          console.warn('⚠️ La empresa no tiene un plan asignado')
+          setIsInitialized(true)
+        }
+      } else {
+        console.error('Error al cargar planes:', response.message)
+        toast.error('No se pudieron cargar los planes disponibles')
+        setAvailablePlans([])
+        setIsInitialized(true)
+      }
+    } catch (error) {
+      console.error('Error al cargar planes:', error)
+      toast.error('Error al cargar planes disponibles')
+      setAvailablePlans([])
+      setIsInitialized(true)
+    } finally {
+      setPlansLoading(false)
+    }
+  }, [isOpen, company.plan, isInitialized, setValue])
 
   useEffect(() => {
-    console.log('🔍 Plan siendo observado (watchedPlan):', watchedPlan)
-    console.log('🔍 Plan original de la empresa:', company?.plan)
-    console.log('🔍 Plan anterior (ref):', prevPlanRef.current)
+    loadPlansAndSetCurrent()
+  }, [loadPlansAndSetCurrent])
 
-    // Solo actualizar características si el plan realmente cambió desde la última vez
-    // No comparar con company.plan para evitar problemas en la inicialización
-    if (watchedPlan && watchedPlan !== prevPlanRef.current) {
-      const selectedPlan = SUBSCRIPTION_PLANS.find(p => p.id === watchedPlan)
-      if (selectedPlan) {
-        console.log('📋 Plan seleccionado encontrado:', selectedPlan.name)
-        console.log('🔄 Actualizando características del plan a:', watchedPlan)
+  // FIX #3: Actualizar características SOLO cuando el usuario cambia el plan
+  const lastSelectedPlanIdRef = useRef<string>('')
 
-        switch (watchedPlan) {
-          case 'trial':
-            setValue(
-              'features',
-              {
-                inventory: true,
-                accounting: true,
-                hrm: true,
-                crm: true,
-                projects: true
-              },
-              {shouldValidate: false}
-            )
-            break
-          case 'free':
-            setValue(
-              'features',
-              {
-                inventory: true,
-                accounting: false,
-                hrm: false,
-                crm: false,
-                projects: false
-              },
-              {shouldValidate: false}
-            )
-            break
-          case 'basic':
-            setValue(
-              'features',
-              {
-                inventory: true,
-                accounting: false,
-                hrm: true,
-                crm: false,
-                projects: false
-              },
-              {shouldValidate: false}
-            )
-            break
-          case 'professional':
-            setValue(
-              'features',
-              {
-                inventory: true,
-                accounting: true,
-                hrm: false,
-                crm: true,
-                projects: false
-              },
-              {shouldValidate: false}
-            )
-            break
-          case 'enterprise':
-            setValue(
-              'features',
-              {
-                inventory: true,
-                accounting: true,
-                hrm: true,
-                crm: true,
-                projects: true
-              },
-              {shouldValidate: false}
-            )
-            break
-        }
-        prevPlanRef.current = watchedPlan
-      }
+  useEffect(() => {
+    console.log('🔍 useEffect plan change - EJECUTADO', {
+      isInitialized,
+      selectedPlanId,
+      lastSelectedPlanId: lastSelectedPlanIdRef.current,
+      companyPlan: company.plan,
+      availablePlansCount: availablePlans.length,
+      timestamp: new Date().toISOString()
+    })
+
+    // Solo ejecutar si ya está inicializado y el plan cambió MANUALMENTE
+    if (!isInitialized || !selectedPlanId || availablePlans.length === 0) {
+      console.log('⏭️ SKIP: no inicializado o sin datos')
+      return
     }
-  }, [watchedPlan, setValue, company.plan])
 
-  // Función para validar campos por etapa con validación granular (memoizada)
+    // Extraer el planId correctamente del company.plan
+    let companyPlanId: string
+    if (typeof company.plan === 'object' && company.plan !== null) {
+      companyPlanId = company.plan._id
+    } else {
+      companyPlanId = company.plan
+    }
+
+    // FIX: Ignorar el primer cambio (inicialización)
+    if (lastSelectedPlanIdRef.current === '' && selectedPlanId === companyPlanId) {
+      console.log('🎬 INICIALIZACIÓN: estableciendo lastSelectedPlanIdRef a:', selectedPlanId)
+      lastSelectedPlanIdRef.current = selectedPlanId
+      return
+    }
+
+    // Solo actualizar si realmente cambió
+    if (selectedPlanId === lastSelectedPlanIdRef.current) {
+      console.log('⏭️ SKIP: plan no cambió (mismo que anterior)')
+      return
+    }
+
+    console.log('🔄 CAMBIO DETECTADO:', {
+      de: lastSelectedPlanIdRef.current,
+      a: selectedPlanId
+    })
+
+    const selectedPlan = availablePlans.find(p => p._id === selectedPlanId)
+    if (selectedPlan) {
+      console.log('✅ Usuario cambió plan manualmente:', {
+        planAnterior: lastSelectedPlanIdRef.current,
+        planNuevo: selectedPlanId,
+        nombrePlan: selectedPlan.name,
+        limites: selectedPlan.limits
+      })
+
+      setValue('subscription.planId', selectedPlan._id, { shouldValidate: true })
+
+      // Actualizar features inmediatamente
+      setValue('features', {
+        inventoryManagement: selectedPlan.features.inventoryManagement,
+        accounting: selectedPlan.features.accounting,
+        hrm: selectedPlan.features.hrm,
+        crm: selectedPlan.features.crm,
+        projectManagement: selectedPlan.features.projectManagement,
+        reports: selectedPlan.features.reports,
+        multiCurrency: selectedPlan.features.multiCurrency,
+        apiAccess: selectedPlan.features.apiAccess,
+        customBranding: selectedPlan.features.customBranding,
+        prioritySupport: selectedPlan.features.prioritySupport,
+        advancedAnalytics: selectedPlan.features.advancedAnalytics,
+        auditLog: selectedPlan.features.auditLog,
+        customIntegrations: selectedPlan.features.customIntegrations,
+        dedicatedAccount: selectedPlan.features.dedicatedAccount
+      }, { shouldValidate: true })
+
+      lastSelectedPlanIdRef.current = selectedPlanId
+    }
+    // setValue se omite de dependencias porque React Hook Form garantiza estabilidad
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPlanId, availablePlans, isInitialized, company.plan])
+
+  // Función para validar campos por etapa
   const validateStep = useCallback(
     async (
       step: number
-    ): Promise<{isValid: boolean; missingFields: string[]}> => {
+    ): Promise<{ isValid: boolean; missingFields: string[] }> => {
       let fieldsToValidate: string[] = []
       let missingFields: string[] = []
 
       switch (step) {
-        case 1: // Información básica
+        case 1:
           fieldsToValidate = [
             'name',
             'email',
@@ -220,7 +346,7 @@ export default function EditCompanyForm({
             'address.postalCode'
           ]
           break
-        case 2: // Configuración de negocio
+        case 2:
           fieldsToValidate = [
             'settings.businessType',
             'settings.industry',
@@ -228,14 +354,11 @@ export default function EditCompanyForm({
             'settings.currency'
           ]
           break
-        case 3: // Plan y características
+        case 3:
           fieldsToValidate = ['subscription.plan']
-          console.log(
-            '🔍 Validando Step 3 - Plan actual:',
-            getValues('subscription.plan')
-          )
+          console.log('🔍 Validando Step 3 - Plan actual:', getValues('subscription.planId'))
           break
-        case 4: // Personalización
+        case 4:
           fieldsToValidate = [
             'branding.primaryColor',
             'branding.secondaryColor'
@@ -243,15 +366,13 @@ export default function EditCompanyForm({
           break
       }
 
-      // Validar cada campo específicamente
       const results = await Promise.all(
         fieldsToValidate.map(field => trigger(field as any))
       )
 
-      // Identificar campos que faltan o son inválidos
       fieldsToValidate.forEach((field, index) => {
         if (!results[index]) {
-          const fieldLabels: {[key: string]: string} = {
+          const fieldLabels: { [key: string]: string } = {
             name: 'Nombre de la Empresa',
             email: 'Email de Contacto',
             'address.street': 'Dirección',
@@ -272,13 +393,15 @@ export default function EditCompanyForm({
       })
 
       const isValid = results.every(result => result)
-      return {isValid, missingFields}
+      return { isValid, missingFields }
     },
     [trigger, getValues]
   )
 
-  // Validación optimizada cuando cambie el paso
+  // 🔥 FIX #4: Solo validar si está inicializado
   useEffect(() => {
+    if (!isInitialized) return
+
     let isMounted = true
 
     const checkValidation = async () => {
@@ -302,16 +425,17 @@ export default function EditCompanyForm({
     return () => {
       isMounted = false
     }
-  }, [currentStep, validateStep])
+  }, [currentStep, validateStep, isInitialized])
 
-  // Validación en tiempo real con debounce optimizada
+  // Validación en tiempo real con debounce
   const formValues = watch()
   const lastValidationTimeRef = useRef(0)
 
-  // Efecto para validación en tiempo real con debounce
   useEffect(() => {
+    if (!isInitialized) return
+
     const now = Date.now()
-    const shouldValidate = now - lastValidationTimeRef.current > 500 // Debounce de 500ms
+    const shouldValidate = now - lastValidationTimeRef.current > 500
 
     if (!shouldValidate) {
       return
@@ -345,130 +469,149 @@ export default function EditCompanyForm({
       isMounted = false
       clearTimeout(timeoutId)
     }
-  }, [formValues, currentStep, validateStep])
+  }, [formValues, currentStep, validateStep, isInitialized])
 
   // Reset inicial del estado de validación cuando se abre el modal
   useEffect(() => {
     if (isOpen) {
+      console.log('🔄 Modal abierto - Reseteando estados')
       setCurrentStep(1)
       setIsCurrentStepValid(false)
       setValidationInProgress(false)
+      setIsInitialized(false)
+      lastSelectedPlanIdRef.current = ''
+      // NO resetear selectedPlanId aquí - se establecerá cuando se carguen los planes
     }
   }, [isOpen])
-
-  // Reset del formulario con datos actualizados cuando cambie la empresa o se abra el modal
-  const companyIdRef = useRef(company?._id)
-
-  useEffect(() => {
-    if (isOpen && company) {
-      console.log('🔄 Resetting form with company data:', company)
-      console.log('🔍 Plan de la empresa:', company.plan)
-      console.log('🔍 Estado de la empresa:', company.status)
-      console.log('🔍 Subscription de la empresa:', company.subscription)
-      console.log('🔍 Subscription status:', company.subscription?.status)
-
-      // Usar función helper para convertir datos de empresa a formato de formulario
-      const formData = convertCompanyToUpdateFormData(company)
-
-      console.log('🔄 Form data que se va a establecer:', formData)
-      console.log('🔍 Plan en form data:', formData.subscription.plan)
-
-      reset(formData)
-      companyIdRef.current = company._id
-      prevPlanRef.current = company.plan // Reset del plan ref también
-    }
-  }, [isOpen, company, reset])
 
   // Manejo del envío del formulario
   const onSubmit = async (data: UpdateCompanyFormData) => {
     console.log('🚀 SUBMIT ejecutado - Paso actual:', currentStep)
-    console.log(
-      '🚀 Debería ejecutarse solo en paso 4, pero se ejecutó en paso:',
-      currentStep
-    )
 
     if (currentStep !== 4) {
       console.error('❌ SUBMIT ejecutado en paso incorrecto!')
       return
     }
 
-    // 🔥 FIX CRÍTICO: Usar helper para sanitizar datos
-    const correctedData = sanitizeCompanyUpdateData(data, company)
+    console.log('📋 Datos del formulario:', data)
+    console.log('📌 selectedPlanId (estado):', selectedPlanId)
+    console.log('📌 company.plan (original):', company.plan)
+    console.log('📌 typeof company.plan:', typeof company.plan)
+    console.log('📌 lastSelectedPlanIdRef.current:', lastSelectedPlanIdRef.current)
 
-    console.log('🔧 Datos ORIGINALES del formulario:', data)
-    console.log('🔧 Status original de la empresa:', company.status)
-    console.log('🔧 Datos CORREGIDOS que se enviarán:', correctedData)
-    console.log('🔧 Status que se enviará:', correctedData.status)
+    // 🔥 CRÍTICO: Determinar el plan a enviar
+    // Extraer el planId correctamente (puede ser string u objeto populated)
+    let originalPlanId: string = ''
+    if (company.plan) {
+      if (typeof company.plan === 'object' && company.plan !== null) {
+        originalPlanId = company.plan._id
+        console.log('✅ Plan es objeto - ID extraído:', originalPlanId)
+      } else {
+        originalPlanId = company.plan as string
+        console.log('✅ Plan es string - ID:', originalPlanId)
+      }
+    } else {
+      console.warn('⚠️ company.plan es null/undefined')
+    }
+
+    console.log('📌 originalPlanId extraído:', originalPlanId)
+    console.log('📌 selectedPlanId actual:', selectedPlanId)
+
+    // Prioridad: 1) selectedPlanId (si el usuario cambió el plan)
+    //           2) originalPlanId (si no se modificó, mantener el original)
+    const planToSend = selectedPlanId || originalPlanId
+
+    console.log('✅ Plan final que se enviará:', planToSend)
+    console.log('📊 Comparación:', {
+      selectedPlanId,
+      originalPlanId,
+      planToSend,
+      esIgualAlOriginal: planToSend === originalPlanId,
+      cambioElPlan: planToSend !== originalPlanId
+    })
+
+    if (!planToSend) {
+      console.error('❌ ERROR: No hay plan válido para enviar')
+      toast.error('Error: No se pudo determinar el plan de la empresa')
+      return
+    }
+
+    // Sanitizar datos PRIMERO
+    const correctedData = sanitizeCompanyUpdateData(data, company as never)
+
+    console.log('📦 Datos sanitizados:', correctedData)
+    console.log('📦 subscription completo:', correctedData.subscription)
+
+    // 🔥 CRÍTICO: Agregar planId a subscription para que la API lo reciba correctamente
+    const dataWithPlan = {
+      ...correctedData,
+      subscription: {
+        ...correctedData.subscription,
+        planId: planToSend // 🔥 La API espera subscription.planId
+      }
+    }
+
+    console.log('📦 Datos finales a enviar:', dataWithPlan)
+    console.log('📦 subscription.planId:', dataWithPlan.subscription.planId)
 
     setIsSubmitting(true)
     try {
-      console.log(
-        '📤 Datos enviados al backend para actualización:',
-        correctedData
-      )
-      console.log(
-        '🔍 Plan específico en subscription:',
-        correctedData.subscription?.plan
-      )
-      console.log(
-        '🔍 Datos de subscription completos:',
-        correctedData.subscription
-      )
-      console.log('🔍 Status de la empresa:', correctedData.status)
-      console.log(
-        '🔍 Valores actuales del formulario (getValues):',
-        getValues()
-      )
       const result = await EnhancedCompanyAPI.updateCompany(
         company._id,
-        correctedData
+        dataWithPlan as never
       )
 
       if (result.success) {
-        // Mostrar toast de éxito
-        toast.success('🎉 Empresa actualizada exitosamente', {
-          position: 'top-right',
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true
-        })
-
-        onSuccess(result.company!)
-        setCurrentStep(1)
-        setIsCurrentStepValid(false)
-        setValidationInProgress(false)
-        onClose()
+        handleSuccess(result)
       } else {
-        setDialogState({
-          isOpen: true,
-          action: 'error',
-          title: 'Error al actualizar empresa',
-          message: result.message || 'No se pudo actualizar la empresa',
-          confirmText: 'Cerrar',
-          onConfirm: closeDialog
-        })
+        handleError(result.message)
       }
     } catch (error) {
-      console.error('Error al actualizar empresa:', error)
-      setDialogState({
-        isOpen: true,
-        action: 'error',
-        title: 'Error inesperado',
-        message:
-          'Error inesperado al actualizar la empresa. Por favor, intente nuevamente.',
-        confirmText: 'Cerrar',
-        onConfirm: closeDialog
-      })
+      handleError(error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  const handleSuccess = (result: any) => {
+    toast.success('🎉 Empresa actualizada exitosamente', {
+      position: 'top-right',
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true
+    })
+
+    onSuccess(result.company!)
+
+    // Reset completo del estado
+    setCurrentStep(1)
+    setIsCurrentStepValid(false)
+    setValidationInProgress(false)
+    setIsInitialized(false)
+    setSelectedPlanId('')
+    lastSelectedPlanIdRef.current = ''
+
+    onClose()
+  }
+
+  const handleError = (error: any) => {
+    console.error('Error al actualizar empresa:', error)
+    setDialogState({
+      isOpen: true,
+      action: 'error',
+      title: 'Error al actualizar empresa',
+      message: typeof error === 'string' ? error : error?.message || 'Error inesperado al actualizar la empresa. Por favor, intente nuevamente.',
+      confirmText: 'Cerrar',
+      onConfirm: closeDialog
+    })
+    setIsSubmitting(false)
+  }
+
   // Navegación entre pasos
   const nextStep = async (e?: React.MouseEvent) => {
-    e?.preventDefault() // Prevenir cualquier comportamiento de envío
+    e?.preventDefault()
     console.log('🔄 NextStep ejecutado, paso actual:', currentStep)
 
     try {
@@ -481,11 +624,8 @@ export default function EditCompanyForm({
         console.log('✅ Avanzando al paso:', newStep)
         setCurrentStep(newStep)
       } else {
-        console.log(
-          '❌ Validación falló, campos faltantes:',
-          validation.missingFields
-        )
-        // Construir mensaje de error específico
+        console.log('❌ Validación falló, campos faltantes:', validation.missingFields)
+
         const missingFieldsList = validation.missingFields.join(', ')
         const message =
           validation.missingFields.length === 1
@@ -507,8 +647,7 @@ export default function EditCompanyForm({
         isOpen: true,
         action: 'error',
         title: 'Error de validación',
-        message:
-          'Ocurrió un error al validar el formulario. Por favor, inténtelo nuevamente.',
+        message: 'Ocurrió un error al validar el formulario. Por favor, inténtelo nuevamente.',
         confirmText: 'Entendido',
         onConfirm: closeDialog
       })
@@ -517,33 +656,27 @@ export default function EditCompanyForm({
     }
   }
 
-  // Navegación al paso anterior
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1))
 
-  // Manejo del cierre del modal
   const handleClose = () => {
     reset()
     setCurrentStep(1)
     setIsCurrentStepValid(false)
     setValidationInProgress(false)
+    setIsInitialized(false)
+    setSelectedPlanId('')
+    lastSelectedPlanIdRef.current = ''
     onClose()
   }
 
   if (!isOpen) return null
 
-  console.log(
-    '🔍 EditForm Render - Paso actual:',
-    currentStep,
-    'Válido:',
-    isCurrentStepValid
-  )
+  console.log('🔍 EditForm Render - Paso:', currentStep, 'Válido:', isCurrentStepValid, 'Inicializado:', isInitialized)
 
-  // Función wrapper para manejar el cambio de paso desde el FormStepper
   const handleStepClick = (step: FormStep) => {
     setCurrentStep(step)
   }
 
-  // Renderizar indicador de validación mejorado
   const renderValidationIndicator = () => {
     if (isCurrentStepValid) {
       return (
@@ -576,7 +709,7 @@ export default function EditCompanyForm({
 
   return (
     <>
-      <CompanyFormModal
+      <FormModal
         isOpen={isOpen}
         onClose={handleClose}
         title='Editar Empresa'
@@ -588,7 +721,7 @@ export default function EditCompanyForm({
           <div className='flex items-center space-x-4 mb-6 pb-4 border-b border-gray-200'>
             <div
               className='w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg'
-              style={{backgroundColor: company.settings.branding.primaryColor}}
+              style={{ backgroundColor: company.settings.branding.primaryColor }}
             >
               {company.name.charAt(0).toUpperCase()}
             </div>
@@ -903,12 +1036,12 @@ export default function EditCompanyForm({
                         })}
                         className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                       >
-                        {Array.from({length: 12}, (_, i) => i + 1).map(
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(
                           month => (
                             <option key={month} value={month}>
                               {new Date(2024, month - 1, 1).toLocaleDateString(
                                 'es-ES',
-                                {month: 'long'}
+                                { month: 'long' }
                               )}
                             </option>
                           )
@@ -926,12 +1059,12 @@ export default function EditCompanyForm({
                         })}
                         className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                       >
-                        {Array.from({length: 12}, (_, i) => i + 1).map(
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(
                           month => (
                             <option key={month} value={month}>
                               {new Date(2024, month - 1, 1).toLocaleDateString(
                                 'es-ES',
-                                {month: 'long'}
+                                { month: 'long' }
                               )}
                             </option>
                           )
@@ -954,64 +1087,97 @@ export default function EditCompanyForm({
                     Plan de Suscripción
                   </h3>
 
-                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
-                    {SUBSCRIPTION_PLANS.map(plan => (
-                      <div
-                        key={plan.id}
-                        className={`border-2 rounded-lg p-4 cursor-pointer transition-all relative ${
-                          watch('subscription.plan') === plan.id
-                            ? plan.id === 'trial'
+                  {plansLoading ? (
+                    <div className='flex justify-center items-center py-8'>
+                      <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
+                      <span className='ml-3 text-gray-600'>Cargando planes disponibles...</span>
+                    </div>
+                  ) : availablePlans.length === 0 ? (
+                    <div className='text-center py-8'>
+                      <p className='text-gray-500'>No hay planes disponibles en este momento.</p>
+                    </div>
+                  ) : (
+                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
+                      {availablePlans.map(plan => (
+                        <div
+                          key={plan._id}
+                          className={`border-2 rounded-lg p-4 cursor-pointer transition-all relative ${selectedPlanId === plan._id
+                            ? plan.type === 'trial'
                               ? 'border-orange-500 bg-orange-50'
                               : 'border-blue-500 bg-blue-50'
                             : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => {
-                          console.log('🎯 Clic en plan:', plan.id)
-                          setValue('subscription.plan', plan.id as any)
-                          console.log(
-                            '✅ Plan establecido en formulario:',
-                            plan.id
-                          )
-                        }}
-                      >
-                        {plan.id === 'trial' && (
-                          <div className='absolute -top-2 -right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full'>
-                            PRUEBA
-                          </div>
-                        )}
-                        <div className='text-center'>
-                          <h4
-                            className={`font-semibold text-lg ${
-                              plan.id === 'trial' ? 'text-orange-700' : ''
                             }`}
-                          >
-                            {plan.name}
-                          </h4>
-                          <p className='text-sm text-gray-600 mt-1'>
-                            {plan.description}
-                          </p>
-                          <div className='mt-3 space-y-1'>
-                            <p className='text-xs text-gray-500'>Límites:</p>
-                            <p className='text-xs'>
-                              👥 {plan.limits.maxUsers} usuarios
+                          onClick={() => {
+                            console.log('🎯 Clic en plan:', {
+                              planId: plan._id,
+                              planName: plan.name,
+                              planType: plan.type,
+                              selectedPlanIdAntes: selectedPlanId,
+                              companyPlan: company.plan
+                            })
+                            setSelectedPlanId(plan._id)
+                            setValue('subscription.planId', plan._id)
+                            console.log('✅ selectedPlanId actualizado a:', plan._id)
+                          }}
+                        >
+                          {plan.type === 'trial' && (
+                            <div className='absolute -top-2 -right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full'>
+                              PRUEBA
+                            </div>
+                          )}
+                          {plan.isRecommended && (
+                            <div className='absolute -top-2 -left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full'>
+                              ⭐ RECOMENDADO
+                            </div>
+                          )}
+                          <div className='text-center'>
+                            <h4
+                              className={`font-semibold text-lg ${plan.type === 'trial' ? 'text-orange-700' : ''
+                                }`}
+                            >
+                              {plan.name}
+                            </h4>
+                            <p className='text-sm text-gray-600 mt-1'>
+                              {plan.description}
                             </p>
-                            <p className='text-xs'>
-                              📦 {plan.limits.maxProducts} productos
-                            </p>
-                            <p className='text-xs'>
-                              💾 {plan.limits.storageGB} GB
-                            </p>
+                            <div className='mt-3 space-y-1'>
+                              <p className='text-xs text-gray-500'>Límites:</p>
+                              <p className='text-xs'>
+                                👥 {plan.limits.maxUsers} usuarios
+                              </p>
+                              <p className='text-xs'>
+                                📦 {plan.limits.maxProducts} productos
+                              </p>
+                              <p className='text-xs'>
+                                💾 {plan.limits.storageGB} GB
+                              </p>
+                            </div>
+                            {plan.price && (
+                              <div className='mt-3 pt-3 border-t border-gray-200'>
+                                <p className='text-lg font-bold text-gray-900'>
+                                  ${plan.price.monthly?.toLocaleString() || '0'} {plan.price.currency || 'USD'}
+                                </p>
+                                <p className='text-xs text-gray-500'>por mes</p>
+                              </div>
+                            )}
                           </div>
+                          <input
+                            type='radio'
+                            name='planSelection'
+                            value={plan._id}
+                            checked={selectedPlanId === plan._id}
+                            onChange={() => {
+                              setSelectedPlanId(plan._id)
+                              setValue('subscription.planId', plan._id)
+                            }}
+                            className='sr-only'
+                            aria-checked='true'
+                            placeholder='Seleccionar este plan'
+                          />
                         </div>
-                        <input
-                          type='radio'
-                          {...register('subscription.plan')}
-                          value={plan.id}
-                          className='sr-only'
-                        />
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div className='mt-4'>
                     <label className='flex items-center'>
@@ -1028,89 +1194,11 @@ export default function EditCompanyForm({
                 </div>
 
                 <div>
-                  <h3 className='text-lg font-medium text-gray-900 border-b border-gray-200 pb-2 mb-4'>
-                    Características Habilitadas
-                  </h3>
-
-                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                    <label className='flex items-center p-3 border border-gray-200 rounded-lg'>
-                      <input
-                        type='checkbox'
-                        {...register('features.inventory')}
-                        className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                      />
-                      <div className='ml-3'>
-                        <p className='text-sm font-medium text-gray-900'>
-                          Inventario
-                        </p>
-                        <p className='text-xs text-gray-500'>
-                          Gestión de productos y stock
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className='flex items-center p-3 border border-gray-200 rounded-lg'>
-                      <input
-                        type='checkbox'
-                        {...register('features.accounting')}
-                        className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                      />
-                      <div className='ml-3'>
-                        <p className='text-sm font-medium text-gray-900'>
-                          Contabilidad
-                        </p>
-                        <p className='text-xs text-gray-500'>
-                          Gestión financiera y contable
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className='flex items-center p-3 border border-gray-200 rounded-lg'>
-                      <input
-                        type='checkbox'
-                        {...register('features.hrm')}
-                        className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                      />
-                      <div className='ml-3'>
-                        <p className='text-sm font-medium text-gray-900'>
-                          Recursos Humanos
-                        </p>
-                        <p className='text-xs text-gray-500'>
-                          Gestión de personal
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className='flex items-center p-3 border border-gray-200 rounded-lg'>
-                      <input
-                        type='checkbox'
-                        {...register('features.crm')}
-                        className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                      />
-                      <div className='ml-3'>
-                        <p className='text-sm font-medium text-gray-900'>CRM</p>
-                        <p className='text-xs text-gray-500'>
-                          Gestión de clientes
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className='flex items-center p-3 border border-gray-200 rounded-lg'>
-                      <input
-                        type='checkbox'
-                        {...register('features.projects')}
-                        className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                      />
-                      <div className='ml-3'>
-                        <p className='text-sm font-medium text-gray-900'>
-                          Proyectos
-                        </p>
-                        <p className='text-xs text-gray-500'>
-                          Gestión de proyectos
-                        </p>
-                      </div>
-                    </label>
-                  </div>
+                  <PlanFeaturesDisplay
+                    features={watch('features')}
+                    size="md"
+                    columns={3}
+                  />
                 </div>
               </div>
             )}
@@ -1139,6 +1227,7 @@ export default function EditCompanyForm({
                             setValue('branding.primaryColor', e.target.value)
                           }
                           className='w-12 h-10 border border-gray-300 rounded-md cursor-pointer'
+                          placeholder='Selecciona un Color Primario'
                         />
                         <input
                           type='text'
@@ -1175,6 +1264,7 @@ export default function EditCompanyForm({
                             setValue('branding.secondaryColor', e.target.value)
                           }
                           className='w-12 h-10 border border-gray-300 rounded-md cursor-pointer'
+                          placeholder='Selecciona un Color Secundario'
                         />
                         <input
                           type='text'
@@ -1259,11 +1349,7 @@ export default function EditCompanyForm({
                       </div>
                       <div>
                         <strong>Plan:</strong>{' '}
-                        {
-                          SUBSCRIPTION_PLANS.find(
-                            p => p.id === watch('subscription.plan')
-                          )?.name
-                        }
+                        {availablePlans.find(p => p._id === selectedPlanId)?.name || 'No seleccionado'}
                       </div>
                       <div>
                         <strong>Moneda:</strong> {watch('settings.currency')}
@@ -1320,11 +1406,10 @@ export default function EditCompanyForm({
                     type='button'
                     onClick={e => nextStep(e)}
                     disabled={!isCurrentStepValid || validationInProgress}
-                    className={`px-6 py-2 rounded-md transition-colors ${
-                      isCurrentStepValid && !validationInProgress
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
+                    className={`px-6 py-2 rounded-md transition-colors ${isCurrentStepValid && !validationInProgress
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
                     title={
                       !isCurrentStepValid
                         ? 'Complete todos los campos requeridos para continuar'
@@ -1337,11 +1422,10 @@ export default function EditCompanyForm({
                   <button
                     type='submit'
                     disabled={isSubmitting || !isCurrentStepValid}
-                    className={`px-6 py-2 rounded-md transition-colors ${
-                      !isSubmitting && isCurrentStepValid
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
+                    className={`px-6 py-2 rounded-md transition-colors ${!isSubmitting && isCurrentStepValid
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
                   >
                     {isSubmitting ? 'Actualizando...' : 'Actualizar Empresa'}
                   </button>
@@ -1350,7 +1434,7 @@ export default function EditCompanyForm({
             </div>
           </form>
         </div>
-      </CompanyFormModal>
+      </FormModal>
 
       {/* Diálogo de Confirmación/Error */}
       <ConfirmationDialog

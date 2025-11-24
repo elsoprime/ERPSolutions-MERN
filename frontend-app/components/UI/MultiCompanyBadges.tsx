@@ -8,8 +8,7 @@ import React from 'react'
 import {
   UserStatus,
   CompanyStatus,
-  UserRole,
-  CompanyPlan
+  UserRole
 } from '@/interfaces/EnhanchedCompany/MultiCompany'
 
 interface StatusBadgeProps {
@@ -25,7 +24,12 @@ interface RoleBadgeProps {
 }
 
 interface PlanBadgeProps {
-  plan: CompanyPlan
+  plan: string | {
+    _id: string;
+    name: string;
+    type: "trial" | "free" | "basic" | "professional" | "enterprise";
+    description?: string;
+  }
   size?: 'sm' | 'md' | 'lg'
   variant?: 'solid' | 'outline'
 }
@@ -37,7 +41,7 @@ type RoleKey =
   | 'manager'
   | 'employee'
   | 'viewer'
-type PlanKey = 'free' | 'basic' | 'professional' | 'enterprise'
+type PlanKey = 'trial' | 'free' | 'basic' | 'professional' | 'enterprise'
 
 const STATUS_STYLES: Record<StatusKey, Record<'solid' | 'outline', string>> = {
   active: {
@@ -86,6 +90,10 @@ const ROLE_STYLES: Record<RoleKey, Record<'solid' | 'outline', string>> = {
 }
 
 const PLAN_STYLES: Record<PlanKey, Record<'solid' | 'outline', string>> = {
+  trial: {
+    solid: 'bg-amber-100 text-amber-800 border-amber-200',
+    outline: 'border-amber-300 text-amber-700 bg-transparent'
+  },
   free: {
     solid: 'bg-gray-100 text-gray-800 border-gray-200',
     outline: 'border-gray-300 text-gray-700 bg-transparent'
@@ -127,6 +135,7 @@ const ROLE_LABELS: Record<RoleKey, string> = {
 }
 
 const PLAN_LABELS: Record<PlanKey, string> = {
+  trial: 'Prueba',
   free: 'Gratuito',
   basic: 'Básico',
   professional: 'Profesional',
@@ -216,15 +225,30 @@ export function PlanBadge({
   size = 'md',
   variant = 'solid'
 }: PlanBadgeProps) {
+  // Determinar el tipo de plan y el nombre
+  let planType: PlanKey;
+  let planName: string;
+
+  if (typeof plan === 'object' && plan !== null) {
+    // Plan viene populated del backend
+    planType = plan.type as PlanKey;
+    planName = plan.name;
+  } else {
+    // Plan es un string
+    planType = plan as PlanKey;
+    planName = PLAN_LABELS[planType] || plan;
+  }
+
   const baseClasses =
     'inline-flex items-center font-medium rounded-full border transition-colors'
   const sizeClasses = SIZE_STYLES[size]
-  const planKey = plan as PlanKey
   const planClasses =
-    PLAN_STYLES[planKey]?.[variant] || PLAN_STYLES.free[variant]
+    PLAN_STYLES[planType]?.[variant] || PLAN_STYLES.free[variant]
 
   const getPlanIcon = () => {
-    switch (planKey) {
+    switch (planType) {
+      case 'trial':
+        return <span className='mr-1.5 text-sm'>🎯</span>
       case 'free':
         return <span className='mr-1.5 text-sm'>🆓</span>
       case 'basic':
@@ -241,7 +265,7 @@ export function PlanBadge({
   return (
     <span className={`${baseClasses} ${sizeClasses} ${planClasses}`}>
       {getPlanIcon()}
-      {PLAN_LABELS[planKey] || plan}
+      {planName}
     </span>
   )
 }
@@ -314,9 +338,8 @@ export function CapacityBadge({
 
   return (
     <span
-      className={`inline-flex items-center font-medium rounded-full border transition-colors ${
-        SIZE_STYLES[size]
-      } ${getVariantClass()}`}
+      className={`inline-flex items-center font-medium rounded-full border transition-colors ${SIZE_STYLES[size]
+        } ${getVariantClass()}`}
     >
       {current}/{displayLimit} {typeLabel}
     </span>
@@ -329,7 +352,7 @@ interface TrialBadgeProps {
   size?: 'sm' | 'md' | 'lg'
 }
 
-export function TrialBadge({daysLeft, size = 'md'}: TrialBadgeProps) {
+export function TrialBadge({ daysLeft, size = 'md' }: TrialBadgeProps) {
   const isExpiringSoon = daysLeft <= 3
   const hasExpired = daysLeft <= 0
 
@@ -347,9 +370,8 @@ export function TrialBadge({daysLeft, size = 'md'}: TrialBadgeProps) {
 
   return (
     <span
-      className={`inline-flex items-center font-medium rounded-full border transition-colors ${
-        SIZE_STYLES[size]
-      } ${getVariantClass()}`}
+      className={`inline-flex items-center font-medium rounded-full border transition-colors ${SIZE_STYLES[size]
+        } ${getVariantClass()}`}
     >
       <span className='mr-1.5 text-sm'>⏰</span>
       {getText()}

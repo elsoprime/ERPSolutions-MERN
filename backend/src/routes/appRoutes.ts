@@ -1,9 +1,10 @@
-import {Router} from 'express'
-import authRoutes from '@/modules/userManagement/routes/authRoutes'
-import userManagementRoutes from '@/modules/userManagement/routes'
-import enhancedCompanyRoutes from '@/modules/companiesManagement/routes/enhancedCompanyRoutes'
-import warehouseRoutes from '@/modules/warehouseManagement/routes/warehouseRoutes'
-import domainsRoutes from '@/routes/domainRoutes'
+import { Router } from "express";
+import authRoutes from "@/modules/userManagement/routes/authRoutes";
+import userManagementRoutes from "@/modules/userManagement/routes";
+import enhancedCompanyRoutes from "@/modules/companiesManagement/routes/enhancedCompanyRoutes";
+import warehouseRoutes from "@/modules/warehouseManagement/routes/warehouseRoutes";
+import domainsRoutes from "@/routes/domainRoutes";
+import planRoutes from "@/routes/planRoutes";
 
 /**
  * @description: Retorno de las rutas globales de la aplicación
@@ -12,18 +13,21 @@ import domainsRoutes from '@/routes/domainRoutes'
  * @author Esteban Leonardo Soto @elsoprimeDev
  */
 
-const router = Router()
+const router = Router();
 
 // Rutas de los módulos principales
-router.use('/auth', authRoutes) // Rutas de autenticación de usuario
+router.use("/auth", authRoutes); // Rutas de autenticación de usuario
 
-router.use('/dashboard', domainsRoutes) // Rutas de inicio
+router.use("/dashboard", domainsRoutes); // Rutas de inicio
+
+// Rutas públicas de planes (para mostrar en registro/pricing)
+router.use("/plans", planRoutes); // Rutas de gestión de planes
 
 // Rutas del Módulo de Gestión de Usuarios Multiempresa [v2.0]
-router.use('/v2', userManagementRoutes)
+router.use("/v2", userManagementRoutes);
 
 // Rutas Protegidas de Gestión de EnhancedCompany [v2.0]
-router.use('/v2/enhanced-companies', enhancedCompanyRoutes) // Rutas de gestión de empresas Enhanced
-router.use('/v2/warehouse', warehouseRoutes)
+router.use("/v2/enhanced-companies", enhancedCompanyRoutes); // Rutas de gestión de empresas Enhanced
+router.use("/v2/warehouse", warehouseRoutes);
 
-export default router
+export default router;

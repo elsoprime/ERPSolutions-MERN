@@ -1,6 +1,6 @@
 'use client'
 
-import {useRef, useState, KeyboardEvent, ClipboardEvent} from 'react'
+import { useRef, useState, KeyboardEvent, ClipboardEvent } from 'react'
 
 interface PinInputProps {
   length?: number
@@ -101,7 +101,7 @@ export function PinInput({
 
   return (
     <div className='flex justify-center gap-3'>
-      {Array.from({length}).map((_, index) => (
+      {Array.from({ length }).map((_, index) => (
         <input
           key={index}
           ref={el => {
@@ -117,18 +117,17 @@ export function PinInput({
           onFocus={() => handleFocus(index)}
           disabled={isDisabled}
           className={`w-12 h-12 text-center text-xl font-bold rounded-lg border transition-all duration-300 
-            ${
-              isDisabled
-                ? 'opacity-50 cursor-not-allowed bg-gray-100'
-                : 'bg-white'
+            ${isDisabled
+              ? 'opacity-50 cursor-not-allowed bg-gray-100'
+              : 'bg-white'
             }
-            ${
-              focusedIndex === index
-                ? 'border-purple-500 ring-2 ring-purple-500'
-                : 'border-purple-400'
+            ${focusedIndex === index
+              ? 'border-purple-500 ring-2 ring-purple-500'
+              : 'border-purple-400'
             }
             focus:outline-none shadow
           `}
+          placeholder='*'
         />
       ))}
     </div>

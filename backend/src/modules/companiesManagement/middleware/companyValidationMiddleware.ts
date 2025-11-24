@@ -6,22 +6,23 @@
  * @updated: 28/10/2025
  */
 
-import {Request, Response, NextFunction} from 'express'
-import {CompanyValidationUtils} from '../utils/CompanyUtils'
+import { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
+import { CompanyValidationUtils } from "../utils/CompanyUtils";
 import {
   ICreateCompanyRequest,
   IUpdateCompanyRequest,
   CompanyStatus,
-  SubscriptionPlan,
   BusinessType,
-  Currency
-} from '../types/EnhandedCompanyTypes'
+  Currency,
+} from "../types/EnhandedCompanyTypes";
+import { PlanType } from "@/interfaces/IPlan";
 
 // ============ TIPOS PARA VALIDACIÓN ============
 
 interface ValidationResult {
-  isValid: boolean
-  errors: string[]
+  isValid: boolean;
+  errors: string[];
 }
 
 // ============ CLASE DE MIDDLEWARE DE VALIDACIÓN ============
@@ -36,68 +37,67 @@ export class CompanyValidationMiddleware {
     next: NextFunction
   ): void => {
     try {
-      const companyData: ICreateCompanyRequest = req.body
-      const errors: string[] = []
+      const companyData: ICreateCompanyRequest = req.body;
+      const errors: string[] = [];
 
       // Validaciones requeridas
       if (!companyData.name || companyData.name.trim().length === 0) {
-        errors.push('El nombre de la empresa es requerido')
+        errors.push("El nombre de la empresa es requerido");
       } else if (companyData.name.length < 3) {
-        errors.push('El nombre debe tener al menos 3 caracteres')
+        errors.push("El nombre debe tener al menos 3 caracteres");
       } else if (companyData.name.length > 100) {
-        errors.push('El nombre no puede exceder 100 caracteres')
+        errors.push("El nombre no puede exceder 100 caracteres");
       }
 
       if (!companyData.email || companyData.email.trim().length === 0) {
-        errors.push('El email de la empresa es requerido')
+        errors.push("El email de la empresa es requerido");
       } else if (!CompanyValidationUtils.validateEmail(companyData.email)) {
-        errors.push('El formato del email no es válido')
+        errors.push("El formato del email no es válido");
       }
 
       // Validar slug si se proporciona
       if (companyData.slug) {
         if (!CompanyValidationUtils.validateSlug(companyData.slug)) {
           errors.push(
-            'El slug solo puede contener letras minúsculas, números y guiones'
-          )
+            "El slug solo puede contener letras minúsculas, números y guiones"
+          );
         }
       }
 
       // Validar teléfono si se proporciona
       if (companyData.phone) {
         if (!CompanyValidationUtils.validatePhone(companyData.phone)) {
-          errors.push('El formato del teléfono no es válido')
+          errors.push("El formato del teléfono no es válido");
         }
       }
 
       // Validar website si se proporciona
       if (companyData.website) {
         if (!CompanyValidationUtils.validateURL(companyData.website)) {
-          errors.push('El formato de la URL del website no es válido')
+          errors.push("El formato de la URL del website no es válido");
         }
       }
 
       // Validar dirección si se proporciona
       if (companyData.address) {
-        const requiredAddressFields = ['street', 'city', 'state', 'country']
-        requiredAddressFields.forEach(field => {
+        const requiredAddressFields = ["street", "city", "state", "country"];
+        requiredAddressFields.forEach((field) => {
           if (
             !companyData.address![field as keyof typeof companyData.address] ||
             companyData.address![
               field as keyof typeof companyData.address
             ]!.trim().length === 0
           ) {
-            errors.push(`El campo ${field} de la dirección es requerido`)
+            errors.push(`El campo ${field} de la dirección es requerido`);
           }
-        })
+        });
       }
 
-      // Validar plan si se proporciona
-      if (
-        companyData.plan &&
-        !Object.values(SubscriptionPlan).includes(companyData.plan)
-      ) {
-        errors.push('Plan de suscripción inválido')
+      // Validar plan si se proporciona (ahora es ObjectId)
+      if (companyData.plan) {
+        if (!mongoose.Types.ObjectId.isValid(companyData.plan)) {
+          errors.push("El ID del plan de suscripción es inválido");
+        }
       }
 
       // Validar settings si se proporcionan
@@ -108,7 +108,7 @@ export class CompanyValidationMiddleware {
             companyData.settings.taxId.length < 5 ||
             companyData.settings.taxId.length > 20
           ) {
-            errors.push('El RUT/Tax ID debe tener entre 5 y 20 caracteres')
+            errors.push("El RUT/Tax ID debe tener entre 5 y 20 caracteres");
           }
         }
 
@@ -119,7 +119,7 @@ export class CompanyValidationMiddleware {
             companyData.settings.businessType
           )
         ) {
-          errors.push('Tipo de negocio inválido')
+          errors.push("Tipo de negocio inválido");
         }
 
         // Validar currency
@@ -127,19 +127,19 @@ export class CompanyValidationMiddleware {
           companyData.settings.currency &&
           !Object.values(Currency).includes(companyData.settings.currency)
         ) {
-          errors.push('Moneda inválida')
+          errors.push("Moneda inválida");
         }
 
         // Validar fiscalYear si se proporciona
         if (companyData.settings.fiscalYear) {
-          const {startMonth, endMonth} = companyData.settings.fiscalYear
+          const { startMonth, endMonth } = companyData.settings.fiscalYear;
           if (
             startMonth < 1 ||
             startMonth > 12 ||
             endMonth < 1 ||
             endMonth > 12
           ) {
-            errors.push('Los meses del año fiscal deben estar entre 1 y 12')
+            errors.push("Los meses del año fiscal deben estar entre 1 y 12");
           }
         }
       }
@@ -147,23 +147,23 @@ export class CompanyValidationMiddleware {
       if (errors.length > 0) {
         res.status(400).json({
           success: false,
-          message: 'Error de validación en los datos de la empresa',
-          error: 'VALIDATION_ERROR',
-          details: errors
-        })
-        return
+          message: "Error de validación en los datos de la empresa",
+          error: "VALIDATION_ERROR",
+          details: errors,
+        });
+        return;
       }
 
-      next()
+      next();
     } catch (error) {
-      console.error('Error en validación de creación de empresa:', error)
+      console.error("Error en validación de creación de empresa:", error);
       res.status(500).json({
         success: false,
-        message: 'Error interno en la validación',
-        error: 'INTERNAL_ERROR'
-      })
+        message: "Error interno en la validación",
+        error: "INTERNAL_ERROR",
+      });
     }
-  }
+  };
 
   /**
    * Validar datos para actualizar empresa
@@ -174,26 +174,26 @@ export class CompanyValidationMiddleware {
     next: NextFunction
   ): void => {
     try {
-      const updateData: IUpdateCompanyRequest = req.body
-      const errors: string[] = []
+      const updateData: IUpdateCompanyRequest = req.body;
+      const errors: string[] = [];
 
       // Validar nombre si se proporciona
       if (updateData.name !== undefined) {
         if (!updateData.name || updateData.name.trim().length === 0) {
-          errors.push('El nombre no puede estar vacío')
+          errors.push("El nombre no puede estar vacío");
         } else if (updateData.name.length < 3) {
-          errors.push('El nombre debe tener al menos 3 caracteres')
+          errors.push("El nombre debe tener al menos 3 caracteres");
         } else if (updateData.name.length > 100) {
-          errors.push('El nombre no puede exceder 100 caracteres')
+          errors.push("El nombre no puede exceder 100 caracteres");
         }
       }
 
       // Validar email si se proporciona
       if (updateData.email !== undefined) {
         if (!updateData.email || updateData.email.trim().length === 0) {
-          errors.push('El email no puede estar vacío')
+          errors.push("El email no puede estar vacío");
         } else if (!CompanyValidationUtils.validateEmail(updateData.email)) {
-          errors.push('El formato del email no es válido')
+          errors.push("El formato del email no es válido");
         }
       }
 
@@ -204,8 +204,8 @@ export class CompanyValidationMiddleware {
           !CompanyValidationUtils.validateSlug(updateData.slug)
         ) {
           errors.push(
-            'El slug solo puede contener letras minúsculas, números y guiones'
-          )
+            "El slug solo puede contener letras minúsculas, números y guiones"
+          );
         }
       }
 
@@ -215,7 +215,7 @@ export class CompanyValidationMiddleware {
           updateData.phone &&
           !CompanyValidationUtils.validatePhone(updateData.phone)
         ) {
-          errors.push('El formato del teléfono no es válido')
+          errors.push("El formato del teléfono no es válido");
         }
       }
 
@@ -225,17 +225,15 @@ export class CompanyValidationMiddleware {
           updateData.website &&
           !CompanyValidationUtils.validateURL(updateData.website)
         ) {
-          errors.push('El formato de la URL del website no es válido')
+          errors.push("El formato de la URL del website no es válido");
         }
       }
 
-      // Validar plan si se proporciona
-      if (
-        updateData.plan !== undefined &&
-        updateData.plan &&
-        !Object.values(SubscriptionPlan).includes(updateData.plan)
-      ) {
-        errors.push('Plan de suscripción inválido')
+      // Validar plan si se proporciona (ahora es ObjectId)
+      if (updateData.plan !== undefined && updateData.plan) {
+        if (!mongoose.Types.ObjectId.isValid(updateData.plan)) {
+          errors.push("El ID del plan de suscripción es inválido");
+        }
       }
 
       // Validar status si se proporciona
@@ -244,7 +242,7 @@ export class CompanyValidationMiddleware {
         updateData.status &&
         !Object.values(CompanyStatus).includes(updateData.status)
       ) {
-        errors.push('Estado de empresa inválido')
+        errors.push("Estado de empresa inválido");
       }
 
       // Validar settings si se proporcionan
@@ -255,7 +253,7 @@ export class CompanyValidationMiddleware {
             (updateData.settings.taxId.length < 5 ||
               updateData.settings.taxId.length > 20)
           ) {
-            errors.push('El RUT/Tax ID debe tener entre 5 y 20 caracteres')
+            errors.push("El RUT/Tax ID debe tener entre 5 y 20 caracteres");
           }
         }
 
@@ -266,7 +264,7 @@ export class CompanyValidationMiddleware {
             updateData.settings.businessType
           )
         ) {
-          errors.push('Tipo de negocio inválido')
+          errors.push("Tipo de negocio inválido");
         }
 
         if (
@@ -274,30 +272,30 @@ export class CompanyValidationMiddleware {
           updateData.settings.currency &&
           !Object.values(Currency).includes(updateData.settings.currency)
         ) {
-          errors.push('Moneda inválida')
+          errors.push("Moneda inválida");
         }
       }
 
       if (errors.length > 0) {
         res.status(400).json({
           success: false,
-          message: 'Error de validación en los datos de actualización',
-          error: 'VALIDATION_ERROR',
-          details: errors
-        })
-        return
+          message: "Error de validación en los datos de actualización",
+          error: "VALIDATION_ERROR",
+          details: errors,
+        });
+        return;
       }
 
-      next()
+      next();
     } catch (error) {
-      console.error('Error en validación de actualización de empresa:', error)
+      console.error("Error en validación de actualización de empresa:", error);
       res.status(500).json({
         success: false,
-        message: 'Error interno en la validación',
-        error: 'INTERNAL_ERROR'
-      })
+        message: "Error interno en la validación",
+        error: "INTERNAL_ERROR",
+      });
     }
-  }
+  };
 
   /**
    * Validar parámetros de ID
@@ -308,38 +306,38 @@ export class CompanyValidationMiddleware {
     next: NextFunction
   ): void => {
     try {
-      const {id} = req.params
+      const { id } = req.params;
 
       if (!id) {
         res.status(400).json({
           success: false,
-          message: 'ID de empresa requerido',
-          error: 'MISSING_ID'
-        })
-        return
+          message: "ID de empresa requerido",
+          error: "MISSING_ID",
+        });
+        return;
       }
 
       // Validar formato de ObjectId de MongoDB
-      const objectIdRegex = /^[0-9a-fA-F]{24}$/
+      const objectIdRegex = /^[0-9a-fA-F]{24}$/;
       if (!objectIdRegex.test(id)) {
         res.status(400).json({
           success: false,
-          message: 'Formato de ID de empresa inválido',
-          error: 'INVALID_ID_FORMAT'
-        })
-        return
+          message: "Formato de ID de empresa inválido",
+          error: "INVALID_ID_FORMAT",
+        });
+        return;
       }
 
-      next()
+      next();
     } catch (error) {
-      console.error('Error en validación de ID de empresa:', error)
+      console.error("Error en validación de ID de empresa:", error);
       res.status(500).json({
         success: false,
-        message: 'Error interno en la validación',
-        error: 'INTERNAL_ERROR'
-      })
+        message: "Error interno en la validación",
+        error: "INTERNAL_ERROR",
+      });
     }
-  }
+  };
 
   /**
    * Validar parámetros de slug
@@ -350,36 +348,36 @@ export class CompanyValidationMiddleware {
     next: NextFunction
   ): void => {
     try {
-      const {slug} = req.params
+      const { slug } = req.params;
 
       if (!slug) {
         res.status(400).json({
           success: false,
-          message: 'Slug de empresa requerido',
-          error: 'MISSING_SLUG'
-        })
-        return
+          message: "Slug de empresa requerido",
+          error: "MISSING_SLUG",
+        });
+        return;
       }
 
       if (!CompanyValidationUtils.validateSlug(slug)) {
         res.status(400).json({
           success: false,
-          message: 'Formato de slug inválido',
-          error: 'INVALID_SLUG_FORMAT'
-        })
-        return
+          message: "Formato de slug inválido",
+          error: "INVALID_SLUG_FORMAT",
+        });
+        return;
       }
 
-      next()
+      next();
     } catch (error) {
-      console.error('Error en validación de slug de empresa:', error)
+      console.error("Error en validación de slug de empresa:", error);
       res.status(500).json({
         success: false,
-        message: 'Error interno en la validación',
-        error: 'INTERNAL_ERROR'
-      })
+        message: "Error interno en la validación",
+        error: "INTERNAL_ERROR",
+      });
     }
-  }
+  };
 
   /**
    * Validar cambio de plan
@@ -390,37 +388,37 @@ export class CompanyValidationMiddleware {
     next: NextFunction
   ): void => {
     try {
-      const {plan} = req.body
+      const { plan } = req.body;
 
       if (!plan) {
         res.status(400).json({
           success: false,
-          message: 'Plan de suscripción requerido',
-          error: 'MISSING_PLAN'
-        })
-        return
+          message: "Plan de suscripción requerido",
+          error: "MISSING_PLAN",
+        });
+        return;
       }
 
-      if (!Object.values(SubscriptionPlan).includes(plan)) {
+      if (!Object.values(PlanType).includes(plan)) {
         res.status(400).json({
           success: false,
-          message: 'Plan de suscripción inválido',
-          error: 'INVALID_PLAN',
-          availablePlans: Object.values(SubscriptionPlan)
-        })
-        return
+          message: "Plan de suscripción inválido",
+          error: "INVALID_PLAN",
+          availablePlans: Object.values(PlanType),
+        });
+        return;
       }
 
-      next()
+      next();
     } catch (error) {
-      console.error('Error en validación de cambio de plan:', error)
+      console.error("Error en validación de cambio de plan:", error);
       res.status(500).json({
         success: false,
-        message: 'Error interno en la validación',
-        error: 'INTERNAL_ERROR'
-      })
+        message: "Error interno en la validación",
+        error: "INTERNAL_ERROR",
+      });
     }
-  }
+  };
 
   /**
    * Validar cambio de estado
@@ -431,37 +429,37 @@ export class CompanyValidationMiddleware {
     next: NextFunction
   ): void => {
     try {
-      const {status} = req.body
+      const { status } = req.body;
 
       if (!status) {
         res.status(400).json({
           success: false,
-          message: 'Estado de empresa requerido',
-          error: 'MISSING_STATUS'
-        })
-        return
+          message: "Estado de empresa requerido",
+          error: "MISSING_STATUS",
+        });
+        return;
       }
 
       if (!Object.values(CompanyStatus).includes(status)) {
         res.status(400).json({
           success: false,
-          message: 'Estado de empresa inválido',
-          error: 'INVALID_STATUS',
-          availableStatuses: Object.values(CompanyStatus)
-        })
-        return
+          message: "Estado de empresa inválido",
+          error: "INVALID_STATUS",
+          availableStatuses: Object.values(CompanyStatus),
+        });
+        return;
       }
 
-      next()
+      next();
     } catch (error) {
-      console.error('Error en validación de cambio de estado:', error)
+      console.error("Error en validación de cambio de estado:", error);
       res.status(500).json({
         success: false,
-        message: 'Error interno en la validación',
-        error: 'INTERNAL_ERROR'
-      })
+        message: "Error interno en la validación",
+        error: "INTERNAL_ERROR",
+      });
     }
-  }
+  };
 
   /**
    * Validar filtros de búsqueda
@@ -472,20 +470,20 @@ export class CompanyValidationMiddleware {
     next: NextFunction
   ): void => {
     try {
-      const errors: string[] = []
+      const errors: string[] = [];
 
       // Validar parámetros de paginación
       if (req.query.page) {
-        const page = parseInt(req.query.page as string)
+        const page = parseInt(req.query.page as string);
         if (isNaN(page) || page < 1) {
-          errors.push('El número de página debe ser un entero mayor a 0')
+          errors.push("El número de página debe ser un entero mayor a 0");
         }
       }
 
       if (req.query.limit) {
-        const limit = parseInt(req.query.limit as string)
+        const limit = parseInt(req.query.limit as string);
         if (isNaN(limit) || limit < 1 || limit > 100) {
-          errors.push('El límite debe ser un entero entre 1 y 100')
+          errors.push("El límite debe ser un entero entre 1 y 100");
         }
       }
 
@@ -493,15 +491,15 @@ export class CompanyValidationMiddleware {
       if (req.query.status) {
         const statuses = Array.isArray(req.query.status)
           ? req.query.status
-          : [req.query.status]
+          : [req.query.status];
 
         const invalidStatuses = statuses.filter(
-          status =>
+          (status) =>
             !Object.values(CompanyStatus).includes(status as CompanyStatus)
-        )
+        );
 
         if (invalidStatuses.length > 0) {
-          errors.push(`Estados inválidos: ${invalidStatuses.join(', ')}`)
+          errors.push(`Estados inválidos: ${invalidStatuses.join(", ")}`);
         }
       }
 
@@ -509,15 +507,14 @@ export class CompanyValidationMiddleware {
       if (req.query.plan) {
         const plans = Array.isArray(req.query.plan)
           ? req.query.plan
-          : [req.query.plan]
+          : [req.query.plan];
 
         const invalidPlans = plans.filter(
-          plan =>
-            !Object.values(SubscriptionPlan).includes(plan as SubscriptionPlan)
-        )
+          (plan) => !Object.values(PlanType).includes(plan as PlanType)
+        );
 
         if (invalidPlans.length > 0) {
-          errors.push(`Planes inválidos: ${invalidPlans.join(', ')}`)
+          errors.push(`Planes inválidos: ${invalidPlans.join(", ")}`);
         }
       }
 
@@ -525,54 +522,54 @@ export class CompanyValidationMiddleware {
       if (req.query.businessType) {
         const businessTypes = Array.isArray(req.query.businessType)
           ? req.query.businessType
-          : [req.query.businessType]
+          : [req.query.businessType];
 
         const invalidBusinessTypes = businessTypes.filter(
-          type => !Object.values(BusinessType).includes(type as BusinessType)
-        )
+          (type) => !Object.values(BusinessType).includes(type as BusinessType)
+        );
 
         if (invalidBusinessTypes.length > 0) {
           errors.push(
-            `Tipos de negocio inválidos: ${invalidBusinessTypes.join(', ')}`
-          )
+            `Tipos de negocio inválidos: ${invalidBusinessTypes.join(", ")}`
+          );
         }
       }
 
       // Validar fechas
       if (req.query.createdAfter) {
-        const date = new Date(req.query.createdAfter as string)
+        const date = new Date(req.query.createdAfter as string);
         if (isNaN(date.getTime())) {
-          errors.push('Fecha createdAfter inválida')
+          errors.push("Fecha createdAfter inválida");
         }
       }
 
       if (req.query.createdBefore) {
-        const date = new Date(req.query.createdBefore as string)
+        const date = new Date(req.query.createdBefore as string);
         if (isNaN(date.getTime())) {
-          errors.push('Fecha createdBefore inválida')
+          errors.push("Fecha createdBefore inválida");
         }
       }
 
       if (errors.length > 0) {
         res.status(400).json({
           success: false,
-          message: 'Error de validación en los filtros de búsqueda',
-          error: 'VALIDATION_ERROR',
-          details: errors
-        })
-        return
+          message: "Error de validación en los filtros de búsqueda",
+          error: "VALIDATION_ERROR",
+          details: errors,
+        });
+        return;
       }
 
-      next()
+      next();
     } catch (error) {
-      console.error('Error en validación de filtros de búsqueda:', error)
+      console.error("Error en validación de filtros de búsqueda:", error);
       res.status(500).json({
         success: false,
-        message: 'Error interno en la validación',
-        error: 'INTERNAL_ERROR'
-      })
+        message: "Error interno en la validación",
+        error: "INTERNAL_ERROR",
+      });
     }
-  }
+  };
 }
 
-export default CompanyValidationMiddleware
+export default CompanyValidationMiddleware;

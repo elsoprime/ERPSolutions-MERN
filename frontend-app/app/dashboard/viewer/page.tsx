@@ -6,24 +6,24 @@
 
 'use client'
 
-import React, {useEffect} from 'react'
-import {useRouter} from 'next/navigation'
-import {useUserProfile} from '@/hooks/useUserManagement'
-import {useCurrentCompany} from '@/hooks/useCompanyManagement'
-import {useAuth} from '@/hooks/useAuth'
-import {getHighestRole, getDefaultRoute} from '@/utils/roleRouting'
-import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
-import {StatusBadge, RoleBadge} from '@/components/UI/MultiCompanyBadges'
-import {UserStatus} from '@/interfaces/EnhanchedCompany/MultiCompany'
+import React, { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useUserProfile } from '@/hooks/useUserManagement'
+import { useCurrentCompany } from '@/hooks/CompanyManagement/useCompanyManagement'
+import { useAuth } from '@/hooks/useAuth'
+import { getHighestRole, getDefaultRoute } from '@/utils/roleRouting'
+import { UserRole } from '@/interfaces/EnhanchedCompany/MultiCompany'
+import { StatusBadge, RoleBadge } from '@/components/UI/MultiCompanyBadges'
+import { UserStatus } from '@/interfaces/EnhanchedCompany/MultiCompany'
 import ProtectedLayout from '@/components/Layout/ProtectedLayout'
 import DashboardHeader from '@/components/Layout/DashboardHeader'
 import ModuleNavigationCards from '@/components/Shared/ModuleNavigationCards'
 
 export default function ViewerDashboardPage() {
   const router = useRouter()
-  const {getUserData} = useAuth()
-  const {data: userProfile, isLoading: userLoading} = useUserProfile()
-  const {data: currentCompany, isLoading: companyLoading} = useCurrentCompany()
+  const { getUserData } = useAuth()
+  const { data: userProfile, isLoading: userLoading } = useUserProfile()
+  const { data: currentCompany, isLoading: companyLoading } = useCurrentCompany()
 
   // 🔥 VERIFICACIÓN: Asegurar que el usuario debería estar en viewer
   useEffect(() => {

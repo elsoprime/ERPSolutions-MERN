@@ -5,10 +5,10 @@
  */
 
 'use client'
-import React, {useState, useEffect, useMemo, useCallback} from 'react'
-import {LoadingSpinner} from '@/components/Shared/LoadingSpinner'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { LoadingSpinner } from '@/components/Shared/LoadingSpinner'
 import UserAPI from '@/api/UserAPI'
-import {useUsers} from '@/hooks/useUserManagement'
+import { useUsers } from '@/hooks/useUserManagement'
 import UserListPreview from '@/components/Modules/UserManagement/UI/UserListPreview'
 import {
   UsersIcon,
@@ -16,7 +16,6 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ClockIcon,
-  ShieldCheckIcon,
   BuildingOfficeIcon,
   ChartBarIcon,
   ArrowTrendingUpIcon,
@@ -25,25 +24,22 @@ import {
   ArrowPathIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline'
-import {toast} from 'react-toastify'
+import { toast } from 'react-toastify'
 
-// Importación normal de Recharts (Next.js hace code splitting automáticamente)
+// Componentes de gráficas reutilizables
 import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  AreaChart,
-  Area,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Cell
-} from 'recharts'
+  PieChartCard,
+  AreaChartCard,
+  BarChartCard,
+} from '@/components/UI/Charts'
+
+// Transformadores de datos
+import {
+  transformStatusDistribution,
+  transformRoleDistribution,
+  transformCompanyDistribution,
+  transformMonthlyTrends,
+} from '@/utils/userChartTransformers'
 
 interface UserDashboardStats {
   totalUsers: number
@@ -82,14 +78,6 @@ export default function UserOverviewDashboard() {
   const [showFilters, setShowFilters] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  // Hook para obtener lista de usuarios recientes
-  const {users, isLoading: usersLoading} = useUsers(
-    {
-      page: 1,
-      limit: 10
-    },
-    false // No en scope de empresa
-  )
 
   // Memoizar loadDashboardData para evitar loops infinitos en useEffect
   const loadDashboardData = useCallback(async () => {
@@ -123,8 +111,8 @@ export default function UserOverviewDashboard() {
       console.error('Error loading dashboard data:', err)
       setError(
         err.response?.data?.error ||
-          err.message ||
-          'Error al cargar los datos del dashboard'
+        err.message ||
+        'Error al cargar los datos del dashboard'
       )
     } finally {
       setLoading(false)
@@ -194,7 +182,7 @@ export default function UserOverviewDashboard() {
       })
 
       // Crear y descargar archivo
-      const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'})
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
       const fecha = new Date().toISOString().split('T')[0]
@@ -236,7 +224,7 @@ export default function UserOverviewDashboard() {
       return '0.0'
     }
 
-    const {newUsers} = stats.monthlyGrowth
+    const { newUsers } = stats.monthlyGrowth
     const previousTotal = stats.totalUsers - newUsers
 
     if (previousTotal === 0) {
@@ -286,128 +274,30 @@ export default function UserOverviewDashboard() {
     viewer: 'bg-yellow-600'
   }
 
-  // Colores para gráficos de Recharts
-  const CHART_COLORS = {
-    purple: '#9333ea',
-    blue: '#2563eb',
-    green: '#16a34a',
-    yellow: '#eab308',
-    red: '#dc2626',
-    orange: '#ea580c',
-    gray: '#6b7280',
-    lightBlue: '#3b82f6',
-    lightGreen: '#22c55e'
-  }
-
-  // Preparar datos para gráfico de roles (Memoizado para optimización)
-  const roleChartData = useMemo(() => {
-    if (!stats) return []
-
-    return Object.entries(stats.roleDistribution)
-      .map(([role, count]) => ({
-        name: roleLabels[role as keyof typeof roleLabels] || role,
-        value: count,
-        percentage: ((count / stats.totalUsers) * 100).toFixed(1),
-        color:
-          role === 'super_admin'
-            ? CHART_COLORS.purple
-            : role === 'admin_empresa'
-            ? CHART_COLORS.blue
-            : role === 'manager'
-            ? CHART_COLORS.green
-            : role === 'employee'
-            ? CHART_COLORS.gray
-            : CHART_COLORS.yellow
-      }))
-      .sort((a, b) => b.value - a.value)
-  }, [stats]) // Solo recalcula cuando stats cambia
-
-  // Preparar datos para gráfico de estados (Memoizado para optimización)
+  // Preparar datos para gráficos usando transformadores
   const statusChartData = useMemo(() => {
     if (!stats) return []
+    return transformStatusDistribution(
+      stats.activeUsers,
+      stats.inactiveUsers,
+      stats.suspendedUsers
+    )
+  }, [stats])
 
-    return [
-      {
-        name: 'Activos',
-        value: stats.activeUsers,
-        color: CHART_COLORS.green
-      },
-      {
-        name: 'Inactivos',
-        value: stats.inactiveUsers,
-        color: CHART_COLORS.yellow
-      },
-      {
-        name: 'Suspendidos',
-        value: stats.suspendedUsers,
-        color: CHART_COLORS.red
-      }
-    ]
-  }, [stats]) // Solo recalcula cuando stats cambia
+  const roleChartData = useMemo(() => {
+    if (!stats) return []
+    return transformRoleDistribution(stats.roleDistribution)
+  }, [stats])
 
-  // Preparar datos para gráfico de empresas (top 8) (Memoizado para optimización)
   const companyChartData = useMemo(() => {
     if (!stats) return []
+    return transformCompanyDistribution(stats.companyDistribution, 8)
+  }, [stats])
 
-    return Object.entries(stats.companyDistribution)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 8)
-      .map(([company, count]) => ({
-        name: company.length > 15 ? company.substring(0, 15) + '...' : company,
-        usuarios: count,
-        fullName: company
-      }))
-  }, [stats]) // Solo recalcula cuando stats cambia
-
-  // Generar datos de tendencia mock (temporal hasta tener backend) (Memoizado)
-  const generateMockTrends = useMemo(() => {
-    if (!stats) return []
-
-    const months = ['Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-    const baseTotal = stats.totalUsers
-
-    return months.map((month, index) => {
-      const variation = Math.floor(Math.random() * 10) - 5
-      const total = Math.max(baseTotal - (6 - index) * 5 + variation, 0)
-      const active = Math.floor(total * 0.85)
-      const inactive = Math.floor(total * 0.12)
-      const newUsers =
-        index === months.length - 1
-          ? stats.monthlyGrowth.newUsers
-          : Math.floor(Math.random() * 8)
-
-      return {
-        month,
-        total,
-        active,
-        inactive,
-        newUsers
-      }
-    })
-  }, [stats]) // Solo recalcula cuando stats cambia
-
-  // Tendencias con preferencia por datos reales del backend (Memoizado)
   const trendsData = useMemo(() => {
-    return stats?.monthlyTrends || generateMockTrends
-  }, [stats, generateMockTrends])
-
-  // Tooltip personalizado para los gráficos
-  const CustomTooltip = ({active, payload, label}: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className='bg-white p-3 border border-gray-200 rounded-lg shadow-lg'>
-          <p className='font-medium text-gray-900'>{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className='text-sm' style={{color: entry.color}}>
-              {entry.name}: <span className='font-semibold'>{entry.value}</span>
-              {entry.payload.percentage && ` (${entry.payload.percentage}%)`}
-            </p>
-          ))}
-        </div>
-      )
-    }
-    return null
-  }
+    if (!stats?.monthlyTrends) return []
+    return transformMonthlyTrends(stats.monthlyTrends)
+  }, [stats])
 
   // ============================================================================
   // EARLY RETURNS - DEBEN ESTAR DESPUÉS DE TODOS LOS HOOKS
@@ -491,11 +381,10 @@ export default function UserOverviewDashboard() {
                           setDateFilter(filter)
                           setShowFilters(false)
                         }}
-                        className={`${
-                          dateFilter === filter
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'text-gray-700 hover:bg-gray-50'
-                        } block w-full text-left px-4 py-2 text-sm transition-colors`}
+                        className={`${dateFilter === filter
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-gray-700 hover:bg-gray-50'
+                          } block w-full text-left px-4 py-2 text-sm transition-colors`}
                       >
                         {getDateFilterLabel(filter)}
                       </button>
@@ -684,256 +573,61 @@ export default function UserOverviewDashboard() {
       </div>
 
       {/* Gráficos Interactivos */}
-      <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
-        {/* Gráfico de Tendencias Mensuales */}
-        <div className='bg-white shadow rounded-lg border border-gray-200 p-6'>
-          <div className='mb-4'>
-            <h3 className='text-lg font-medium text-gray-900'>
-              Tendencia de Usuarios
-            </h3>
-            <p className='text-sm text-gray-500 mt-1'>
-              Evolución de usuarios en los últimos 6 meses
-            </p>
-          </div>
-          <ResponsiveContainer width='100%' height={300}>
-            <AreaChart data={trendsData}>
-              <defs>
-                <linearGradient id='colorTotal' x1='0' y1='0' x2='0' y2='1'>
-                  <stop
-                    offset='5%'
-                    stopColor={CHART_COLORS.blue}
-                    stopOpacity={0.8}
-                  />
-                  <stop
-                    offset='95%'
-                    stopColor={CHART_COLORS.blue}
-                    stopOpacity={0}
-                  />
-                </linearGradient>
-                <linearGradient id='colorActive' x1='0' y1='0' x2='0' y2='1'>
-                  <stop
-                    offset='5%'
-                    stopColor={CHART_COLORS.green}
-                    stopOpacity={0.8}
-                  />
-                  <stop
-                    offset='95%'
-                    stopColor={CHART_COLORS.green}
-                    stopOpacity={0}
-                  />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
-              <XAxis dataKey='month' tick={{fontSize: 12}} stroke='#9ca3af' />
-              <YAxis tick={{fontSize: 12}} stroke='#9ca3af' />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{fontSize: '12px'}} />
-              <Area
-                type='monotone'
-                dataKey='total'
-                stroke={CHART_COLORS.blue}
-                fillOpacity={1}
-                fill='url(#colorTotal)'
-                name='Total'
-              />
-              <Area
-                type='monotone'
-                dataKey='active'
-                stroke={CHART_COLORS.green}
-                fillOpacity={1}
-                fill='url(#colorActive)'
-                name='Activos'
-              />
-              <Line
-                type='monotone'
-                dataKey='newUsers'
-                stroke={CHART_COLORS.purple}
-                strokeWidth={2}
-                name='Nuevos'
-                dot={{fill: CHART_COLORS.purple, r: 4}}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+      <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4 gap-6'>
+        {/* Gráfico de Tendencias Mensuales - MEJORADO CON AREACHARTCARD */}
+        <AreaChartCard
+          title="Tendencia de Usuarios"
+          subtitle="Evolución de usuarios en los últimos 6 meses"
+          data={trendsData}
+          xAxisKey="month"
+          dataKeys={[
+            { key: 'total', name: 'Total', color: 'blue' },
+            { key: 'active', name: 'Activos', color: 'green' },
+            { key: 'newUsers', name: 'Nuevos', color: 'purple', type: 'line' },
+          ]}
+          height={300}
+          gradientFill={true}
+          showGrid={true}
+          showLegend={true}
+        />
 
-        {/* Gráfico de Estado de Usuarios (Donut mejorado) */}
-        <div className='bg-white shadow rounded-lg border border-gray-200 p-6'>
-          <div className='mb-4'>
-            <h3 className='text-lg font-medium text-gray-900'>
-              Estado de Usuarios
-            </h3>
-            <p className='text-sm text-gray-500 mt-1'>
-              Distribución por estado actual
-            </p>
-          </div>
-          <div className='flex flex-col items-center'>
-            <ResponsiveContainer width='100%' height={240}>
-              <PieChart>
-                <Pie
-                  data={statusChartData}
-                  cx='50%'
-                  cy='50%'
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={2}
-                  dataKey='value'
-                  label={false}
-                >
-                  {statusChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  content={({active, payload}) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload
-                      return (
-                        <div className='bg-white p-3 border border-gray-200 rounded-lg shadow-lg'>
-                          <p className='font-medium text-gray-900'>
-                            {data.name}
-                          </p>
-                          <p className='text-sm' style={{color: data.color}}>
-                            Usuarios:{' '}
-                            <span className='font-semibold'>{data.value}</span>
-                          </p>
-                          <p className='text-xs text-gray-500'>
-                            {((data.value / stats!.totalUsers) * 100).toFixed(
-                              1
-                            )}
-                            % del total
-                          </p>
-                        </div>
-                      )
-                    }
-                    return null
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+        {/* Gráfico de Estado de Usuarios - MEJORADO CON PIECHARTCARD */}
+        <PieChartCard
+          title="Estado de Usuarios"
+          subtitle="Distribución por estado actual"
+          data={statusChartData}
+          height={300}
+          innerRadius={60}
+          outerRadius={90}
+          showStats={true}
+          showLegend={false}
+        />
 
-            {/* Leyenda mejorada con barras */}
-            <div className='w-full mt-4 space-y-3'>
-              {statusChartData.map((item, index) => {
-                const percentage = (
-                  (item.value / stats!.totalUsers) *
-                  100
-                ).toFixed(1)
-                return (
-                  <div key={index} className='flex items-center gap-3'>
-                    <div
-                      className='w-4 h-4 rounded-full flex-shrink-0 shadow-sm'
-                      style={{backgroundColor: item.color}}
-                    />
-                    <div className='flex-1'>
-                      <div className='flex justify-between items-center mb-1'>
-                        <span className='text-sm font-medium text-gray-900'>
-                          {item.name}
-                        </span>
-                        <span
-                          className='text-sm font-semibold'
-                          style={{color: item.color}}
-                        >
-                          {item.value} ({percentage}%)
-                        </span>
-                      </div>
-                      <div className='w-full bg-gray-100 rounded-full h-1.5 overflow-hidden'>
-                        <div
-                          className='h-1.5 rounded-full transition-all duration-500'
-                          style={{
-                            width: `${percentage}%`,
-                            backgroundColor: item.color
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
+        {/* Gráfico de Distribución por Roles - MEJORADO CON BARCHARTCARD */}
+        <BarChartCard
+          title="Usuarios por Rol"
+          subtitle="Cantidad de usuarios por cada rol"
+          data={roleChartData}
+          dataKey="value"
+          nameKey="name"
+          height={300}
+          showGrid={true}
+          layout="horizontal"
+          useCustomColors={true}
+        />
 
-        {/* Gráfico de Distribución por Roles (Barras) */}
-        <div className='bg-white shadow rounded-lg border border-gray-200 p-6'>
-          <div className='mb-4'>
-            <h3 className='text-lg font-medium text-gray-900'>
-              Usuarios por Rol
-            </h3>
-            <p className='text-sm text-gray-500 mt-1'>
-              Cantidad de usuarios por cada rol
-            </p>
-          </div>
-          <ResponsiveContainer width='100%' height={300}>
-            <BarChart data={roleChartData}>
-              <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
-              <XAxis
-                dataKey='name'
-                tick={{fontSize: 11}}
-                stroke='#9ca3af'
-                angle={-15}
-                textAnchor='end'
-                height={60}
-              />
-              <YAxis tick={{fontSize: 12}} stroke='#9ca3af' />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey='value' name='Usuarios' radius={[8, 8, 0, 0]}>
-                {roleChartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Gráfico de Top Empresas (Barras Horizontales) */}
-        <div className='bg-white shadow rounded-lg border border-gray-200 p-6'>
-          <div className='mb-4'>
-            <h3 className='text-lg font-medium text-gray-900'>
-              Top 8 Empresas
-            </h3>
-            <p className='text-sm text-gray-500 mt-1'>
-              Empresas con más usuarios registrados
-            </p>
-          </div>
-          <ResponsiveContainer width='100%' height={300}>
-            <BarChart data={companyChartData} layout='vertical'>
-              <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
-              <XAxis type='number' tick={{fontSize: 12}} stroke='#9ca3af' />
-              <YAxis
-                type='category'
-                dataKey='name'
-                tick={{fontSize: 11}}
-                stroke='#9ca3af'
-                width={120}
-              />
-              <Tooltip
-                content={({active, payload}) => {
-                  if (active && payload && payload.length) {
-                    return (
-                      <div className='bg-white p-3 border border-gray-200 rounded-lg shadow-lg'>
-                        <p className='font-medium text-gray-900'>
-                          {payload[0].payload.fullName}
-                        </p>
-                        <p className='text-sm text-purple-600'>
-                          Usuarios:{' '}
-                          <span className='font-semibold'>
-                            {payload[0].value}
-                          </span>
-                        </p>
-                      </div>
-                    )
-                  }
-                  return null
-                }}
-              />
-              <Bar
-                dataKey='usuarios'
-                fill={CHART_COLORS.purple}
-                radius={[0, 8, 8, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Gráfico de Top Empresas - MEJORADO CON BARCHARTCARD */}
+        <BarChartCard
+          title="Top 8 Empresas"
+          subtitle="Empresas con más usuarios registrados"
+          data={companyChartData}
+          dataKey="value"
+          nameKey="name"
+          height={300}
+          showGrid={true}
+          layout="horizontal"
+          barColor="purple"
+        />
       </div>
 
       {/* Gráficos y distribuciones */}
@@ -965,10 +659,9 @@ export default function UserOverviewDashboard() {
                       <div className='flex items-center justify-between mb-2'>
                         <div className='flex items-center'>
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              roleColors[role as keyof typeof roleColors] ||
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${roleColors[role as keyof typeof roleColors] ||
                               roleColors.viewer
-                            }`}
+                              }`}
                           >
                             {roleName}
                           </span>
@@ -982,11 +675,10 @@ export default function UserOverviewDashboard() {
                       </div>
                       <div className='w-full bg-gray-200 rounded-full h-2.5 overflow-hidden'>
                         <div
-                          className={`h-2.5 rounded-full transition-all duration-500 ease-out ${
-                            roleBarColors[role as keyof typeof roleBarColors] ||
+                          className={`h-2.5 rounded-full transition-all duration-500 ease-out ${roleBarColors[role as keyof typeof roleBarColors] ||
                             'bg-gray-600'
-                          }`}
-                          style={{width: `${percentage}%`}}
+                            }`}
+                          style={{ width: `${percentage}%` }}
                         />
                       </div>
                     </div>
@@ -1032,8 +724,8 @@ export default function UserOverviewDashboard() {
                         <div className='relative pb-8'>
                           {index !==
                             stats.recentActivity.slice(0, 8).length - 1 && (
-                            <span className='absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200' />
-                          )}
+                              <span className='absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200' />
+                            )}
                           <div className='relative flex space-x-3 group hover:bg-gray-50 p-2 rounded-lg transition-colors'>
                             <div>
                               <span
@@ -1122,14 +814,12 @@ export default function UserOverviewDashboard() {
                       <div className='flex-1'>
                         <div className='flex items-center mb-1'>
                           <BuildingOfficeIcon
-                            className={`h-5 w-5 mr-2 ${
-                              isSinEmpresa ? 'text-gray-400' : 'text-purple-500'
-                            }`}
+                            className={`h-5 w-5 mr-2 ${isSinEmpresa ? 'text-gray-400' : 'text-purple-500'
+                              }`}
                           />
                           <h4
-                            className={`text-sm font-semibold truncate ${
-                              isSinEmpresa ? 'text-gray-600' : 'text-gray-900'
-                            }`}
+                            className={`text-sm font-semibold truncate ${isSinEmpresa ? 'text-gray-600' : 'text-gray-900'
+                              }`}
                             title={company}
                           >
                             {company}
@@ -1143,7 +833,7 @@ export default function UserOverviewDashboard() {
                     <div className='w-full bg-gray-200 rounded-full h-2.5 mb-2 overflow-hidden'>
                       <div
                         className='bg-gradient-to-r from-purple-500 to-purple-600 h-2.5 rounded-full transition-all duration-500'
-                        style={{width: `${percentage}%`}}
+                        style={{ width: `${percentage}%` }}
                       />
                     </div>
                     <div className='flex items-center justify-between'>

@@ -15,15 +15,12 @@
     "fix:user-stats": "ts-node -r tsconfig-paths/register src/scripts/syncCompanyUserStats.ts",
     "company:limits": "ts-node -r tsconfig-paths/register src/scripts/updateCompanyLimits.ts",
     "test:quick": "ts-node -r tsconfig-paths/register src/scripts/utilities/quickTest.ts",
+    "seed:plans": "ts-node -r tsconfig-paths/register src/scripts/initialization/seedPlans.ts",
     "init:enhanced": "ts-node -r tsconfig-paths/register src/scripts/initialization/initializeEnhancedNew.ts",
     "init:settings": "ts-node -r tsconfig-paths/register src/scripts/initialization/initializeSettings.ts",
     "init:run": "ts-node -r tsconfig-paths/register src/scripts/initialization/runEnhancedInitialization.ts",
     "init:clean": "npm run clean:db && npm run init:enhanced",
-    "migrate:enhanced-user": "ts-node -r tsconfig-paths/register src/scripts/migration/migrateToEnhancedUser.ts",
-    "migrate:enhanced-company": "ts-node -r tsconfig-paths/register src/scripts/migration/migrateToEnhancedCompany.ts",
-    "migrate:users-legacy": "ts-node -r tsconfig-paths/register src/scripts/migration/migrateUsers.ts",
-    "migrate:verify": "ts-node -r tsconfig-paths/register src/scripts/migration/migrateToEnhancedUser.ts --verify",
-    "migrate:rollback": "ts-node -r tsconfig-paths/register src/scripts/migration/migrateToEnhancedUser.ts --rollback"
+    "init:fresh": "npm run clean:db && npm run init:enhanced && npm run verify:enhanced"
   },
   "keywords": [],
   "author": "",

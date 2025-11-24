@@ -7,17 +7,17 @@
 'use client'
 
 import React from 'react'
-import {useUserProfile} from '@/hooks/useUserManagement'
-import {useCurrentCompany} from '@/hooks/useCompanyManagement'
-import {StatusBadge, RoleBadge} from '@/components/UI/MultiCompanyBadges'
-import {UserRole, UserStatus} from '@/interfaces/EnhanchedCompany/MultiCompany'
+import { useUserProfile } from '@/hooks/useUserManagement'
+import { useCurrentCompany } from '@/hooks/CompanyManagement/useCompanyManagement'
+import { StatusBadge, RoleBadge } from '@/components/UI/MultiCompanyBadges'
+import { UserRole, UserStatus } from '@/interfaces/EnhanchedCompany/MultiCompany'
 import ProtectedLayout from '@/components/Layout/ProtectedLayout'
 import DashboardHeader from '@/components/Layout/DashboardHeader'
 import ModuleNavigationCards from '@/components/Shared/ModuleNavigationCards'
 
 export default function ManagerDashboardPage() {
-  const {data: userProfile, isLoading: userLoading} = useUserProfile()
-  const {data: currentCompany, isLoading: companyLoading} = useCurrentCompany()
+  const { data: userProfile, isLoading: userLoading } = useUserProfile()
+  const { data: currentCompany, isLoading: companyLoading } = useCurrentCompany()
 
   if (userLoading || companyLoading) {
     return (

@@ -6,7 +6,7 @@
 
 'use client'
 
-import React, {ReactNode} from 'react'
+import React, { ReactNode } from 'react'
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -18,7 +18,7 @@ import {
 export interface FilterConfig {
   id: string
   label: string
-  options: Array<{value: string; label: string}>
+  options: Array<{ value: string; label: string }>
   value: string
   onChange: (value: string) => void
 }
@@ -26,7 +26,7 @@ export interface FilterConfig {
 export interface BulkAction {
   id: string
   label: string
-  icon?: React.ComponentType<{className?: string}>
+  icon?: React.ComponentType<{ className?: string }>
   onClick: () => void
   variant?: 'primary' | 'warning' | 'success' | 'danger'
   hidden?: boolean
@@ -62,7 +62,7 @@ export interface TableHeaderProps {
   // Acciones principales
   primaryAction?: {
     label: string
-    icon?: React.ComponentType<{className?: string}>
+    icon?: React.ComponentType<{ className?: string }>
     onClick: () => void
   }
 
@@ -152,6 +152,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
                   Mostrar:
                 </label>
                 <select
+                  aria-label=''
                   value={pageSize}
                   onChange={e => onPageSizeChange(Number(e.target.value))}
                   className='px-2 sm:px-3 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[70px]'
@@ -199,11 +200,10 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
               {showExport && onExport && (
                 <button
                   onClick={onExport}
-                  className={`inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                    selectedCount > 0
+                  className={`inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border rounded-md text-xs sm:text-sm font-medium transition-colors ${selectedCount > 0
                       ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100'
                       : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
-                  }`}
+                    }`}
                   title={
                     selectedCount > 0
                       ? `Exportar ${selectedCount} registros seleccionados`
@@ -223,11 +223,10 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
               {showFilters && onToggleFilters && (
                 <button
                   onClick={onToggleFilters}
-                  className={`inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                    filtersOpen
+                  className={`inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border rounded-md text-xs sm:text-sm font-medium transition-colors ${filtersOpen
                       ? 'border-blue-300 text-blue-700 bg-blue-50'
                       : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   <FunnelIcon className='w-4 h-4 sm:mr-2' />
                   <span className='hidden sm:inline'>Filtros</span>

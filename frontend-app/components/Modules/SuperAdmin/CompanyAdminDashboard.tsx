@@ -6,9 +6,9 @@
 
 'use client'
 
-import React, {useState} from 'react'
-import {useUsers} from '@/hooks/useUserManagement'
-import {useCurrentCompany, useCompanyStats} from '@/hooks/useCompanyManagement'
+import React, { useState } from 'react'
+import { useUsers } from '@/hooks/useUserManagement'
+import { useCurrentCompany, useCompanyStats } from '@/hooks/CompanyManagement/useCompanyManagement'
 import {
   StatusBadge,
   RoleBadge,
@@ -17,32 +17,31 @@ import {
   TrialBadge
 } from '@/components/UI/MultiCompanyBadges'
 import {
-  IEnhancedCompany,
   IEnhancedUser,
-  CompanyPlan,
   CompanyStatus,
   UserStatus,
   UserRole,
   ICompanyStats
 } from '@/interfaces/EnhanchedCompany/MultiCompany'
+import { PlanType } from '@/types/plan'
 
 interface CompanyDashboardStats {
   totalUsers: number
   activeUsers: number
   usersByRole: Record<UserRole, number>
   capacityUsage: {
-    users: {current: number; limit: number | 'unlimited'}
-    products: {current: number; limit: number | 'unlimited'}
-    transactions: {current: number; limit: number | 'unlimited'}
-    storage: {current: number; limit: number | 'unlimited'}
+    users: { current: number; limit: number | 'unlimited' }
+    products: { current: number; limit: number | 'unlimited' }
+    transactions: { current: number; limit: number | 'unlimited' }
+    storage: { current: number; limit: number | 'unlimited' }
   }
   recentActivity: Array<{
     id: string
     type:
-      | 'user_invited'
-      | 'role_assigned'
-      | 'user_deactivated'
-      | 'settings_updated'
+    | 'user_invited'
+    | 'role_assigned'
+    | 'user_deactivated'
+    | 'settings_updated'
     description: string
     timestamp: Date
     user?: string
@@ -68,10 +67,10 @@ export const CompanyAdminDashboard: React.FC = () => {
     useState(false)
 
   // Hooks para datos
-  const {data: currentCompany, isLoading: companyLoading} = useCurrentCompany()
-  const {data: companyStats, isLoading: statsLoading} = useCompanyStats()
-  const {users, isLoading: usersLoading} = useUsers(
-    {companyId: currentCompany?.data?._id},
+  const { data: currentCompany, isLoading: companyLoading } = useCurrentCompany()
+  const { data: companyStats, isLoading: statsLoading } = useCompanyStats()
+  const { users, isLoading: usersLoading } = useUsers(
+    { companyId: currentCompany?.data?._id },
     true // Scope de empresa
   )
 
@@ -83,10 +82,10 @@ export const CompanyAdminDashboard: React.FC = () => {
         activeUsers: 0,
         usersByRole: {} as Record<UserRole, number>,
         capacityUsage: {
-          users: {current: 0, limit: 0},
-          products: {current: 0, limit: 0},
-          transactions: {current: 0, limit: 0},
-          storage: {current: 0, limit: 0}
+          users: { current: 0, limit: 0 },
+          products: { current: 0, limit: 0 },
+          transactions: { current: 0, limit: 0 },
+          storage: { current: 0, limit: 0 }
         },
         recentActivity: []
       }
@@ -168,9 +167,9 @@ export const CompanyAdminDashboard: React.FC = () => {
     const company = currentCompany.data
     const isTrialExpiringSoon = company.trialEndsAt
       ? Math.ceil(
-          (new Date(company.trialEndsAt).getTime() - Date.now()) /
-            (1000 * 60 * 60 * 24)
-        ) <= 7
+        (new Date(company.trialEndsAt).getTime() - Date.now()) /
+        (1000 * 60 * 60 * 24)
+      ) <= 7
       : false
 
     const isNearUserLimit = company.settings?.limits?.maxUsers
@@ -202,7 +201,7 @@ export const CompanyAdminDashboard: React.FC = () => {
         description: 'Mejorar las capacidades de tu empresa',
         action: () => console.log('Upgrade plan'),
         variant: 'warning',
-        disabled: company.plan === CompanyPlan.ENTERPRISE
+        disabled: company.plan === PlanType.ENTERPRISE
       },
       {
         id: 'reports',
@@ -279,7 +278,7 @@ export const CompanyAdminDashboard: React.FC = () => {
                   <TrialBadge
                     daysLeft={Math.ceil(
                       (new Date(company.trialEndsAt).getTime() - Date.now()) /
-                        (1000 * 60 * 60 * 24)
+                      (1000 * 60 * 60 * 24)
                     )}
                     size='sm'
                   />
@@ -294,6 +293,7 @@ export const CompanyAdminDashboard: React.FC = () => {
                 setSelectedTimeRange(e.target.value as '7d' | '30d' | '90d')
               }
               className='rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
+              aria-label='Seleccionar rango de tiempo para las estadísticas'
             >
               <option value='7d'>Últimos 7 días</option>
               <option value='30d'>Últimos 30 días</option>
@@ -427,15 +427,14 @@ export const CompanyAdminDashboard: React.FC = () => {
               key={action.id}
               onClick={action.action}
               disabled={action.disabled}
-              className={`p-4 rounded-lg border-2 border-dashed transition-colors text-left ${
-                action.disabled
-                  ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
-                  : action.variant === 'primary'
+              className={`p-4 rounded-lg border-2 border-dashed transition-colors text-left ${action.disabled
+                ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                : action.variant === 'primary'
                   ? 'border-blue-300 hover:border-blue-400 hover:bg-blue-50'
                   : action.variant === 'warning'
-                  ? 'border-yellow-300 hover:border-yellow-400 hover:bg-yellow-50'
-                  : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-              }`}
+                    ? 'border-yellow-300 hover:border-yellow-400 hover:bg-yellow-50'
+                    : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                }`}
             >
               <div className='flex items-center mb-2'>
                 <span className='text-2xl mr-3'>{action.icon}</span>
@@ -477,7 +476,7 @@ export const CompanyAdminDashboard: React.FC = () => {
                       width: `${Math.min(
                         (stats.capacityUsage.users.current /
                           (stats.capacityUsage.users.limit as number)) *
-                          100,
+                        100,
                         100
                       )}%`
                     }}
@@ -506,7 +505,7 @@ export const CompanyAdminDashboard: React.FC = () => {
                       width: `${Math.min(
                         (stats.capacityUsage.products.current /
                           (stats.capacityUsage.products.limit as number)) *
-                          100,
+                        100,
                         100
                       )}%`
                     }}
@@ -535,7 +534,7 @@ export const CompanyAdminDashboard: React.FC = () => {
                       width: `${Math.min(
                         (stats.capacityUsage.storage.current /
                           (stats.capacityUsage.storage.limit as number)) *
-                          100,
+                        100,
                         100
                       )}%`
                     }}

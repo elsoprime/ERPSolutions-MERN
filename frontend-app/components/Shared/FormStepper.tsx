@@ -6,7 +6,7 @@
  */
 
 import React from 'react'
-import {CheckIcon} from '@heroicons/react/24/solid'
+import { CheckIcon } from '@heroicons/react/24/solid'
 import {
   FormStep,
   StepConfig
@@ -41,13 +41,13 @@ export const FormStepper: React.FC<FormStepperProps> = ({
   const getStepClasses = (stepNumber: FormStep) => {
     const status = getStepStatus(stepNumber)
     const baseClasses =
-      'flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300 transform'
+      'flex h-12 w-12 lg:h-8 lg:w-8 items-center justify-center rounded-full border-2 transition-all duration-300 transform'
 
     switch (status) {
       case 'completed':
         return `${baseClasses} bg-gradient-to-br from-green-500 to-green-600 border-green-500 text-white shadow-lg`
       case 'current':
-        return `${baseClasses} bg-gradient-to-br from-blue-600 to-blue-700 border-blue-600 text-white shadow-xl ring-4 ring-blue-600/20 scale-110`
+        return `${baseClasses} bg-gradient-to-br from-blue-500 to-blue-700 border-blue-500 text-white shadow-xl ring-4 ring-gray-500/20 scale-110`
       case 'pending':
         return `${baseClasses} bg-white border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-500`
       default:
@@ -72,8 +72,81 @@ export const FormStepper: React.FC<FormStepperProps> = ({
   return (
     <div className={`w-full ${className}`}>
       <div className='relative'>
-        {/* Steps Container - Horizontal layout */}
-        <div className='flex items-center justify-between relative'>
+        {/* Steps Container - Mobile: Single step view, Desktop: Horizontal layout */}
+
+        {/* Mobile View - Solo paso actual */}
+        <div className='md:hidden flex flex-col items-center justify-center relative'>
+          {steps
+            .filter((step) => step.number === currentStep)
+            .map((step) => {
+              const stepNumber = step.number
+              const status = getStepStatus(stepNumber)
+              const isClickable = allowClickableSteps && stepNumber <= currentStep
+
+              return (
+                <div key={stepNumber} className='relative flex flex-col items-center z-10 animate-fadeIn'>
+                  {/* Step Circle with Icon */}
+                  <button
+                    onClick={() => handleStepClick(stepNumber)}
+                    disabled={!isClickable}
+                    className={`
+                      ${getStepClasses(stepNumber)}
+                      ${isClickable
+                        ? 'cursor-pointer hover:scale-105 hover:shadow-lg'
+                        : 'cursor-default'
+                      }
+                      relative z-10 transition-all duration-300
+                    `}
+                    aria-label={`Paso ${stepNumber}: ${step.title}`}
+                    title={step.description || step.title}
+                  >
+                    {status === 'completed' ? (
+                      <CheckIcon className='h-5 w-5' />
+                    ) : status === 'current' ? (
+                      <step.icon className='h-4 w-4' />
+                    ) : (
+                      <step.icon className='h-4 w-4 opacity-60' />
+                    )}
+                  </button>
+
+                  {/* Step Info */}
+                  <div className='mt-3 text-center max-w-full px-4'>
+                    <div
+                      className={`
+                        text-sm font-bold transition-colors duration-200
+                        ${status === 'current'
+                          ? 'text-blue-700'
+                          : status === 'completed'
+                            ? 'text-green-600'
+                            : 'text-gray-500'
+                        }
+                      `}
+                    >
+                      {step.title}
+                    </div>
+                    {step.description && (
+                      <div
+                        className={`
+                          text-xs mt-1 transition-colors duration-200 leading-tight
+                          ${status === 'current'
+                            ? 'text-blue-500'
+                            : status === 'completed'
+                              ? 'text-green-500'
+                              : 'text-gray-400'
+                          }
+                        `}
+                      >
+                        {step.description}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+        </div>
+
+        {/* Desktop View - Todos los pasos horizontales */}
+        <div className='hidden md:flex flex-row items-center justify-between relative'>
           {steps.map((step, index) => {
             const stepNumber = step.number
             const status = getStepStatus(stepNumber)
@@ -89,10 +162,9 @@ export const FormStepper: React.FC<FormStepperProps> = ({
                     disabled={!isClickable}
                     className={`
                       ${getStepClasses(stepNumber)}
-                      ${
-                        isClickable
-                          ? 'cursor-pointer hover:scale-105 hover:shadow-lg'
-                          : 'cursor-default'
+                      ${isClickable
+                        ? 'cursor-pointer hover:scale-105 hover:shadow-lg'
+                        : 'cursor-default'
                       }
                       relative z-10 transition-all duration-300
                     `}
@@ -102,7 +174,7 @@ export const FormStepper: React.FC<FormStepperProps> = ({
                     {status === 'completed' ? (
                       <CheckIcon className='h-5 w-5' />
                     ) : status === 'current' ? (
-                      <step.icon className='h-5 w-5' />
+                      <step.icon className='h-4 w-4' />
                     ) : (
                       <step.icon className='h-4 w-4 opacity-60' />
                     )}
@@ -112,11 +184,10 @@ export const FormStepper: React.FC<FormStepperProps> = ({
                   <div className='mt-3 text-center max-w-24'>
                     <div
                       className={`
-                        text-sm font-medium transition-colors duration-200
-                        ${
-                          status === 'current'
-                            ? 'text-blue-600'
-                            : status === 'completed'
+                        text-sm font-bold transition-colors duration-200
+                        ${status === 'current'
+                          ? 'text-blue-700'
+                          : status === 'completed'
                             ? 'text-green-600'
                             : 'text-gray-500'
                         }
@@ -128,10 +199,9 @@ export const FormStepper: React.FC<FormStepperProps> = ({
                       <div
                         className={`
                           text-xs mt-1 transition-colors duration-200 leading-tight
-                          ${
-                            status === 'current'
-                              ? 'text-blue-500'
-                              : status === 'completed'
+                          ${status === 'current'
+                            ? 'text-blue-500'
+                            : status === 'completed'
                               ? 'text-green-500'
                               : 'text-gray-400'
                           }
@@ -145,7 +215,7 @@ export const FormStepper: React.FC<FormStepperProps> = ({
 
                 {/* Connector Line between steps */}
                 {index < steps.length - 1 && (
-                  <div className='flex-1 flex items-center px-4'>
+                  <div className='flex-1 flex items-center px-6 lg:px-2'>
                     <div
                       className={`h-0.5 w-full ${getConnectorClasses(
                         stepNumber
@@ -161,7 +231,7 @@ export const FormStepper: React.FC<FormStepperProps> = ({
 
       {/* Enhanced Progress Bar */}
       {showProgress && (
-        <div className='mt-8 w-full bg-gray-200 rounded-full h-3 shadow-inner'>
+        <div className='mt-2 w-full bg-gray-200 rounded-full h-3 shadow-inner'>
           <div
             className='bg-gradient-to-r from-blue-500 via-blue-600 to-green-500 h-3 rounded-full transition-all duration-700 ease-out shadow-sm relative overflow-hidden'
             style={{
@@ -175,12 +245,12 @@ export const FormStepper: React.FC<FormStepperProps> = ({
       )}
 
       {/* Enhanced Step Description */}
-      <div className='mt-6 text-center'>
-        <div className='text-gray-600 text-sm font-medium'>
-          Paso {currentStep} de {steps.length}
+      <div className='mt-2 px-4 text-center flex flex-col md:flex-row items-center '>
+        <div className='text-gray-600 text-xs font-medium'>
+          Paso <span className='font-bold'>{currentStep}</span> de {steps.length}
         </div>
         {steps[currentStep - 1]?.description && (
-          <div className='mt-2 text-sm text-gray-500 max-w-lg mx-auto leading-relaxed'>
+          <div className='mt-2 text-xs text-gray-500 max-w-lg mx-auto leading-relaxed'>
             {steps[currentStep - 1].description}
           </div>
         )}

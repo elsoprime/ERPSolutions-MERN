@@ -6,17 +6,18 @@
 
 'use client'
 
-import React, {useState} from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
-import {usePathname} from 'next/navigation'
-import {useAuth} from '@/hooks/useAuth'
+import { usePathname } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import {
   getHighestRole,
   hasRouteAccess,
   getCompanyContext
 } from '@/utils/roleRouting'
-import {RoleBadge} from '@/components/UI/MultiCompanyBadges'
-import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
+import { RoleBadge } from '@/components/UI/MultiCompanyBadges'
+import { UserRole } from '@/interfaces/EnhanchedCompany/MultiCompany'
+import { AuthLoadingState } from '@/components/Modules/Auth/States/AuthLoadingState'
 
 interface NavigationItem {
   name: string
@@ -28,7 +29,7 @@ interface NavigationItem {
 
 const RoleBasedNavigation: React.FC = () => {
   const pathname = usePathname()
-  const {getUserData, logout} = useAuth()
+  const { getUserData, logout, isLoggingOut } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const userData = getUserData()
@@ -280,11 +281,10 @@ const RoleBasedNavigation: React.FC = () => {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors ${
-                      isActive
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors ${isActive
                         ? 'border-blue-500 text-gray-900'
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                    }`}
+                      }`}
                     title={item.description}
                   >
                     <span className='mr-2'>{item.icon}</span>
@@ -309,22 +309,27 @@ const RoleBasedNavigation: React.FC = () => {
 
             <button
               onClick={handleLogout}
-              className='bg-gray-100 p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-200 transition-colors'
-              title='Cerrar sesión'
+              disabled={isLoggingOut}
+              className='bg-gray-100 p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+              title={isLoggingOut ? 'Cerrando sesión...' : 'Cerrar sesión'}
             >
-              <svg
-                className='h-5 w-5'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1'
-                />
-              </svg>
+              {isLoggingOut ? (
+                <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-current' />
+              ) : (
+                <svg
+                  className='h-5 w-5'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1'
+                  />
+                </svg>
+              )}
             </button>
           </div>
 
@@ -363,11 +368,10 @@ const RoleBasedNavigation: React.FC = () => {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors ${
-                    isActive
+                  className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors ${isActive
                       ? 'bg-blue-50 border-blue-500 text-blue-700'
                       : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
-                  }`}
+                    }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <div className='flex items-center'>
@@ -397,14 +401,18 @@ const RoleBasedNavigation: React.FC = () => {
             <div className='mt-3 space-y-1'>
               <button
                 onClick={handleLogout}
-                className='block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 w-full text-left'
+                disabled={isLoggingOut}
+                className='block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 w-full text-left disabled:opacity-50 disabled:cursor-not-allowed'
               >
-                Cerrar Sesión
+                {isLoggingOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Overlay de logout */}
+      {isLoggingOut && <AuthLoadingState type='logout' message='Cerrando sesión...' />}
     </nav>
   )
 }

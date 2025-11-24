@@ -1,12 +1,12 @@
 /**
  * Company Details Modal Component
- * @description: Modal para ver detalles completos de una empresa
+ * @description: Modal mejorado para ver detalles completos de una empresa
  * @author: Esteban Soto Ojeda @elsoprimeDev
  */
 
 'use client'
-import React, {useState, useEffect} from 'react'
-import {IEnhancedCompany} from '@/interfaces/EnhanchedCompany/EnhancedCompany'
+import React, { useState, useEffect } from 'react'
+import { IEnhancedCompany, ICompanyChartData } from '@/interfaces/EnhanchedCompany/EnhancedCompany'
 import EnhancedCompanyAPI from '@/api/EnhancedCompanyAPI'
 import {
   XMarkIcon,
@@ -19,17 +19,56 @@ import {
   CurrencyDollarIcon,
   UserGroupIcon,
   ChartBarIcon,
-  PencilIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  ClockIcon
+  ClockIcon,
+  ShieldCheckIcon,
+  CreditCardIcon,
+  Cog6ToothIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
 
 interface CompanyDetailsModalProps {
   isOpen: boolean
   company: IEnhancedCompany
   onClose: () => void
-  onEdit: () => void
+  onEdit?: () => void
+}
+
+// Mapeo de claves técnicas a etiquetas legibles en español
+const FEATURE_LABELS: Record<string, string> = {
+  inventoryManagement: 'Gestión de Inventario',
+  accounting: 'Contabilidad',
+  hrm: 'Recursos Humanos',
+  crm: 'CRM',
+  projectManagement: 'Gestión de Proyectos',
+  reports: 'Reportes',
+  multiCurrency: 'Multimoneda',
+  apiAccess: 'Acceso API',
+  customBranding: 'Branding Personalizado',
+  prioritySupport: 'Soporte Prioritario',
+  advancedAnalytics: 'Analítica Avanzada',
+  auditLog: 'Registro de Auditoría',
+  customIntegrations: 'Integraciones Personalizadas',
+  dedicatedAccount: 'Cuenta Dedicada'
+}
+
+// Iconos para cada característica
+const FEATURE_ICONS: Record<string, string> = {
+  inventoryManagement: '📦',
+  accounting: '💰',
+  hrm: '👥',
+  crm: '🤝',
+  projectManagement: '📊',
+  reports: '📈',
+  multiCurrency: '💱',
+  apiAccess: '🔌',
+  customBranding: '🎨',
+  prioritySupport: '⭐',
+  advancedAnalytics: '📉',
+  auditLog: '📝',
+  customIntegrations: '🔗',
+  dedicatedAccount: '👤'
 }
 
 export default function CompanyDetailsModal({
@@ -38,7 +77,7 @@ export default function CompanyDetailsModal({
   onClose,
   onEdit
 }: CompanyDetailsModalProps) {
-  const [statistics, setStatistics] = useState(company?.statistics || null)
+  const [chartData, setChartData] = useState<ICompanyChartData | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
 
   useEffect(() => {
@@ -51,7 +90,7 @@ export default function CompanyDetailsModal({
     try {
       setLoadingStats(true)
       const stats = await EnhancedCompanyAPI.getCompanyStatistics(company._id)
-      setStatistics(stats)
+      setChartData(stats)
     } catch (error) {
       console.error('Error loading company statistics:', error)
     } finally {
@@ -61,531 +100,511 @@ export default function CompanyDetailsModal({
 
   if (!isOpen) return null
 
-  const getStatusIcon = (status: string, subscriptionStatus?: string) => {
+  const getStatusConfig = (status: string, subscriptionStatus?: string) => {
     if (subscriptionStatus === 'suspended') {
-      return <ExclamationTriangleIcon className='w-5 h-5 text-red-500' />
+      return {
+        icon: ExclamationTriangleIcon,
+        text: 'Suspendida',
+        color: 'text-red-600',
+        bg: 'bg-red-50',
+        border: 'border-red-200'
+      }
     }
 
     switch (status) {
       case 'active':
-        return <CheckCircleIcon className='w-5 h-5 text-green-500' />
+        return {
+          icon: CheckCircleIcon,
+          text: 'Activa',
+          color: 'text-green-600',
+          bg: 'bg-green-50',
+          border: 'border-green-200'
+        }
       case 'inactive':
-        return <ClockIcon className='w-5 h-5 text-gray-500' />
+        return {
+          icon: ClockIcon,
+          text: 'Inactiva',
+          color: 'text-gray-600',
+          bg: 'bg-gray-50',
+          border: 'border-gray-200'
+        }
       default:
-        return <ClockIcon className='w-5 h-5 text-gray-500' />
+        return {
+          icon: ClockIcon,
+          text: status,
+          color: 'text-gray-600',
+          bg: 'bg-gray-50',
+          border: 'border-gray-200'
+        }
     }
   }
 
-  const getStatusText = (status: string, subscriptionStatus?: string) => {
-    if (subscriptionStatus === 'suspended') return 'Suspendida'
-
-    switch (status) {
-      case 'active':
-        return 'Activa'
-      case 'inactive':
-        return 'Inactiva'
-      default:
-        return status
+  const getPlanConfig = (plan: string) => {
+    const configs = {
+      free: {
+        name: 'Gratuito',
+        color: 'text-gray-700',
+        bg: 'bg-gray-100',
+        border: 'border-gray-200',
+        icon: '🆓'
+      },
+      basic: {
+        name: 'Básico',
+        color: 'text-blue-700',
+        bg: 'bg-blue-100',
+        border: 'border-blue-200',
+        icon: '📦'
+      },
+      professional: {
+        name: 'Profesional',
+        color: 'text-purple-700',
+        bg: 'bg-purple-100',
+        border: 'border-purple-200',
+        icon: '⭐'
+      },
+      enterprise: {
+        name: 'Empresarial',
+        color: 'text-orange-700',
+        bg: 'bg-orange-100',
+        border: 'border-orange-200',
+        icon: '🏢'
+      }
     }
-  }
 
-  const getPlanBadge = (plan: string) => {
-    const colors = {
-      free: 'bg-gray-100 text-gray-800',
-      basic: 'bg-blue-100 text-blue-800',
-      professional: 'bg-purple-100 text-purple-800',
-      enterprise: 'bg-orange-100 text-orange-800'
-    }
-
-    const names = {
-      free: 'Gratuito',
-      basic: 'Básico',
-      professional: 'Profesional',
-      enterprise: 'Empresarial'
-    }
-
-    return (
-      <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          colors[plan as keyof typeof colors] || colors.free
-        }`}
-      >
-        {names[plan as keyof typeof names] || plan}
-      </span>
-    )
-  }
-
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: currency
-    }).format(amount)
-  }
-
-  const getUsagePercentage = (current: number, limit: number) => {
-    return Math.min((current / limit) * 100, 100)
+    return configs[plan as keyof typeof configs] || configs.free
   }
 
   const getUsageColor = (percentage: number) => {
     if (percentage >= 90) return 'bg-red-500'
     if (percentage >= 75) return 'bg-yellow-500'
+    if (percentage >= 50) return 'bg-blue-500'
     return 'bg-green-500'
   }
 
-  return (
-    <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50'>
-      <div className='bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto'>
-        {/* Header */}
-        <div className='flex items-center justify-between p-6 border-b border-gray-200'>
-          <div className='flex items-center space-x-4'>
-            <div
-              className='w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg'
-              style={{
-                backgroundColor:
-                  company?.settings?.branding?.primaryColor || '#3B82F6'
-              }}
-            >
-              {company?.name?.charAt(0).toUpperCase() || 'C'}
-            </div>
-            <div>
-              <h2 className='text-xl font-semibold text-gray-900'>
-                {company?.name || 'Sin nombre'}
-              </h2>
-              <p className='text-sm text-gray-600'>
-                {company?.settings?.industry || 'Sin industria'}
-              </p>
-            </div>
-          </div>
+  const getUsageTextColor = (percentage: number) => {
+    if (percentage >= 90) return 'text-red-700'
+    if (percentage >= 75) return 'text-yellow-700'
+    if (percentage >= 50) return 'text-blue-700'
+    return 'text-green-700'
+  }
 
-          <div className='flex items-center space-x-3'>
-            <button
-              onClick={onEdit}
-              className='inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors'
-            >
-              <PencilIcon className='w-4 h-4 mr-2' />
-              Editar
-            </button>
+  const statusConfig = getStatusConfig(company?.status || 'inactive', company?.subscription?.status)
+  const planConfig = getPlanConfig(company?.plan as string)
+  const StatusIcon = statusConfig.icon
+
+  return (
+    <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in'>
+      <div className='bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col'>
+        {/* Header con diseño mejorado */}
+        <div className='relative bg-gradient-to-r from-blue-600 to-purple-600 p-6'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center space-x-4'>
+              <div
+                className='w-16 h-16 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg ring-4 ring-white/20'
+                style={{
+                  backgroundColor: company?.settings?.branding?.primaryColor || '#3B82F6'
+                }}
+              >
+                {company?.name?.charAt(0).toUpperCase() || 'C'}
+              </div>
+              <div className='text-white'>
+                <h2 className='text-2xl font-bold mb-1'>
+                  {company?.name || 'Sin nombre'}
+                </h2>
+                <div className='flex items-center space-x-3 text-sm'>
+                  <span className='flex items-center space-x-1 bg-white/20 px-3 py-1 rounded-full'>
+                    <BuildingOfficeIcon className='w-4 h-4' />
+                    <span>{company?.settings?.industry || 'Sin industria'}</span>
+                  </span>
+                  {company?.verified && (
+                    <span className='flex items-center space-x-1 bg-green-500/30 px-3 py-1 rounded-full'>
+                      <ShieldCheckIcon className='w-4 h-4' />
+                      <span>Verificada</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
 
             <button
               onClick={onClose}
-              className='p-2 hover:bg-gray-100 rounded-full transition-colors'
+              className='p-2 hover:bg-white/20 rounded-lg transition-colors text-white'
             >
-              <XMarkIcon className='w-6 h-6 text-gray-400' />
+              <XMarkIcon className='w-6 h-6' />
             </button>
           </div>
         </div>
 
-        <div className='p-6 space-y-8'>
-          {/* Estado y suscripción */}
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-            <div className='bg-gray-50 rounded-lg p-4'>
-              <div className='flex items-center mb-2'>
-                {getStatusIcon(
-                  company?.status || 'inactive',
-                  company?.subscription?.status
-                )}
-                <h3 className='ml-2 text-sm font-medium text-gray-900'>
-                  Estado
-                </h3>
+        {/* Content con scroll */}
+        <div className='flex-1 overflow-y-auto p-6'>
+          <div className='space-y-6'>
+            {/* Tarjetas de estado principales */}
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+              {/* Estado */}
+              <div className={`${statusConfig.bg} ${statusConfig.border} border-2 rounded-xl p-5 transition-all hover:shadow-lg`}>
+                <div className='flex items-center justify-between mb-3'>
+                  <div className='flex items-center space-x-2'>
+                    <StatusIcon className={`w-6 h-6 ${statusConfig.color}`} />
+                    <h3 className='font-semibold text-gray-900'>Estado</h3>
+                  </div>
+                </div>
+                <p className={`text-2xl font-bold ${statusConfig.color}`}>
+                  {statusConfig.text}
+                </p>
               </div>
-              <p className='text-lg font-semibold'>
-                {getStatusText(
-                  company?.status || 'inactive',
-                  company?.subscription?.status
-                )}
-              </p>
-            </div>
 
-            <div className='bg-gray-50 rounded-lg p-4'>
-              <div className='flex items-center mb-2'>
-                <CurrencyDollarIcon className='w-5 h-5 text-blue-500' />
-                <h3 className='ml-2 text-sm font-medium text-gray-900'>Plan</h3>
-              </div>
-              <div className='flex items-center space-x-2'>
-                {getPlanBadge(company?.plan || 'free')}
+              {/* Plan */}
+              <div className={`${planConfig.bg} ${planConfig.border} border-2 rounded-xl p-5 transition-all hover:shadow-lg`}>
+                <div className='flex items-center justify-between mb-3'>
+                  <div className='flex items-center space-x-2'>
+                    <CreditCardIcon className={`w-6 h-6 ${planConfig.color}`} />
+                    <h3 className='font-semibold text-gray-900'>Plan</h3>
+                  </div>
+                  <span className='text-2xl'>{planConfig.icon}</span>
+                </div>
+                <p className={`text-2xl font-bold ${planConfig.color}`}>
+                  {planConfig.name}
+                </p>
                 {company?.subscription?.autoRenew && (
-                  <span className='text-xs text-gray-500'>
-                    (Auto-renovación)
+                  <span className='text-xs text-gray-600 mt-1 block'>
+                    ✓ Auto-renovación activa
                   </span>
                 )}
               </div>
-            </div>
 
-            <div className='bg-gray-50 rounded-lg p-4'>
-              <div className='flex items-center mb-2'>
-                <CalendarIcon className='w-5 h-5 text-green-500' />
-                <h3 className='ml-2 text-sm font-medium text-gray-900'>
-                  Registro
-                </h3>
-              </div>
-              <p className='text-sm text-gray-600'>
-                {company?.createdAt
-                  ? new Date(company.createdAt).toLocaleDateString('es-ES', {
+              {/* Fecha de registro */}
+              <div className='bg-blue-50 border-2 border-blue-200 rounded-xl p-5 transition-all hover:shadow-lg'>
+                <div className='flex items-center space-x-2 mb-3'>
+                  <CalendarIcon className='w-6 h-6 text-blue-600' />
+                  <h3 className='font-semibold text-gray-900'>Registro</h3>
+                </div>
+                <p className='text-lg font-semibold text-blue-700'>
+                  {company?.createdAt
+                    ? new Date(company.createdAt).toLocaleDateString('es-ES', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
                     })
-                  : 'Sin fecha'}
-              </p>
-            </div>
-          </div>
-
-          {/* Información de contacto */}
-          <div>
-            <h3 className='text-lg font-medium text-gray-900 mb-4'>
-              Información de Contacto
-            </h3>
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-              <div className='space-y-3'>
-                <div className='flex items-center'>
-                  <EnvelopeIcon className='w-5 h-5 text-gray-400 mr-3' />
-                  <span className='text-sm text-gray-900'>
-                    {company?.email || 'Sin email'}
-                  </span>
-                </div>
-
-                {company?.phone && (
-                  <div className='flex items-center'>
-                    <PhoneIcon className='w-5 h-5 text-gray-400 mr-3' />
-                    <span className='text-sm text-gray-900'>
-                      {company.phone}
-                    </span>
-                  </div>
-                )}
-
-                {company?.website && (
-                  <div className='flex items-center'>
-                    <GlobeAltIcon className='w-5 h-5 text-gray-400 mr-3' />
-                    <a
-                      href={company.website}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className='text-sm text-blue-600 hover:text-blue-800'
-                    >
-                      {company.website}
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {company?.address && (
-                <div>
-                  <div className='flex items-start'>
-                    <MapPinIcon className='w-5 h-5 text-gray-400 mr-3 mt-0.5' />
-                    <div className='text-sm text-gray-900'>
-                      <p>{company.address.street || 'Sin calle'}</p>
-                      <p>
-                        {company.address.city || 'Sin ciudad'},{' '}
-                        {company.address.state || 'Sin estado'}
-                      </p>
-                      <p>
-                        {company.address.country || 'Sin país'}{' '}
-                        {company.address.postalCode || ''}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Estadísticas de uso */}
-          {statistics?.usage && (
-            <div>
-              <div className='flex items-center justify-between mb-4'>
-                <h3 className='text-lg font-medium text-gray-900'>
-                  Estadísticas de Uso
-                </h3>
-                {loadingStats && (
-                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500'></div>
-                )}
-              </div>
-
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-                {/* Usuarios */}
-                {statistics.usage.users && (
-                  <div className='bg-white border border-gray-200 rounded-lg p-4'>
-                    <div className='flex items-center justify-between mb-2'>
-                      <div className='flex items-center'>
-                        <UserGroupIcon className='w-5 h-5 text-blue-500' />
-                        <span className='ml-2 text-sm font-medium text-gray-900'>
-                          Usuarios
-                        </span>
-                      </div>
-                      <span className='text-sm text-gray-500'>
-                        {statistics.usage.users.current || 0} /{' '}
-                        {statistics.usage.users.limit || 0}
-                      </span>
-                    </div>
-                    <div className='w-full bg-gray-200 rounded-full h-2'>
-                      <div
-                        className={`h-2 rounded-full ${getUsageColor(
-                          statistics.usage.users.percentage || 0
-                        )}`}
-                        style={{
-                          width: `${statistics.usage.users.percentage || 0}%`
-                        }}
-                      />
-                    </div>
-                    <p className='text-xs text-gray-500 mt-1'>
-                      {(statistics.usage.users.percentage || 0).toFixed(1)}%
-                      utilizado
-                    </p>
-                  </div>
-                )}
-
-                {/* Productos */}
-                {statistics.usage.products && (
-                  <div className='bg-white border border-gray-200 rounded-lg p-4'>
-                    <div className='flex items-center justify-between mb-2'>
-                      <div className='flex items-center'>
-                        <BuildingOfficeIcon className='w-5 h-5 text-green-500' />
-                        <span className='ml-2 text-sm font-medium text-gray-900'>
-                          Productos
-                        </span>
-                      </div>
-                      <span className='text-sm text-gray-500'>
-                        {statistics.usage.products.current || 0} /{' '}
-                        {statistics.usage.products.limit || 0}
-                      </span>
-                    </div>
-                    <div className='w-full bg-gray-200 rounded-full h-2'>
-                      <div
-                        className={`h-2 rounded-full ${getUsageColor(
-                          statistics.usage.products.percentage || 0
-                        )}`}
-                        style={{
-                          width: `${statistics.usage.products.percentage || 0}%`
-                        }}
-                      />
-                    </div>
-                    <p className='text-xs text-gray-500 mt-1'>
-                      {(statistics.usage.products.percentage || 0).toFixed(1)}%
-                      utilizado
-                    </p>
-                  </div>
-                )}
-
-                {/* Transacciones */}
-                {statistics.usage.transactions && (
-                  <div className='bg-white border border-gray-200 rounded-lg p-4'>
-                    <div className='flex items-center justify-between mb-2'>
-                      <div className='flex items-center'>
-                        <ChartBarIcon className='w-5 h-5 text-purple-500' />
-                        <span className='ml-2 text-sm font-medium text-gray-900'>
-                          Transacciones
-                        </span>
-                      </div>
-                      <span className='text-sm text-gray-500'>
-                        {statistics.usage.transactions.current || 0} /{' '}
-                        {statistics.usage.transactions.limit || 0}
-                      </span>
-                    </div>
-                    <div className='w-full bg-gray-200 rounded-full h-2'>
-                      <div
-                        className={`h-2 rounded-full ${getUsageColor(
-                          statistics.usage.transactions.percentage || 0
-                        )}`}
-                        style={{
-                          width: `${
-                            statistics.usage.transactions.percentage || 0
-                          }%`
-                        }}
-                      />
-                    </div>
-                    <p className='text-xs text-gray-500 mt-1'>
-                      {(statistics.usage.transactions.percentage || 0).toFixed(
-                        1
-                      )}
-                      % utilizado
-                    </p>
-                  </div>
-                )}
-
-                {/* Almacenamiento */}
-                {statistics.usage.storage && (
-                  <div className='bg-white border border-gray-200 rounded-lg p-4'>
-                    <div className='flex items-center justify-between mb-2'>
-                      <div className='flex items-center'>
-                        <CurrencyDollarIcon className='w-5 h-5 text-orange-500' />
-                        <span className='ml-2 text-sm font-medium text-gray-900'>
-                          Storage
-                        </span>
-                      </div>
-                      <span className='text-sm text-gray-500'>
-                        {statistics.usage.storage.current || 0} /{' '}
-                        {statistics.usage.storage.limit || 0} GB
-                      </span>
-                    </div>
-                    <div className='w-full bg-gray-200 rounded-full h-2'>
-                      <div
-                        className={`h-2 rounded-full ${getUsageColor(
-                          statistics.usage.storage.percentage || 0
-                        )}`}
-                        style={{
-                          width: `${statistics.usage.storage.percentage || 0}%`
-                        }}
-                      />
-                    </div>
-                    <p className='text-xs text-gray-500 mt-1'>
-                      {(statistics.usage.storage.percentage || 0).toFixed(1)}%
-                      utilizado
-                    </p>
-                  </div>
-                )}
+                    : 'Sin fecha'}
+                </p>
               </div>
             </div>
-          )}
 
-          {/* Sin estadísticas disponibles */}
-          {!statistics?.usage && !loadingStats && (
-            <div className='text-center py-8'>
-              <p className='text-gray-500'>No hay estadísticas disponibles</p>
-            </div>
-          )}
-
-          {/* Configuración de negocio */}
-          {company?.settings && (
-            <div>
-              <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                Configuración de Negocio
-              </h3>
+            {/* Información de contacto */}
+            <div className='bg-white border-2 border-gray-200 rounded-xl p-6'>
+              <div className='flex items-center space-x-2 mb-5'>
+                <EnvelopeIcon className='w-6 h-6 text-blue-600' />
+                <h3 className='text-xl font-bold text-gray-900'>Información de Contacto</h3>
+              </div>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                <div className='space-y-3'>
-                  <div>
-                    <label className='text-sm font-medium text-gray-500'>
+                <div className='space-y-4'>
+                  <div className='flex items-center space-x-3 p-3 bg-gray-50 rounded-lg'>
+                    <EnvelopeIcon className='w-5 h-5 text-gray-400 flex-shrink-0' />
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-xs text-gray-500 mb-1'>Email</p>
+                      <p className='text-sm font-medium text-gray-900 truncate'>
+                        {company?.email || 'Sin email'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {company?.phone && (
+                    <div className='flex items-center space-x-3 p-3 bg-gray-50 rounded-lg'>
+                      <PhoneIcon className='w-5 h-5 text-gray-400 flex-shrink-0' />
+                      <div className='flex-1'>
+                        <p className='text-xs text-gray-500 mb-1'>Teléfono</p>
+                        <p className='text-sm font-medium text-gray-900'>{company.phone}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {company?.website && (
+                    <div className='flex items-center space-x-3 p-3 bg-gray-50 rounded-lg'>
+                      <GlobeAltIcon className='w-5 h-5 text-gray-400 flex-shrink-0' />
+                      <div className='flex-1 min-w-0'>
+                        <p className='text-xs text-gray-500 mb-1'>Sitio Web</p>
+                        <a
+                          href={company.website}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='text-sm font-medium text-blue-600 hover:text-blue-800 truncate block'
+                        >
+                          {company.website}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {company?.address && (
+                  <div className='p-4 bg-gray-50 rounded-lg'>
+                    <div className='flex items-start space-x-3'>
+                      <MapPinIcon className='w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0' />
+                      <div className='flex-1'>
+                        <p className='text-xs text-gray-500 mb-2'>Dirección</p>
+                        <div className='text-sm font-medium text-gray-900 space-y-1'>
+                          <p>{company.address.street || 'Sin calle'}</p>
+                          <p>
+                            {company.address.city || 'Sin ciudad'}, {company.address.state || 'Sin estado'}
+                          </p>
+                          <p className='text-gray-600'>
+                            {company.address.country || 'Sin país'} {company.address.postalCode || ''}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Estadísticas de uso */}
+            {chartData?.resourceUsage && (
+              <div className='bg-white border-2 border-gray-200 rounded-xl p-6'>
+                <div className='flex items-center justify-between mb-5'>
+                  <div className='flex items-center space-x-2'>
+                    <ChartBarIcon className='w-6 h-6 text-purple-600' />
+                    <h3 className='text-xl font-bold text-gray-900'>Uso de Recursos</h3>
+                  </div>
+                  {loadingStats && (
+                    <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600'></div>
+                  )}
+                </div>
+
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+                  {/* Usuarios */}
+                  <div className='bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-4 hover:shadow-lg transition-all'>
+                    <div className='flex items-center justify-between mb-3'>
+                      <UserGroupIcon className='w-8 h-8 text-blue-600' />
+                      <span className='text-xs font-semibold text-blue-700 bg-white px-2 py-1 rounded-full'>
+                        {chartData.resourceUsage.users.current} / {chartData.resourceUsage.users.limit}
+                      </span>
+                    </div>
+                    <h4 className='text-sm font-semibold text-gray-700 mb-2'>Usuarios</h4>
+                    <div className='w-full bg-white rounded-full h-3 mb-2 overflow-hidden shadow-inner'>
+                      <div
+                        className={`h-3 rounded-full transition-all ${getUsageColor(chartData.resourceUsage.users.percentage)}`}
+                        style={{ width: `${Math.min(chartData.resourceUsage.users.percentage, 100)}%` }}
+                      />
+                    </div>
+                    <p className={`text-xs font-bold ${getUsageTextColor(chartData.resourceUsage.users.percentage)}`}>
+                      {chartData.resourceUsage.users.percentage.toFixed(1)}% utilizado
+                    </p>
+                  </div>
+
+                  {/* Productos */}
+                  <div className='bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl p-4 hover:shadow-lg transition-all'>
+                    <div className='flex items-center justify-between mb-3'>
+                      <BuildingOfficeIcon className='w-8 h-8 text-green-600' />
+                      <span className='text-xs font-semibold text-green-700 bg-white px-2 py-1 rounded-full'>
+                        {chartData.resourceUsage.products.current} / {chartData.resourceUsage.products.limit}
+                      </span>
+                    </div>
+                    <h4 className='text-sm font-semibold text-gray-700 mb-2'>Productos</h4>
+                    <div className='w-full bg-white rounded-full h-3 mb-2 overflow-hidden shadow-inner'>
+                      <div
+                        className={`h-3 rounded-full transition-all ${getUsageColor(chartData.resourceUsage.products.percentage)}`}
+                        style={{ width: `${Math.min(chartData.resourceUsage.products.percentage, 100)}%` }}
+                      />
+                    </div>
+                    <p className={`text-xs font-bold ${getUsageTextColor(chartData.resourceUsage.products.percentage)}`}>
+                      {chartData.resourceUsage.products.percentage.toFixed(1)}% utilizado
+                    </p>
+                  </div>
+
+                  {/* Transacciones */}
+                  <div className='bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-4 hover:shadow-lg transition-all'>
+                    <div className='flex items-center justify-between mb-3'>
+                      <ChartBarIcon className='w-8 h-8 text-purple-600' />
+                      <span className='text-xs font-semibold text-purple-700 bg-white px-2 py-1 rounded-full'>
+                        {chartData.resourceUsage.transactions.current} / {chartData.resourceUsage.transactions.limit}
+                      </span>
+                    </div>
+                    <h4 className='text-sm font-semibold text-gray-700 mb-2'>Transacciones</h4>
+                    <div className='w-full bg-white rounded-full h-3 mb-2 overflow-hidden shadow-inner'>
+                      <div
+                        className={`h-3 rounded-full transition-all ${getUsageColor(chartData.resourceUsage.transactions.percentage)}`}
+                        style={{ width: `${Math.min(chartData.resourceUsage.transactions.percentage, 100)}%` }}
+                      />
+                    </div>
+                    <p className={`text-xs font-bold ${getUsageTextColor(chartData.resourceUsage.transactions.percentage)}`}>
+                      {chartData.resourceUsage.transactions.percentage.toFixed(1)}% utilizado
+                    </p>
+                  </div>
+
+                  {/* Almacenamiento */}
+                  <div className='bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200 rounded-xl p-4 hover:shadow-lg transition-all'>
+                    <div className='flex items-center justify-between mb-3'>
+                      <CurrencyDollarIcon className='w-8 h-8 text-orange-600' />
+                      <span className='text-xs font-semibold text-orange-700 bg-white px-2 py-1 rounded-full'>
+                        {chartData.resourceUsage.storage.current} / {chartData.resourceUsage.storage.limit} GB
+                      </span>
+                    </div>
+                    <h4 className='text-sm font-semibold text-gray-700 mb-2'>Almacenamiento</h4>
+                    <div className='w-full bg-white rounded-full h-3 mb-2 overflow-hidden shadow-inner'>
+                      <div
+                        className={`h-3 rounded-full transition-all ${getUsageColor(chartData.resourceUsage.storage.percentage)}`}
+                        style={{ width: `${Math.min(chartData.resourceUsage.storage.percentage, 100)}%` }}
+                      />
+                    </div>
+                    <p className={`text-xs font-bold ${getUsageTextColor(chartData.resourceUsage.storage.percentage)}`}>
+                      {chartData.resourceUsage.storage.percentage.toFixed(1)}% utilizado
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sin estadísticas */}
+            {!chartData?.resourceUsage && !loadingStats && (
+              <div className='bg-gray-50 border-2 border-gray-200 rounded-xl p-8 text-center'>
+                <ChartBarIcon className='w-16 h-16 text-gray-300 mx-auto mb-3' />
+                <p className='text-gray-500 font-medium'>No hay estadísticas disponibles</p>
+              </div>
+            )}
+
+            {/* Configuración de negocio */}
+            {company?.settings && (
+              <div className='bg-white border-2 border-gray-200 rounded-xl p-6'>
+                <div className='flex items-center space-x-2 mb-5'>
+                  <Cog6ToothIcon className='w-6 h-6 text-indigo-600' />
+                  <h3 className='text-xl font-bold text-gray-900'>Configuración de Negocio</h3>
+                </div>
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+                  <div className='p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg border-2 border-indigo-200'>
+                    <label className='text-xs font-semibold text-indigo-600 uppercase mb-2 block'>
                       Tipo de Negocio
                     </label>
-                    <p className='text-sm text-gray-900 capitalize'>
-                      {company.settings.businessType?.replace('_', ' ') ||
-                        'No especificado'}
+                    <p className='text-lg font-bold text-gray-900 capitalize'>
+                      {company.settings.businessType?.replace('_', ' ') || 'No especificado'}
                     </p>
                   </div>
 
-                  <div>
-                    <label className='text-sm font-medium text-gray-500'>
+                  <div className='p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border-2 border-green-200'>
+                    <label className='text-xs font-semibold text-green-600 uppercase mb-2 block'>
                       RUT/Tax ID
                     </label>
-                    <p className='text-sm text-gray-900'>
+                    <p className='text-lg font-bold text-gray-900'>
                       {company.settings.taxId || 'No especificado'}
                     </p>
                   </div>
 
-                  <div>
-                    <label className='text-sm font-medium text-gray-500'>
+                  <div className='p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg border-2 border-yellow-200'>
+                    <label className='text-xs font-semibold text-yellow-600 uppercase mb-2 block'>
                       Moneda
                     </label>
-                    <p className='text-sm text-gray-900'>
+                    <p className='text-lg font-bold text-gray-900'>
                       {company.settings.currency || 'USD'}
                     </p>
                   </div>
                 </div>
+              </div>
+            )}
 
-                <div className='space-y-3'>
-                  {company.settings.fiscalYear && (
+            {/* Características habilitadas */}
+            {company?.settings?.features && (
+              <div className='bg-white border-2 border-gray-200 rounded-xl p-6'>
+                <div className='flex items-center justify-between mb-5'>
+                  <div className='flex items-center space-x-2'>
+                    <SparklesIcon className='w-6 h-6 text-yellow-600' />
+                    <h3 className='text-xl font-bold text-gray-900'>Características del Plan</h3>
+                  </div>
+                  <span className='text-xs font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-full'>
+                    {Object.entries(company.settings.features).filter(([_, enabled]) => enabled).length} de{' '}
+                    {Object.entries(company.settings.features).length} activas
+                  </span>
+                </div>
+                <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3'>
+                  {Object.entries(company.settings.features).map(([feature, enabled]) => {
+                    const label = FEATURE_LABELS[feature] || feature
+                    const icon = FEATURE_ICONS[feature] || '✨'
+
+                    return (
+                      <div
+                        key={feature}
+                        className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${enabled
+                            ? 'border-green-300 bg-gradient-to-br from-green-50 to-green-100 text-green-800 shadow-sm hover:shadow-md'
+                            : 'border-gray-200 bg-gray-50 text-gray-400'
+                          }`}
+                      >
+                        <span className='text-2xl mb-2'>{icon}</span>
+                        <span className='text-xs font-bold text-center leading-tight'>
+                          {label}
+                        </span>
+                        <span className='text-xs mt-1'>
+                          {enabled ? '✓' : '×'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <p className='text-xs text-gray-500 mt-4 italic border-t border-gray-200 pt-3'>
+                  💡 Las características están definidas por el plan seleccionado y no pueden modificarse manualmente.
+                </p>
+              </div>
+            )}
+
+            {/* Personalización */}
+            {company?.settings?.branding && (
+              <div className='bg-white border-2 border-gray-200 rounded-xl p-6'>
+                <div className='flex items-center space-x-2 mb-5'>
+                  <SparklesIcon className='w-6 h-6 text-pink-600' />
+                  <h3 className='text-xl font-bold text-gray-900'>Personalización de Marca</h3>
+                </div>
+                <div className='flex flex-wrap items-center gap-6'>
+                  <div className='flex items-center space-x-4 p-4 bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl border-2 border-pink-200'>
                     <div>
-                      <label className='text-sm font-medium text-gray-500'>
-                        Año Fiscal
-                      </label>
-                      <p className='text-sm text-gray-900'>
-                        {new Date(
-                          2024,
-                          (company.settings.fiscalYear.startMonth || 1) - 1,
-                          1
-                        ).toLocaleDateString('es-ES', {month: 'long'})}{' '}
-                        -{' '}
-                        {new Date(
-                          2024,
-                          (company.settings.fiscalYear.endMonth || 12) - 1,
-                          1
-                        ).toLocaleDateString('es-ES', {month: 'long'})}
-                      </p>
+                      <p className='text-xs font-semibold text-pink-600 uppercase mb-2'>Color Primario</p>
+                      <div className='flex items-center space-x-3'>
+                        <div
+                          className='w-12 h-12 rounded-lg border-2 border-white shadow-lg'
+                          style={{
+                            backgroundColor: company.settings.branding.primaryColor || '#3B82F6'
+                          }}
+                        />
+                        <span className='text-sm font-mono font-bold text-gray-900'>
+                          {company.settings.branding.primaryColor || '#3B82F6'}
+                        </span>
+                      </div>
                     </div>
-                  )}
-
-                  <div>
-                    <label className='text-sm font-medium text-gray-500'>
-                      Verificada
-                    </label>
-                    <p className='text-sm text-gray-900'>
-                      {company.verified ? '✓ Verificada' : '⚠ Pendiente'}
-                    </p>
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* Características habilitadas */}
-          {company?.settings?.features && (
-            <div>
-              <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                Características Habilitadas
-              </h3>
-              <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3'>
-                {Object.entries(company.settings.features).map(
-                  ([feature, enabled]) => (
-                    <div
-                      key={feature}
-                      className={`flex items-center justify-center p-3 rounded-lg border ${
-                        enabled
-                          ? 'border-green-200 bg-green-50 text-green-800'
-                          : 'border-gray-200 bg-gray-50 text-gray-500'
-                      }`}
-                    >
-                      <span className='text-sm font-medium capitalize'>
-                        {enabled ? '✓' : '×'} {feature}
-                      </span>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Personalización */}
-          {company?.settings?.branding && (
-            <div>
-              <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                Personalización
-              </h3>
-              <div className='flex items-center space-x-6'>
-                <div>
-                  <label className='text-sm font-medium text-gray-500'>
-                    Colores de Marca
-                  </label>
-                  <div className='flex items-center space-x-3 mt-2'>
-                    <div className='flex items-center space-x-2'>
-                      <div
-                        className='w-6 h-6 rounded-full border border-gray-300'
-                        style={{
-                          backgroundColor:
-                            company.settings.branding.primaryColor || '#3B82F6'
-                        }}
-                      />
-                      <span className='text-sm text-gray-900'>
-                        {company.settings.branding.primaryColor || '#3B82F6'}
-                      </span>
-                    </div>
-                    <div className='flex items-center space-x-2'>
-                      <div
-                        className='w-6 h-6 rounded-full border border-gray-300'
-                        style={{
-                          backgroundColor:
-                            company.settings.branding.secondaryColor ||
-                            '#6B7280'
-                        }}
-                      />
-                      <span className='text-sm text-gray-900'>
-                        {company.settings.branding.secondaryColor || '#6B7280'}
-                      </span>
+                  <div className='flex items-center space-x-4 p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border-2 border-purple-200'>
+                    <div>
+                      <p className='text-xs font-semibold text-purple-600 uppercase mb-2'>Color Secundario</p>
+                      <div className='flex items-center space-x-3'>
+                        <div
+                          className='w-12 h-12 rounded-lg border-2 border-white shadow-lg'
+                          style={{
+                            backgroundColor: company.settings.branding.secondaryColor || '#6B7280'
+                          }}
+                        />
+                        <span className='text-sm font-mono font-bold text-gray-900'>
+                          {company.settings.branding.secondaryColor || '#6B7280'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+
+        {/* Footer actions */}
+        {onEdit && (
+          <div className='p-4 bg-gray-50 border-t-2 border-gray-200'>
+            <div className='flex justify-end'>
+              <button
+                onClick={onEdit}
+                className='inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl'
+              >
+                <Cog6ToothIcon className='w-5 h-5 mr-2' />
+                Editar Empresa
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

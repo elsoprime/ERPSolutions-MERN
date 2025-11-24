@@ -7,16 +7,25 @@
  */
 
 'use client'
-import React, {useState, useEffect, useCallback, useRef} from 'react'
-import {useForm} from 'react-hook-form'
-import {zodResolver} from '@hookform/resolvers/zod'
-import {toast} from 'react-toastify'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'react-toastify'
 
 import {
   CreateCompanyFormProps,
   FORM_STEPS,
   FormStep
 } from '@/interfaces/EnhanchedCompany/CreateCompanyFormTypes'
+import { PlanFeaturesDisplay } from '@/components/Plans/PlanFeaturesDisplay'
+import {
+  CreateCompanyFormData,
+  createCompanySchema,
+  defaultCompanyFormValues
+} from '@/schemas/EnhancedCompanySchemas'
+
+// Después:
+import { IPlan } from "@/interfaces/Plan/IPlan";
 
 import {
   INDUSTRIES,
@@ -24,28 +33,18 @@ import {
   SUBSCRIPTION_PLANS
 } from '@/interfaces/EnhanchedCompany/EnhancedCompany'
 import EnhancedCompanyAPI from '@/api/EnhancedCompanyAPI'
+import PlanAPI from '@/api/PlanAPI'
 import ConfirmationDialog, {
   ConfirmationDialogAction
 } from '@/components/Shared/ConfirmationDialog'
-import {
-  CreateCompanyFormData,
-  createCompanySchema
-} from '@/schemas/EnhancedCompanySchemas'
-import {getTranslatedBusinessTypes} from '@/utils/formOptions'
+import { getTranslatedBusinessTypes } from '@/utils/formOptions'
 import {
   ExclamationTriangleIcon,
   CheckCircleIcon
 } from '@heroicons/react/20/solid'
-import CompanyFormModal from '@/components/Shared/CompanyFormModal'
 import FormStepper from '@/components/Shared/FormStepper'
+import FormModal from '@/components/Shared/FormModal'
 
-/*
-interface CreateCompanyFormProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: (company: any) => void
-}
-  */
 
 export default function CreateCompanyForm({
   isOpen,
@@ -58,6 +57,11 @@ export default function CreateCompanyForm({
   const [slugPreview, setSlugPreview] = useState('')
   const [isCurrentStepValid, setIsCurrentStepValid] = useState(false)
   const [validationInProgress, setValidationInProgress] = useState(false)
+
+  // Estado para planes disponibles desde la API
+  const [availablePlans, setAvailablePlans] = useState<IPlan[]>([])
+  const [plansLoading, setPlansLoading] = useState(true)
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('')
 
   // Estado para el diálogo de confirmación/error
   const [dialogState, setDialogState] = useState<{
@@ -82,42 +86,44 @@ export default function CreateCompanyForm({
     }))
   }
 
+  // Cargar planes dinámicamente
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        setPlansLoading(true);
+        const response = await PlanAPI.getActivePlans();
+
+        console.log('📋 Planes cargados desde API:', response);
+
+        if (response.success && response.data) {
+          setAvailablePlans(response.data);
+          console.log('✅ Planes disponibles:', response.data.length);
+        } else {
+          console.error('❌ Error al cargar planes:', response.message);
+          setAvailablePlans([]);
+        }
+      } catch (error) {
+        console.error('❌ Error al cargar planes:', error);
+        setAvailablePlans([]);
+      } finally {
+        setPlansLoading(false);
+      }
+    };
+    loadPlans();
+  }, []);
+
   const {
     register,
     handleSubmit,
     watch,
-    control,
-    formState: {errors},
+    formState: { errors },
     setValue,
     getValues,
     reset,
     trigger
   } = useForm<CreateCompanyFormData>({
     resolver: zodResolver(createCompanySchema),
-    defaultValues: {
-      subscription: {
-        plan: 'basic',
-        autoRenew: true
-      },
-      features: {
-        inventory: true,
-        accounting: false,
-        hrm: false,
-        crm: false,
-        projects: false
-      },
-      branding: {
-        primaryColor: '#3B82F6',
-        secondaryColor: '#64748B'
-      },
-      settings: {
-        currency: 'CLP',
-        fiscalYear: {
-          startMonth: 1,
-          endMonth: 12
-        }
-      }
-    }
+    defaultValues: defaultCompanyFormValues
   })
 
   // Observar cambios en el nombre para generar slug
@@ -134,93 +140,23 @@ export default function CreateCompanyForm({
     }
   }, [watchedName])
 
-  // Observar cambios en el plan para actualizar características (optimizado)
-  const watchedPlan = watch('subscription.plan')
-  const prevPlanRef = useRef(watchedPlan)
-
+  // Observar cambios en el plan seleccionado para actualizar características
   useEffect(() => {
-    // Solo actualizar si el plan realmente cambió
-    if (watchedPlan && watchedPlan !== prevPlanRef.current) {
-      const selectedPlan = SUBSCRIPTION_PLANS.find(p => p.id === watchedPlan)
+    if (selectedPlanId && availablePlans.length > 0) {
+      const selectedPlan = availablePlans.find(p => p._id === selectedPlanId);
+
       if (selectedPlan) {
-        // Actualizar características según el plan
-        switch (watchedPlan) {
-          case 'trial':
-            setValue(
-              'features',
-              {
-                inventory: true,
-                accounting: true,
-                hrm: true,
-                crm: true,
-                projects: true
-              },
-              {shouldValidate: false}
-            )
-            break
-          case 'free':
-            setValue(
-              'features',
-              {
-                inventory: true,
-                accounting: false,
-                hrm: false,
-                crm: false,
-                projects: false
-              },
-              {shouldValidate: false}
-            )
-            break
-          case 'basic':
-            setValue(
-              'features',
-              {
-                inventory: true,
-                accounting: false,
-                hrm: true,
-                crm: false,
-                projects: false
-              },
-              {shouldValidate: false}
-            )
-            break
-          case 'professional':
-            setValue(
-              'features',
-              {
-                inventory: true,
-                accounting: true,
-                hrm: false,
-                crm: true,
-                projects: false
-              },
-              {shouldValidate: false}
-            )
-            break
-          case 'enterprise':
-            setValue(
-              'features',
-              {
-                inventory: true,
-                accounting: true,
-                hrm: true,
-                crm: true,
-                projects: true
-              },
-              {shouldValidate: false}
-            )
-            break
-        }
-        prevPlanRef.current = watchedPlan
+        // ✅ Copiar TODAS las features directamente
+        setValue('features', selectedPlan.features, { shouldValidate: true });
       }
     }
-  }, [watchedPlan, setValue])
+  }, [selectedPlanId, availablePlans, setValue]);
 
   // Función para validar campos por etapa con validación granular (memoizada)
   const validateStep = useCallback(
     async (
       step: number
-    ): Promise<{isValid: boolean; missingFields: string[]}> => {
+    ): Promise<{ isValid: boolean; missingFields: string[] }> => {
       let fieldsToValidate: string[] = []
       let missingFields: string[] = []
 
@@ -248,7 +184,7 @@ export default function CreateCompanyForm({
           fieldsToValidate = ['subscription.plan']
           console.log(
             '🔍 Validando Step 3 - Plan actual:',
-            getValues('subscription.plan')
+            getValues('subscription')
           )
           break
         case 4: // Personalización
@@ -267,7 +203,7 @@ export default function CreateCompanyForm({
       // Identificar campos que faltan o son inválidos
       fieldsToValidate.forEach((field, index) => {
         if (!results[index]) {
-          const fieldLabels: {[key: string]: string} = {
+          const fieldLabels: { [key: string]: string } = {
             name: 'Nombre de la Empresa',
             email: 'Email de Contacto',
             'address.street': 'Dirección',
@@ -288,7 +224,7 @@ export default function CreateCompanyForm({
       })
 
       const isValid = results.every(result => result)
-      return {isValid, missingFields}
+      return { isValid, missingFields }
     },
     [trigger, getValues]
   )
@@ -387,7 +323,10 @@ export default function CreateCompanyForm({
 
     setIsSubmitting(true)
     try {
+      // Los datos ya están en el formato correcto con subscription.planId
       console.log('📤 Datos enviados al backend:', data)
+      console.log('🆔 Plan ObjectId:', data.subscription.planId)
+
       const result = await EnhancedCompanyAPI.createCompany(data)
 
       if (result.success) {
@@ -406,6 +345,7 @@ export default function CreateCompanyForm({
         setCurrentStep(1)
         setIsCurrentStepValid(false)
         setValidationInProgress(false)
+        setSelectedPlanId('')
         onClose()
       } else {
         setDialogState({
@@ -543,7 +483,7 @@ export default function CreateCompanyForm({
 
   return (
     <>
-      <CompanyFormModal
+      <FormModal
         isOpen={isOpen}
         onClose={handleClose}
         title='Crear Nueva Empresa'
@@ -852,11 +792,11 @@ export default function CreateCompanyForm({
                       })}
                       className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                     >
-                      {Array.from({length: 12}, (_, i) => i + 1).map(month => (
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
                         <option key={month} value={month}>
                           {new Date(2024, month - 1, 1).toLocaleDateString(
                             'es-ES',
-                            {month: 'long'}
+                            { month: 'long' }
                           )}
                         </option>
                       ))}
@@ -873,11 +813,11 @@ export default function CreateCompanyForm({
                       })}
                       className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                     >
-                      {Array.from({length: 12}, (_, i) => i + 1).map(month => (
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
                         <option key={month} value={month}>
                           {new Date(2024, month - 1, 1).toLocaleDateString(
                             'es-ES',
-                            {month: 'long'}
+                            { month: 'long' }
                           )}
                         </option>
                       ))}
@@ -899,59 +839,93 @@ export default function CreateCompanyForm({
                   Plan de Suscripción
                 </h3>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
-                  {SUBSCRIPTION_PLANS.map(plan => (
-                    <div
-                      key={plan.id}
-                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all relative ${
-                        watch('subscription.plan') === plan.id
-                          ? plan.id === 'trial'
+                {plansLoading ? (
+                  <div className='text-center py-8'>
+                    <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto'></div>
+                    <p className='mt-4 text-gray-600'>Cargando planes disponibles...</p>
+                  </div>
+                ) : availablePlans.length === 0 ? (
+                  <div className='text-center py-8 text-gray-500'>
+                    <p>No hay planes disponibles</p>
+                  </div>
+                ) : (
+                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
+                    {availablePlans.map(plan => (
+                      <div
+                        key={plan._id}
+                        className={`border-2 rounded-lg p-4 cursor-pointer transition-all relative ${selectedPlanId === plan._id
+                          ? plan.type === 'trial'
                             ? 'border-orange-500 bg-orange-50'
                             : 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      onClick={() =>
-                        setValue('subscription.plan', plan.id as any)
-                      }
-                    >
-                      {plan.id === 'trial' && (
-                        <div className='absolute -top-2 -right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full'>
-                          PRUEBA
-                        </div>
-                      )}
-                      <div className='text-center'>
-                        <h4
-                          className={`font-semibold text-lg ${
-                            plan.id === 'trial' ? 'text-orange-700' : ''
                           }`}
-                        >
-                          {plan.name}
-                        </h4>
-                        <p className='text-sm text-gray-600 mt-1'>
-                          {plan.description}
-                        </p>
-                        <div className='mt-3 space-y-1'>
-                          <p className='text-xs text-gray-500'>Límites:</p>
-                          <p className='text-xs'>
-                            👥 {plan.limits.maxUsers} usuarios
+                        onClick={() => {
+                          setSelectedPlanId(plan._id)
+                          setValue('subscription.planId', plan._id)
+                          console.log('🎯 Plan seleccionado:', {
+                            id: plan._id,
+                            type: plan.type,
+                            name: plan.name
+                          })
+                        }}
+                      >
+                        {plan.type === 'trial' && (
+                          <div className='absolute -top-2 -right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full'>
+                            PRUEBA
+                          </div>
+                        )}
+                        {plan.isRecommended && (
+                          <div className='absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full'>
+                            ⭐ Recomendado
+                          </div>
+                        )}
+                        <div className='text-center'>
+                          <h4
+                            className={`font-semibold text-lg ${plan.type === 'trial' ? 'text-orange-700' : ''
+                              }`}
+                          >
+                            {plan.name}
+                          </h4>
+                          <p className='text-sm text-gray-600 mt-1'>
+                            {plan.description}
                           </p>
-                          <p className='text-xs'>
-                            📦 {plan.limits.maxProducts} productos
-                          </p>
-                          <p className='text-xs'>
-                            💾 {plan.limits.storageGB} GB
-                          </p>
+                          <div className='mt-3 space-y-1'>
+                            <p className='text-xs text-gray-500'>Límites:</p>
+                            <p className='text-xs'>
+                              👥 {plan.limits.maxUsers} usuarios
+                            </p>
+                            <p className='text-xs'>
+                              📦 {plan.limits.maxProducts} productos
+                            </p>
+                            <p className='text-xs'>
+                              💾 {plan.limits.storageGB} GB
+                            </p>
+                          </div>
+                          {plan.price && (
+                            <div className='mt-3 pt-3 border-t border-gray-200'>
+                              <p className='text-lg font-bold text-gray-900'>
+                                ${plan.price.monthly?.toLocaleString() || '0'} {plan.price.currency || 'USD'}
+                              </p>
+                              <p className='text-xs text-gray-500'>por mes</p>
+                            </div>
+                          )}
                         </div>
+                        <input
+                          type='radio'
+                          name='planSelection'
+                          value={plan._id}
+                          checked={selectedPlanId === plan._id}
+                          onChange={() => {
+                            setSelectedPlanId(plan._id)
+                            setValue('subscription.planId', plan._id)
+                          }}
+                          className='sr-only'
+                          aria-hidden='true'
+                        />
                       </div>
-                      <input
-                        type='radio'
-                        {...register('subscription.plan')}
-                        value={plan.id}
-                        className='sr-only'
-                      />
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className='mt-4'>
                   <label className='flex items-center'>
@@ -968,89 +942,11 @@ export default function CreateCompanyForm({
               </div>
 
               <div>
-                <h3 className='text-lg font-medium text-gray-900 border-b border-gray-200 pb-2 mb-4'>
-                  Características Habilitadas
-                </h3>
-
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                  <label className='flex items-center p-3 border border-gray-200 rounded-lg'>
-                    <input
-                      type='checkbox'
-                      {...register('features.inventory')}
-                      className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                    />
-                    <div className='ml-3'>
-                      <p className='text-sm font-medium text-gray-900'>
-                        Inventario
-                      </p>
-                      <p className='text-xs text-gray-500'>
-                        Gestión de productos y stock
-                      </p>
-                    </div>
-                  </label>
-
-                  <label className='flex items-center p-3 border border-gray-200 rounded-lg'>
-                    <input
-                      type='checkbox'
-                      {...register('features.accounting')}
-                      className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                    />
-                    <div className='ml-3'>
-                      <p className='text-sm font-medium text-gray-900'>
-                        Contabilidad
-                      </p>
-                      <p className='text-xs text-gray-500'>
-                        Gestión financiera y contable
-                      </p>
-                    </div>
-                  </label>
-
-                  <label className='flex items-center p-3 border border-gray-200 rounded-lg'>
-                    <input
-                      type='checkbox'
-                      {...register('features.hrm')}
-                      className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                    />
-                    <div className='ml-3'>
-                      <p className='text-sm font-medium text-gray-900'>
-                        Recursos Humanos
-                      </p>
-                      <p className='text-xs text-gray-500'>
-                        Gestión de personal
-                      </p>
-                    </div>
-                  </label>
-
-                  <label className='flex items-center p-3 border border-gray-200 rounded-lg'>
-                    <input
-                      type='checkbox'
-                      {...register('features.crm')}
-                      className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                    />
-                    <div className='ml-3'>
-                      <p className='text-sm font-medium text-gray-900'>CRM</p>
-                      <p className='text-xs text-gray-500'>
-                        Gestión de clientes
-                      </p>
-                    </div>
-                  </label>
-
-                  <label className='flex items-center p-3 border border-gray-200 rounded-lg'>
-                    <input
-                      type='checkbox'
-                      {...register('features.projects')}
-                      className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                    />
-                    <div className='ml-3'>
-                      <p className='text-sm font-medium text-gray-900'>
-                        Proyectos
-                      </p>
-                      <p className='text-xs text-gray-500'>
-                        Gestión de proyectos
-                      </p>
-                    </div>
-                  </label>
-                </div>
+                <PlanFeaturesDisplay
+                  features={watch('features')}
+                  size="md"
+                  columns={3}
+                />
               </div>
             </div>
           )}
@@ -1079,6 +975,7 @@ export default function CreateCompanyForm({
                           setValue('branding.primaryColor', e.target.value)
                         }
                         className='w-12 h-10 border border-gray-300 rounded-md cursor-pointer'
+                        aria-hidden='true'
                       />
                       <input
                         type='text'
@@ -1112,6 +1009,7 @@ export default function CreateCompanyForm({
                           setValue('branding.secondaryColor', e.target.value)
                         }
                         className='w-12 h-10 border border-gray-300 rounded-md cursor-pointer'
+                        aria-hidden='true'
                       />
                       <input
                         type='text'
@@ -1195,7 +1093,7 @@ export default function CreateCompanyForm({
                       <strong>Plan:</strong>{' '}
                       {
                         SUBSCRIPTION_PLANS.find(
-                          p => p.id === watch('subscription.plan')
+                          p => p.id === watch('subscription.planId')
                         )?.name
                       }
                     </div>
@@ -1251,11 +1149,10 @@ export default function CreateCompanyForm({
                   type='button'
                   onClick={e => nextStep(e)}
                   disabled={!isCurrentStepValid || validationInProgress}
-                  className={`px-6 py-2 rounded-md transition-colors ${
-                    isCurrentStepValid && !validationInProgress
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
+                  className={`px-6 py-2 rounded-md transition-colors ${isCurrentStepValid && !validationInProgress
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   title={
                     !isCurrentStepValid
                       ? 'Complete todos los campos requeridos para continuar'
@@ -1268,11 +1165,10 @@ export default function CreateCompanyForm({
                 <button
                   type='submit'
                   disabled={isSubmitting || !isCurrentStepValid}
-                  className={`px-6 py-2 rounded-md transition-colors ${
-                    !isSubmitting && isCurrentStepValid
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
+                  className={`px-6 py-2 rounded-md transition-colors ${!isSubmitting && isCurrentStepValid
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                 >
                   {isSubmitting ? 'Creando...' : 'Crear Empresa'}
                 </button>
@@ -1280,7 +1176,7 @@ export default function CreateCompanyForm({
             </div>
           </div>
         </form>
-      </CompanyFormModal>
+      </FormModal>
       {/* Diálogo de Confirmación/Error */}
       <ConfirmationDialog
         isOpen={dialogState.isOpen}

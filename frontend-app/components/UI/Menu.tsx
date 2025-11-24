@@ -1,13 +1,14 @@
-import {getMenuByRole} from '@/data/Menu'
-import {ChevronUpIcon, ChevronDownIcon} from '@heroicons/react/20/solid'
+import { getMenuByRole } from '@/data/Menu'
+import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/20/solid'
 import Link from 'next/link'
-import {usePathname} from 'next/navigation'
-import {useState, useMemo, useEffect} from 'react'
-import {IMenu, ISubMenu} from '@/interfaces/IComponents'
-import {useAuth} from '@/hooks/useAuth'
-import {useLogout} from '@/hooks/useLogout'
-import {getHighestRole} from '@/utils/roleRouting'
-import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
+import { usePathname } from 'next/navigation'
+import { useState, useMemo, useEffect } from 'react'
+import { IMenu, ISubMenu } from '@/interfaces/IComponents'
+import { useAuth } from '@/hooks/useAuth'
+import { useLogout } from '@/hooks/useLogout'
+import { getHighestRole } from '@/utils/roleRouting'
+import { UserRole } from '@/interfaces/EnhanchedCompany/MultiCompany'
+import { AuthLoadingState } from '@/components/Modules/Auth/States/AuthLoadingState'
 
 /**
  *
@@ -19,8 +20,8 @@ import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
 export default function Menu(): JSX.Element {
   const [openSubMenu, setOpenSubMenu] = useState<number | null>(null)
   const pathname = usePathname()
-  const {getUserData} = useAuth()
-  const {handleLogout, isLoggingOut, isLogoutItem} = useLogout()
+  const { getUserData } = useAuth()
+  const { handleLogout, isLoggingOut, isLogoutItem } = useLogout()
 
   // Obtener rol del usuario actual
   const userData = getUserData()
@@ -79,7 +80,7 @@ export default function Menu(): JSX.Element {
     const menuForRole = getMenuByRole(userRole)
 
     return menuForRole.map(item => {
-      const processedItem = {...item}
+      const processedItem = { ...item }
       processedItem.isActive = isItemActive(processedItem)
 
       if (processedItem.ISubMenu) {
@@ -132,7 +133,7 @@ export default function Menu(): JSX.Element {
             className={`${baseClasses} ${activeClasses} ${
               // Añadimos una clase condicional para manejar el hover
               isItemActiveForStyling ? '' : 'group'
-            }`}
+              }`}
           >
             <span className='flex items-center'>
               {item.icon}
@@ -154,11 +155,10 @@ export default function Menu(): JSX.Element {
                   key={subItem.id}
                   href={subItem.link}
                   className={`block px-2 py-2 text-sm rounded-md
-                                        ${
-                                          subItem.isActive
-                                            ? 'bg-purple-100 text-purple-800'
-                                            : 'text-gray-500 hover:bg-white/10 hover:text-purple-800 transition-colors duration-200'
-                                        }`}
+                                        ${subItem.isActive
+                      ? 'bg-purple-100 text-purple-800'
+                      : 'text-gray-500 hover:bg-white/10 hover:text-purple-800 transition-colors duration-200'
+                    }`}
                 >
                   <span className='flex items-center'>
                     {subItem.icon}
@@ -176,13 +176,11 @@ export default function Menu(): JSX.Element {
       <div key={item.id} className={lastItemClasses}>
         <Link
           href={item.link || ''}
-          className={`${
-            isLastItem ? '' : 'mt-4'
-          } ${baseClasses} ${activeClasses} ${
-            isLogoutItem(item.title, item.id) && isLoggingOut
+          className={`${isLastItem ? '' : 'mt-4'
+            } ${baseClasses} ${activeClasses} ${isLogoutItem(item.title, item.id) && isLoggingOut
               ? 'opacity-50 cursor-not-allowed'
               : ''
-          }`}
+            }`}
           onClick={e => handleMenuItemClick(item, e)}
         >
           <span className='flex items-center'>
@@ -203,8 +201,13 @@ export default function Menu(): JSX.Element {
   }
 
   return (
-    <nav className='flex flex-col h-full space-y-2'>
-      {processedMenuItems.map(renderMenuItem)}
-    </nav>
+    <>
+      {/* Overlay de logout */}
+      {isLoggingOut && <AuthLoadingState type='logout' message='Cerrando sesión...' />}
+
+      <nav className='flex flex-col h-full space-y-2'>
+        {processedMenuItems.map(renderMenuItem)}
+      </nav>
+    </>
   )
 }

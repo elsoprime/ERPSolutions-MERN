@@ -4,8 +4,7 @@
  * @author: Esteban Soto Ojeda @elsoprimeDev
  */
 
-import {UserManagementPage} from '@/components/Modules/UserManagement'
-import ProtectedLayout from '@/components/Layout/ProtectedLayout'
+import { UserManagementPage } from '@/components/Modules/UserManagement'
 import DashboardHeader from '@/components/Layout/DashboardHeader'
 
 export default function UsersPage() {

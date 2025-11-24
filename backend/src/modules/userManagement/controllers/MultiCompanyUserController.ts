@@ -4,14 +4,33 @@
  * @author: Esteban Soto Ojeda @elsoprimeDev
  */
 
-import {Request, Response} from 'express'
-import {Types} from 'mongoose'
-import EnhancedUser from '../models/EnhancedUser'
-import EnhancedCompany from '../../companiesManagement/models/EnhancedCompany'
-import MultiCompanyPermissionChecker from '../../../utils/multiCompanyPermissions'
-import {hashPassword} from '../../../utils/authUtils'
-import {generateJWT} from '../../../utils/jwt'
-import {AuthEmail} from '../../../email/AuthEmail'
+import { Request, Response } from "express";
+import { Types } from "mongoose";
+import EnhancedUser, { GlobalRole, CompanyRole } from "../models/EnhancedUser";
+import EnhancedCompany from "@/modules/companiesManagement/models/EnhancedCompany";
+import MultiCompanyPermissionChecker from "@/utils/multiCompanyPermissions";
+import { hashPassword } from "@/utils/authUtils";
+import { generateJWT } from "@/utils/jwt";
+import { AuthEmail } from "@/email/AuthEmail";
+import PermissionService from "@/services/permissionService";
+import RoleAssignmentService from "@/services/roleAssignmentService";
+
+// Enums para roles y status
+enum UserRole {
+  SUPER_ADMIN = "super_admin",
+  SYSTEM_ADMIN = "system_admin",
+  ADMIN_EMPRESA = "admin_empresa",
+  MANAGER = "manager",
+  EMPLOYEE = "employee",
+  VIEWER = "viewer",
+}
+
+enum UserStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  SUSPENDED = "suspended",
+  PENDING = "pending",
+}
 
 export class MultiCompanyUserController {
   /**
@@ -19,43 +38,54 @@ export class MultiCompanyUserController {
    */
   static getAllUsers = async (req: Request, res: Response) => {
     try {
-      const page = parseInt(req.query.page as string) || 1
-      const limit = parseInt(req.query.limit as string) || 10
-      const search = (req.query.search as string) || ''
-      const role = (req.query.role as string) || ''
-      const status = (req.query.status as string) || ''
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const search = (req.query.search as string) || "";
+      const role = (req.query.role as string) || "";
+      const status = (req.query.status as string) || "";
+      const companyId = (req.query.companyId as string) || "";
 
       // Construir filtros
-      const filters: any = {}
+      const filters: any = {};
 
       if (search) {
         filters.$or = [
-          {name: {$regex: search, $options: 'i'}},
-          {email: {$regex: search, $options: 'i'}}
-        ]
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ];
       }
 
+      // 🔒 Filtro de status: Excluir INACTIVOS por defecto
       if (status) {
-        filters.status = status
+        // Si se especifica un status explícitamente, usarlo
+        filters.status = status;
+      } else {
+        // Por defecto, excluir usuarios INACTIVOS
+        filters.status = { $ne: UserStatus.INACTIVE };
+      }
+
+      // 🏢 Filtro por empresa: Buscar usuarios que tengan un rol en esa empresa
+      if (companyId) {
+        filters["roles.companyId"] = companyId;
       }
 
       // Filtro por rol (buscar en el array de roles)
       if (role) {
-        filters['roles.role'] = role
+        filters["roles.role"] = role;
       }
 
-      const skip = (page - 1) * limit
+      const skip = (page - 1) * limit;
 
       const [users, total] = await Promise.all([
         EnhancedUser.find(filters)
-          .select('-password')
-          .populate('primaryCompanyId', 'name slug')
-          .populate('roles.companyId', 'name slug')
-          .sort({createdAt: -1})
+          .select("-password")
+          .populate("primaryCompanyId", "name slug")
+          .populate("roles.companyId", "name slug")
+          .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit),
-        EnhancedUser.countDocuments(filters)
-      ])
+        EnhancedUser.countDocuments(filters),
+      ]);
 
       res.status(200).json({
         data: users, // ✅ Cambiado de "users" a "data" para consistencia
@@ -63,72 +93,82 @@ export class MultiCompanyUserController {
           page,
           limit,
           total,
-          pages: Math.ceil(total / limit)
-        }
-      })
+          pages: Math.ceil(total / limit),
+        },
+      });
     } catch (error) {
-      console.error('Error al obtener usuarios:', error)
+      console.error("Error al obtener usuarios:", error);
       res.status(500).json({
-        error: 'Error interno del servidor'
-      })
+        error: "Error interno del servidor",
+      });
     }
-  }
+  };
 
   /**
    * Obtener usuarios de una empresa específica
    */
   static getCompanyUsers = async (req: Request, res: Response) => {
     try {
-      const companyId = req.companyContext?.id
+      const companyId = req.companyContext?.id;
       if (!companyId) {
         return res.status(400).json({
-          error: 'ID de empresa requerido'
-        })
+          error: "ID de empresa requerido",
+        });
       }
 
-      const page = parseInt(req.query.page as string) || 1
-      const limit = parseInt(req.query.limit as string) || 10
-      const search = (req.query.search as string) || ''
-      const role = (req.query.role as string) || ''
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const search = (req.query.search as string) || "";
+      const role = (req.query.role as string) || "";
+      const status = (req.query.status as string) || "";
 
       // Construir filtros
       const filters: any = {
         roles: {
           $elemMatch: {
             companyId: companyId,
-            isActive: true
-          }
-        }
+            isActive: true,
+          },
+        },
+      };
+
+      // 🔒 Filtro de status: Excluir INACTIVOS por defecto
+      if (status) {
+        // Si se especifica un status explícitamente, usarlo
+        filters.status = status;
+      } else {
+        // Por defecto, excluir usuarios INACTIVOS
+        filters.status = { $ne: UserStatus.INACTIVE };
       }
 
       if (search) {
         filters.$or = [
-          {name: {$regex: search, $options: 'i'}},
-          {email: {$regex: search, $options: 'i'}}
-        ]
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ];
       }
 
       if (role) {
-        filters['roles'] = {
+        filters["roles"] = {
           $elemMatch: {
             companyId: companyId,
             role: role,
-            isActive: true
-          }
-        }
+            isActive: true,
+          },
+        };
       }
 
-      const skip = (page - 1) * limit
+      const skip = (page - 1) * limit;
 
       const [users, total] = await Promise.all([
         EnhancedUser.find(filters)
-          .select('-password')
-          .populate('primaryCompanyId', 'name slug')
-          .sort({createdAt: -1})
+          .select("-password")
+          .populate("primaryCompanyId", "name slug")
+          .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit),
-        EnhancedUser.countDocuments(filters)
-      ])
+        EnhancedUser.countDocuments(filters),
+      ]);
 
       res.status(200).json({
         data: users, // ✅ Cambiado de "users" a "data" para consistencia
@@ -136,17 +176,17 @@ export class MultiCompanyUserController {
           page,
           limit,
           total,
-          pages: Math.ceil(total / limit)
+          pages: Math.ceil(total / limit),
         },
-        company: req.companyContext
-      })
+        company: req.companyContext,
+      });
     } catch (error) {
-      console.error('Error al obtener usuarios de la empresa:', error)
+      console.error("Error al obtener usuarios de la empresa:", error);
       res.status(500).json({
-        error: 'Error interno del servidor'
-      })
+        error: "Error interno del servidor",
+      });
     }
-  }
+  };
 
   /**
    * Crear un nuevo usuario
@@ -161,79 +201,111 @@ export class MultiCompanyUserController {
         roleType,
         role,
         companyId,
-        permissions = []
-      } = req.body
+        permissions = [],
+      } = req.body;
 
-      console.log('📋 Permisos recibidos:', permissions)
+      console.log("📋 Permisos recibidos:", permissions);
 
       // Normalizar email
-      const normalizedEmail = email.toLowerCase().trim()
+      const normalizedEmail = email.toLowerCase().trim();
 
       // Validar que el email no exista (case-insensitive)
       const existingUser = await EnhancedUser.findOne({
-        email: {$regex: new RegExp(`^${normalizedEmail}$`, 'i')}
-      })
+        email: { $regex: new RegExp(`^${normalizedEmail}$`, "i") },
+      });
 
       if (existingUser) {
-        console.log(`❌ Email duplicado: ${normalizedEmail}`)
+        console.log(`❌ Email duplicado: ${normalizedEmail}`);
         return res.status(409).json({
-          error: 'Ya existe un usuario con este correo electrónico'
-        })
+          error: "Ya existe un usuario con este correo electrónico",
+        });
       }
 
       // Validar empresa si es rol de empresa
-      if (roleType === 'company') {
+      if (roleType === "company") {
         if (!companyId) {
           return res.status(400).json({
-            error: 'ID de empresa requerido para roles de empresa'
-          })
+            error: "ID de empresa requerido para roles de empresa",
+          });
         }
 
-        const company = await EnhancedCompany.findById(companyId)
+        const company = await EnhancedCompany.findById(companyId);
         if (!company) {
           return res.status(404).json({
-            error: 'Empresa no encontrada'
-          })
+            error: "Empresa no encontrada",
+          });
         }
 
         // 🔒 Verificar que la empresa no esté suspendida
-        if (company.status === 'suspended') {
+        if (company.status === "suspended") {
           console.log(
             `🚫 Intento de crear usuario en empresa suspendida: ${company.name}`
-          )
+          );
           return res.status(403).json({
-            error: 'No se pueden crear usuarios en una empresa suspendida',
+            error: "No se pueden crear usuarios en una empresa suspendida",
             details: {
               companyName: company.name,
               suspendedAt: company.suspendedAt,
-              suspensionReason: company.suspensionReason
-            }
-          })
+              suspensionReason: company.suspensionReason,
+            },
+          });
         }
 
         // Verificar si la empresa puede agregar más usuarios
         if (!company.canAddUser()) {
           console.log(`❌ Límite de usuarios alcanzado para ${company.name}:`, {
             totalUsers: company.stats.totalUsers,
-            maxUsers: company.settings.limits.maxUsers
-          })
+            maxUsers: company.settings.limits.maxUsers,
+          });
           return res.status(400).json({
-            error: `La empresa ha alcanzado el límite de usuarios (${company.stats.totalUsers}/${company.settings.limits.maxUsers})`
-          })
+            error: `La empresa ha alcanzado el límite de usuarios (${company.stats.totalUsers}/${company.settings.limits.maxUsers})`,
+          });
         }
       }
 
       // Crear el usuario
-      const hashedPassword = await hashPassword(password)
+      const hashedPassword = await hashPassword(password);
 
-      console.log('💾 Guardando usuario con permisos:', permissions)
+      // 🎯 AUTO-CALCULAR PERMISOS SI NO SE PROPORCIONAN
+      let finalPermissions: string[] = permissions;
+
+      if (
+        roleType === "company" &&
+        companyId &&
+        (!permissions || permissions.length === 0)
+      ) {
+        try {
+          const calculatedResult =
+            await PermissionService.calculateUserPermissions(
+              role as CompanyRole,
+              companyId
+            );
+          finalPermissions = calculatedResult.permissions;
+          console.log(
+            `🤖 Permisos auto-calculados para ${role} en empresa ${companyId}:`,
+            {
+              total: finalPermissions.length,
+              planName: calculatedResult.planName,
+              availableModules: calculatedResult.availableModules.length,
+            }
+          );
+        } catch (error) {
+          console.warn(
+            "⚠️ Error calculando permisos automáticos, usando permisos vacíos:",
+            error
+          );
+          finalPermissions = [];
+        }
+      }
+
+      console.log("💾 Guardando usuario con permisos:", finalPermissions);
 
       const newUser = new EnhancedUser({
         name,
         email: normalizedEmail,
         password: hashedPassword,
         phone,
-        status: 'active',
+        status: "active",
         confirmed: true,
         emailVerified: true,
         createdBy: req.authUser?.id,
@@ -242,46 +314,46 @@ export class MultiCompanyUserController {
             roleType,
             role,
             companyId:
-              roleType === 'company'
+              roleType === "company"
                 ? new Types.ObjectId(companyId)
                 : undefined,
-            permissions,
+            permissions: finalPermissions, // ✅ Usar permisos finales (auto-calculados o manuales)
             isActive: true,
             assignedAt: new Date(),
             assignedBy: req.authUser?.id
               ? new Types.ObjectId(req.authUser.id)
-              : undefined
-          }
+              : undefined,
+          },
         ],
         primaryCompanyId:
-          roleType === 'company' ? new Types.ObjectId(companyId) : undefined
-      })
+          roleType === "company" ? new Types.ObjectId(companyId) : undefined,
+      });
 
-      await newUser.save()
+      await newUser.save();
 
       console.log(
-        '✅ Usuario guardado con permisos:',
+        "✅ Usuario guardado con permisos:",
         newUser.roles[0].permissions
-      )
+      );
 
       // ✅ Actualizar estadísticas de la empresa usando el método updateStats
-      if (roleType === 'company' && companyId) {
-        const company = await EnhancedCompany.findById(companyId)
+      if (roleType === "company" && companyId) {
+        const company = await EnhancedCompany.findById(companyId);
         if (company) {
-          await company.updateStats()
-          console.log(`✅ Estadísticas actualizadas para empresa ${companyId}`)
+          await company.updateStats();
+          console.log(`✅ Estadísticas actualizadas para empresa ${companyId}`);
         }
       }
 
       // Enviar email de bienvenida
       try {
-        let companyName = 'ERPSolutions Platform'
-        if (roleType === 'company' && companyId) {
+        let companyName = "ERPSolutions Platform";
+        if (roleType === "company" && companyId) {
           const company = await EnhancedCompany.findById(companyId).select(
-            'name'
-          )
+            "name"
+          );
           if (company) {
-            companyName = company.name
+            companyName = company.name;
           }
         }
 
@@ -289,36 +361,36 @@ export class MultiCompanyUserController {
           email: newUser.email,
           name: newUser.name,
           companyName,
-          role
-        })
+          role,
+        });
         console.log(
           `✅ Email de bienvenida enviado via Resend a: ${newUser.email}`
-        )
+        );
       } catch (emailError) {
         console.error(
-          '⚠️ Error al enviar email de bienvenida (Resend):',
+          "⚠️ Error al enviar email de bienvenida (Resend):",
           emailError
-        )
+        );
         // No fallar la creación del usuario si el email falla
       }
 
       // Devolver usuario sin password
       const userResponse = await EnhancedUser.findById(newUser._id)
-        .select('-password')
-        .populate('primaryCompanyId', 'name slug')
-        .populate('roles.companyId', 'name slug')
+        .select("-password")
+        .populate("primaryCompanyId", "name slug")
+        .populate("roles.companyId", "name slug");
 
       res.status(201).json({
-        message: 'Usuario creado exitosamente',
-        user: userResponse
-      })
+        message: "Usuario creado exitosamente",
+        user: userResponse,
+      });
     } catch (error) {
-      console.error('Error al crear usuario:', error)
+      console.error("Error al crear usuario:", error);
       res.status(500).json({
-        error: 'Error interno del servidor'
-      })
+        error: "Error interno del servidor",
+      });
     }
-  }
+  };
 
   /**
    * Actualizar un usuario
@@ -326,7 +398,7 @@ export class MultiCompanyUserController {
    */
   static updateUser = async (req: Request, res: Response) => {
     try {
-      const {userId} = req.params
+      const { userId } = req.params;
       const {
         name,
         email,
@@ -337,144 +409,178 @@ export class MultiCompanyUserController {
         role,
         permissions,
         companyId,
-        roleType
-      } = req.body
+        roleType,
+      } = req.body;
 
       // 🚫 Rechazar intentos de cambiar contraseña por este endpoint
       if (password !== undefined) {
         return res.status(400).json({
           success: false,
           error:
-            'No se puede cambiar la contraseña desde este endpoint. Use PUT /api/users/:id/password',
-          hint: 'Para cambiar la contraseña, use el endpoint dedicado que requiere la contraseña actual'
-        })
+            "No se puede cambiar la contraseña desde este endpoint. Use PUT /api/users/:id/password",
+          hint: "Para cambiar la contraseña, use el endpoint dedicado que requiere la contraseña actual",
+        });
       }
 
       if (!Types.ObjectId.isValid(userId)) {
         return res.status(400).json({
-          error: 'ID de usuario inválido'
-        })
+          error: "ID de usuario inválido",
+        });
       }
 
-      const user = await EnhancedUser.findById(userId)
+      const user = await EnhancedUser.findById(userId);
       if (!user) {
         return res.status(404).json({
-          error: 'Usuario no encontrado'
-        })
+          error: "Usuario no encontrado",
+        });
       }
 
       // Verificar permisos para editar este usuario
-      const currentUser = req.authUser
-      const contextCompanyId = req.companyContext?.id
+      const currentUser = req.authUser;
+      const contextCompanyId = req.companyContext?.id;
 
       if (!currentUser) {
         return res.status(401).json({
-          error: 'Usuario no autenticado'
-        })
+          error: "Usuario no autenticado",
+        });
       }
 
       // Super admin puede editar cualquier usuario - Verificación directa por rol
-      const isSuperAdmin = currentUser.role === 'super_admin'
+      const isSuperAdmin = currentUser.role === "super_admin";
 
       // Admin de empresa puede editar usuarios de su empresa
       const isCompanyAdmin =
         (contextCompanyId && user.hasRoleInCompany(contextCompanyId)) ||
-        (currentUser.role === 'admin_empresa' &&
+        (currentUser.role === "admin_empresa" &&
           user.primaryCompanyId &&
           currentUser.companyId?.toString() ===
-            user.primaryCompanyId.toString())
+            user.primaryCompanyId.toString());
 
       if (!isSuperAdmin && !isCompanyAdmin) {
         return res.status(403).json({
-          error: 'No tienes permisos para editar este usuario'
-        })
+          error: "No tienes permisos para editar este usuario",
+        });
       }
 
       // Guardar el status anterior para detectar cambios
-      const previousStatus = user.status
+      const previousStatus = user.status;
+
+      // 🔒 PROTECCIÓN DE ESTADOS CRÍTICOS
+      // No permitir cambiar el estado de usuarios INACTIVOS (eliminados permanentemente)
+      if (previousStatus === UserStatus.INACTIVE) {
+        return res.status(403).json({
+          success: false,
+          error:
+            "No se puede modificar un usuario inactivo (eliminado permanentemente)",
+          hint: "Los usuarios inactivos no pueden ser editados ni reactivados",
+        });
+      }
+
+      // 🔒 PROTECCIÓN ESTADO SUSPENDIDO
+      // Si se intenta cambiar el status de un usuario SUSPENDIDO, rechazar
+      if (
+        previousStatus === UserStatus.SUSPENDED &&
+        status &&
+        status !== UserStatus.SUSPENDED
+      ) {
+        return res.status(403).json({
+          success: false,
+          error:
+            "No se puede cambiar el estado de un usuario suspendido desde este endpoint",
+          hint: "Use PUT /api/users/:userId/reactivate para reactivar un usuario suspendido",
+        });
+      }
 
       // 🔒 Si se intenta activar un usuario, verificar que la empresa no esté suspendida
       if (
-        status === 'active' &&
-        previousStatus !== 'active' &&
+        status === "active" &&
+        previousStatus !== "active" &&
         user.primaryCompanyId
       ) {
-        const company = await EnhancedCompany.findById(user.primaryCompanyId)
-        if (company && company.status === 'suspended') {
+        const company = await EnhancedCompany.findById(user.primaryCompanyId);
+        if (company && company.status === "suspended") {
           console.log(
             `🚫 Intento de activar usuario en empresa suspendida: ${company.name}`
-          )
+          );
           return res.status(403).json({
-            error: 'No se pueden activar usuarios en una empresa suspendida',
+            error: "No se pueden activar usuarios en una empresa suspendida",
             details: {
               companyName: company.name,
               suspendedAt: company.suspendedAt,
-              suspensionReason: company.suspensionReason
-            }
-          })
+              suspensionReason: company.suspensionReason,
+            },
+          });
         }
       }
 
       // Actualizar campos básicos
-      const updateFields: any = {}
-      if (name) updateFields.name = name
-      if (phone) updateFields.phone = phone
-      if (status) updateFields.status = status
+      const updateFields: any = {};
+      if (name) updateFields.name = name;
+      if (phone) updateFields.phone = phone;
+
+      // 🔒 OMITIR cambios de status si el usuario está SUSPENDIDO o INACTIVO
+      // Solo permitir cambios de status si viene explícitamente Y el usuario está ACTIVO
+      if (status && previousStatus === UserStatus.ACTIVE) {
+        updateFields.status = status;
+      }
+      // Si el usuario está SUSPENDIDO, mantener ese estado (ignorar cambios)
+      // Si el usuario está INACTIVO, ya fue rechazado arriba
+
       if (preferences)
-        updateFields.preferences = {...user.preferences, ...preferences}
+        updateFields.preferences = { ...user.preferences, ...preferences };
 
       // � Si se proporciona un nuevo email, validar que no exista
       if (email && email.trim()) {
-        const normalizedEmail = email.toLowerCase().trim()
+        const normalizedEmail = email.toLowerCase().trim();
 
         // Verificar que no sea el mismo email actual (case-insensitive)
         if (normalizedEmail !== user.email.toLowerCase()) {
           // Verificar que no exista otro usuario con ese email
           const existingUser = await EnhancedUser.findOne({
-            email: {$regex: new RegExp(`^${normalizedEmail}$`, 'i')},
-            _id: {$ne: userId} // Excluir el usuario actual
-          })
+            email: { $regex: new RegExp(`^${normalizedEmail}$`, "i") },
+            _id: { $ne: userId }, // Excluir el usuario actual
+          });
 
           if (existingUser) {
             return res.status(409).json({
-              error: 'Ya existe otro usuario con este correo electrónico'
-            })
+              error: "Ya existe otro usuario con este correo electrónico",
+            });
           }
 
           console.log(
             `📧 Actualizando email de ${user.email} a ${normalizedEmail}`
-          )
-          updateFields.email = normalizedEmail
+          );
+          updateFields.email = normalizedEmail;
         }
       }
 
       // 🔄 Si se proporcionan datos de rol, actualizar el rol principal
       if (role && roleType !== undefined) {
         // Validar empresa si es rol de empresa
-        if (roleType === 'company') {
+        if (roleType === "company") {
           if (!companyId) {
             return res.status(400).json({
-              error: 'ID de empresa requerido para roles de empresa'
-            })
+              error: "ID de empresa requerido para roles de empresa",
+            });
           }
 
-          const company = await EnhancedCompany.findById(companyId)
+          const company = await EnhancedCompany.findById(companyId);
           if (!company) {
             return res.status(404).json({
-              error: 'Empresa no encontrada'
-            })
+              error: "Empresa no encontrada",
+            });
           }
 
           // Verificar que la empresa no esté suspendida
-          if (company.status === 'suspended') {
+          if (company.status === "suspended") {
             return res.status(403).json({
-              error: 'No se pueden asignar roles en una empresa suspendida',
+              error: "No se pueden asignar roles en una empresa suspendida",
               details: {
                 companyName: company.name,
                 suspendedAt: company.suspendedAt,
-                suspensionReason: company.suspensionReason
-              }
-            })
+                suspensionReason: company.suspensionReason,
+              },
+            });
           }
         }
 
@@ -484,7 +590,7 @@ export class MultiCompanyUserController {
             roleType,
             role,
             companyId:
-              roleType === 'company' && companyId
+              roleType === "company" && companyId
                 ? new Types.ObjectId(companyId)
                 : undefined,
             permissions: permissions || [],
@@ -492,160 +598,192 @@ export class MultiCompanyUserController {
             assignedAt: user.roles[0]?.assignedAt || new Date(),
             assignedBy:
               user.roles[0]?.assignedBy ||
-              (currentUser?.id ? new Types.ObjectId(currentUser.id) : undefined)
+              (currentUser?.id
+                ? new Types.ObjectId(currentUser.id)
+                : undefined),
           },
           // Mantener roles adicionales si existen
-          ...user.roles.slice(1)
-        ]
+          ...user.roles.slice(1),
+        ];
 
-        updateFields.roles = updatedRoles
+        updateFields.roles = updatedRoles;
         updateFields.primaryCompanyId =
-          roleType === 'company' && companyId
+          roleType === "company" && companyId
             ? new Types.ObjectId(companyId)
-            : undefined
+            : undefined;
 
         console.log(`🔄 Actualizando rol de ${user.email}:`, {
           roleType,
           role,
           companyId,
-          permissionsCount: permissions?.length || 0
-        })
+          permissionsCount: permissions?.length || 0,
+        });
       } else if (permissions !== undefined && user.roles.length > 0) {
         // Si solo se actualizan permisos sin cambiar el rol
-        const updatedRoles = [...user.roles]
+        const updatedRoles = [...user.roles];
         updatedRoles[0] = {
           ...updatedRoles[0],
-          permissions
-        }
-        updateFields.roles = updatedRoles
+          permissions,
+        };
+        updateFields.roles = updatedRoles;
         console.log(
           `📝 Actualizando permisos de ${user.email}: ${permissions.length} permisos`
-        )
+        );
       }
 
       const updatedUser = await EnhancedUser.findByIdAndUpdate(
         userId,
         updateFields,
-        {new: true, runValidators: true}
+        { new: true, runValidators: true }
       )
-        .select('-password')
-        .populate('primaryCompanyId', 'name slug')
-        .populate('roles.companyId', 'name slug')
+        .select("-password")
+        .populate("primaryCompanyId", "name slug")
+        .populate("roles.companyId", "name slug");
 
       // ✅ Actualizar estadísticas de empresas si hubo cambios relevantes
-      const previousCompanyId = user.primaryCompanyId?.toString()
-      const newCompanyId = updateFields.primaryCompanyId?.toString()
+      const previousCompanyId = user.primaryCompanyId?.toString();
+      const newCompanyId = updateFields.primaryCompanyId?.toString();
 
       // Caso 1: Si cambió de empresa
       if (newCompanyId && previousCompanyId !== newCompanyId) {
         console.log(
           `🔄 Usuario cambió de empresa: ${previousCompanyId} → ${newCompanyId}`
-        )
+        );
 
         // Actualizar estadísticas de la empresa anterior (decrementar)
         if (previousCompanyId) {
           const previousCompany = await EnhancedCompany.findById(
             previousCompanyId
-          )
+          );
           if (previousCompany) {
-            await previousCompany.updateStats()
+            await previousCompany.updateStats();
             console.log(
               `📉 Estadísticas actualizadas para empresa anterior: ${previousCompany.name} (usuario removido)`
-            )
+            );
           }
         }
 
         // Actualizar estadísticas de la nueva empresa (incrementar)
-        const newCompany = await EnhancedCompany.findById(newCompanyId)
+        const newCompany = await EnhancedCompany.findById(newCompanyId);
         if (newCompany) {
-          await newCompany.updateStats()
+          await newCompany.updateStats();
           console.log(
             `📈 Estadísticas actualizadas para nueva empresa: ${newCompany.name} (usuario agregado)`
-          )
+          );
         }
       }
       // Caso 2: Si solo cambió el status (sin cambio de empresa)
       else if (status && status !== previousStatus && user.primaryCompanyId) {
-        const company = await EnhancedCompany.findById(user.primaryCompanyId)
+        const company = await EnhancedCompany.findById(user.primaryCompanyId);
         if (company) {
-          await company.updateStats()
+          await company.updateStats();
           console.log(
             `✅ Estadísticas actualizadas para empresa ${user.primaryCompanyId} por cambio de status de usuario`
-          )
+          );
         }
       }
 
       res.status(200).json({
-        message: 'Usuario actualizado exitosamente',
-        user: updatedUser
-      })
+        message: "Usuario actualizado exitosamente",
+        user: updatedUser,
+      });
     } catch (error) {
-      console.error('Error al actualizar usuario:', error)
+      console.error("Error al actualizar usuario:", error);
       res.status(500).json({
-        error: 'Error interno del servidor'
-      })
+        error: "Error interno del servidor",
+      });
     }
-  }
+  };
 
   /**
    * Asignar rol a un usuario
    */
   static assignRole = async (req: Request, res: Response) => {
     try {
-      const {userId} = req.params
-      const {roleType, role, companyId, permissions = []} = req.body
+      const { userId } = req.params;
+      const { roleType, role, companyId, permissions = [] } = req.body;
 
       if (!Types.ObjectId.isValid(userId)) {
         return res.status(400).json({
-          error: 'ID de usuario inválido'
-        })
+          error: "ID de usuario inválido",
+        });
       }
 
-      const user = await EnhancedUser.findById(userId)
+      const user = await EnhancedUser.findById(userId);
       if (!user) {
         return res.status(404).json({
-          error: 'Usuario no encontrado'
-        })
+          error: "Usuario no encontrado",
+        });
       }
 
       // Validar empresa si es rol de empresa
-      if (roleType === 'company' && companyId) {
-        const company = await EnhancedCompany.findById(companyId)
+      if (roleType === "company" && companyId) {
+        const company = await EnhancedCompany.findById(companyId);
         if (!company) {
           return res.status(404).json({
-            error: 'Empresa no encontrada'
-          })
+            error: "Empresa no encontrada",
+          });
         }
 
         // 🔒 Verificar que la empresa no esté suspendida
-        if (company.status === 'suspended') {
+        if (company.status === "suspended") {
           console.log(
             `🚫 Intento de asignar rol en empresa suspendida: ${company.name}`
-          )
+          );
           return res.status(403).json({
-            error: 'No se pueden asignar roles en una empresa suspendida',
+            error: "No se pueden asignar roles en una empresa suspendida",
             details: {
               companyName: company.name,
               suspendedAt: company.suspendedAt,
-              suspensionReason: company.suspensionReason
-            }
-          })
+              suspensionReason: company.suspensionReason,
+            },
+          });
         }
       }
 
       // Verificar si ya tiene un rol activo en esta empresa
-      if (roleType === 'company' && companyId) {
+      if (roleType === "company" && companyId) {
         const existingRole = user.roles.find(
-          r =>
-            r.roleType === 'company' &&
+          (r) =>
+            r.roleType === "company" &&
             r.companyId?.toString() === companyId &&
             r.isActive
-        )
+        );
 
         if (existingRole) {
           return res.status(400).json({
-            error: 'El usuario ya tiene un rol activo en esta empresa'
-          })
+            error: "El usuario ya tiene un rol activo en esta empresa",
+          });
+        }
+      }
+
+      // 🔒 NUEVO: Validar capacidad multi-empresa
+      if (roleType === "company" && companyId) {
+        const multiCompanyValidation =
+          RoleAssignmentService.canHaveMultiCompanyRole(
+            user.roles,
+            role as CompanyRole,
+            companyId
+          );
+
+        if (!multiCompanyValidation.allowed) {
+          console.log(`🚫 Intento de asignar rol multi-empresa rechazado:`, {
+            userId: user._id,
+            userEmail: user.email,
+            newRole: role,
+            newCompanyId: companyId,
+            reason: multiCompanyValidation.reason,
+          });
+
+          return res.status(400).json({
+            error: multiCompanyValidation.reason,
+            code: "MULTI_COMPANY_ROLE_RESTRICTION",
+            details: {
+              existingRoles: user.roles.filter((r) => r.isActive).length,
+              attemptedRole: role,
+              restriction: multiCompanyValidation.reason,
+            },
+          });
         }
       }
 
@@ -654,208 +792,208 @@ export class MultiCompanyUserController {
         roleType,
         role,
         companyId:
-          roleType === 'company' ? new Types.ObjectId(companyId) : undefined,
+          roleType === "company" ? new Types.ObjectId(companyId) : undefined,
         permissions,
         isActive: true,
         assignedAt: new Date(),
         assignedBy: req.authUser?.id
           ? new Types.ObjectId(req.authUser.id)
-          : undefined
-      })
+          : undefined,
+      });
 
       // Si es el primer rol de empresa, establecerlo como primario
-      if (roleType === 'company' && !user.primaryCompanyId) {
-        user.primaryCompanyId = new Types.ObjectId(companyId)
+      if (roleType === "company" && !user.primaryCompanyId) {
+        user.primaryCompanyId = new Types.ObjectId(companyId);
       }
 
-      await user.save()
+      await user.save();
 
       const updatedUser = await EnhancedUser.findById(userId)
-        .select('-password')
-        .populate('primaryCompanyId', 'name slug')
-        .populate('roles.companyId', 'name slug')
+        .select("-password")
+        .populate("primaryCompanyId", "name slug")
+        .populate("roles.companyId", "name slug");
 
       res.status(200).json({
-        message: 'Rol asignado exitosamente',
-        user: updatedUser
-      })
+        message: "Rol asignado exitosamente",
+        user: updatedUser,
+      });
     } catch (error) {
-      console.error('Error al asignar rol:', error)
+      console.error("Error al asignar rol:", error);
       res.status(500).json({
-        error: 'Error interno del servidor'
-      })
+        error: "Error interno del servidor",
+      });
     }
-  }
+  };
 
   /**
    * Revocar rol de un usuario
    */
   static revokeRole = async (req: Request, res: Response) => {
     try {
-      const {userId} = req.params
-      const {roleIndex} = req.body
+      const { userId } = req.params;
+      const { roleIndex } = req.body;
 
       if (!Types.ObjectId.isValid(userId)) {
         return res.status(400).json({
-          error: 'ID de usuario inválido'
-        })
+          error: "ID de usuario inválido",
+        });
       }
 
-      const user = await EnhancedUser.findById(userId)
+      const user = await EnhancedUser.findById(userId);
       if (!user) {
         return res.status(404).json({
-          error: 'Usuario no encontrado'
-        })
+          error: "Usuario no encontrado",
+        });
       }
 
       if (roleIndex < 0 || roleIndex >= user.roles.length) {
         return res.status(400).json({
-          error: 'Índice de rol inválido'
-        })
+          error: "Índice de rol inválido",
+        });
       }
 
       // Desactivar el rol
-      user.roles[roleIndex].isActive = false
+      user.roles[roleIndex].isActive = false;
 
-      await user.save()
+      await user.save();
 
       const updatedUser = await EnhancedUser.findById(userId)
-        .select('-password')
-        .populate('primaryCompanyId', 'name slug')
-        .populate('roles.companyId', 'name slug')
+        .select("-password")
+        .populate("primaryCompanyId", "name slug")
+        .populate("roles.companyId", "name slug");
 
       res.status(200).json({
-        message: 'Rol revocado exitosamente',
-        user: updatedUser
-      })
+        message: "Rol revocado exitosamente",
+        user: updatedUser,
+      });
     } catch (error) {
-      console.error('Error al revocar rol:', error)
+      console.error("Error al revocar rol:", error);
       res.status(500).json({
-        error: 'Error interno del servidor'
-      })
+        error: "Error interno del servidor",
+      });
     }
-  }
+  };
 
   /**
    * Eliminar usuario (soft delete)
    */
   static deleteUser = async (req: Request, res: Response) => {
     try {
-      const {userId} = req.params
-      const currentUser = req.authUser
+      const { userId } = req.params;
+      const currentUser = req.authUser;
 
       if (!currentUser) {
         return res.status(401).json({
-          error: 'Usuario no autenticado'
-        })
+          error: "Usuario no autenticado",
+        });
       }
 
       if (!Types.ObjectId.isValid(userId)) {
         return res.status(400).json({
-          error: 'ID de usuario inválido'
-        })
+          error: "ID de usuario inválido",
+        });
       }
 
-      const user = await EnhancedUser.findById(userId)
+      const user = await EnhancedUser.findById(userId);
       if (!user) {
         return res.status(404).json({
-          error: 'Usuario no encontrado'
-        })
+          error: "Usuario no encontrado",
+        });
       }
 
       // ✅ Validar permisos - Verificación directa por rol para Super Admin
-      const isSuperAdmin = currentUser.role === 'super_admin'
+      const isSuperAdmin = currentUser.role === "super_admin";
       const isCompanyAdmin =
         user.primaryCompanyId &&
         currentUser.companyId?.toString() ===
           user.primaryCompanyId.toString() &&
-        (req.userPermissions?.company.includes('users.delete') ||
-          currentUser.role === 'admin_empresa')
+        (req.userPermissions?.company.includes("users.delete") ||
+          currentUser.role === "admin_empresa");
 
       if (!isSuperAdmin && !isCompanyAdmin) {
-        console.log('❌ Permiso denegado:', {
+        console.log("❌ Permiso denegado:", {
           currentUserRole: currentUser.role,
           currentUserCompanyId: currentUser.companyId?.toString(),
           targetUserCompanyId: user.primaryCompanyId?.toString(),
           isSuperAdmin,
-          isCompanyAdmin
-        })
+          isCompanyAdmin,
+        });
         return res.status(403).json({
-          error: 'No tienes permisos para eliminar este usuario'
-        })
+          error: "No tienes permisos para eliminar este usuario",
+        });
       }
 
       // Obtener la empresa principal del usuario para actualizar estadísticas
-      const companyId = user.primaryCompanyId
+      const companyId = user.primaryCompanyId;
 
       // Soft delete - cambiar status a inactive
-      user.status = 'inactive'
+      user.status = "inactive";
 
       // Desactivar todos los roles
-      user.roles.forEach(role => {
-        role.isActive = false
-      })
+      user.roles.forEach((role) => {
+        role.isActive = false;
+      });
 
-      await user.save()
+      await user.save();
 
       console.log(
         `🗑️ Usuario ${userId} marcado como inactivo por ${currentUser.name}`
-      )
+      );
 
       // ✅ Actualizar estadísticas de la empresa
       if (companyId) {
-        const company = await EnhancedCompany.findById(companyId)
+        const company = await EnhancedCompany.findById(companyId);
         if (company) {
-          await company.updateStats()
-          console.log(`✅ Estadísticas actualizadas para empresa ${companyId}`)
+          await company.updateStats();
+          console.log(`✅ Estadísticas actualizadas para empresa ${companyId}`);
         }
       }
 
       res.status(200).json({
-        message: 'Usuario eliminado exitosamente'
-      })
+        message: "Usuario eliminado exitosamente",
+      });
     } catch (error) {
-      console.error('Error al eliminar usuario:', error)
+      console.error("Error al eliminar usuario:", error);
       res.status(500).json({
-        error: 'Error interno del servidor'
-      })
+        error: "Error interno del servidor",
+      });
     }
-  }
+  };
 
   /**
    * Obtener perfil del usuario actual
    */
   static getProfile = async (req: Request, res: Response) => {
     try {
-      const userId = req.authUser?.id
+      const userId = req.authUser?.id;
 
       if (!userId) {
         return res.status(401).json({
-          error: 'Usuario no autenticado'
-        })
+          error: "Usuario no autenticado",
+        });
       }
 
       const user = await EnhancedUser.findById(userId)
-        .select('-password')
-        .populate('primaryCompanyId', 'name slug')
-        .populate('roles.companyId', 'name slug')
+        .select("-password")
+        .populate("primaryCompanyId", "name slug")
+        .populate("roles.companyId", "name slug");
 
       if (!user) {
         return res.status(404).json({
-          error: 'Usuario no encontrado'
-        })
+          error: "Usuario no encontrado",
+        });
       }
 
       res.status(200).json({
-        user
-      })
+        user,
+      });
     } catch (error) {
-      console.error('Error al obtener perfil:', error)
+      console.error("Error al obtener perfil:", error);
       res.status(500).json({
-        error: 'Error interno del servidor'
-      })
+        error: "Error interno del servidor",
+      });
     }
-  }
+  };
 
   /**
    * Obtener estadísticas de usuarios (Solo Super Admin)
@@ -863,145 +1001,147 @@ export class MultiCompanyUserController {
   static getUsersStats = async (req: Request, res: Response) => {
     try {
       // Total de usuarios
-      const totalUsers = await EnhancedUser.countDocuments()
+      const totalUsers = await EnhancedUser.countDocuments();
 
       // Usuarios por estado
       const [activeUsers, inactiveUsers, suspendedUsers] = await Promise.all([
-        EnhancedUser.countDocuments({status: 'active'}),
-        EnhancedUser.countDocuments({status: 'inactive'}),
-        EnhancedUser.countDocuments({status: 'suspended'})
-      ])
+        EnhancedUser.countDocuments({ status: "active" }),
+        EnhancedUser.countDocuments({ status: "inactive" }),
+        EnhancedUser.countDocuments({ status: "suspended" }),
+      ]);
 
       // Distribución por roles
-      const allUsers = await EnhancedUser.find({status: {$ne: 'inactive'}})
-      const roleDistribution: Record<string, number> = {}
+      const allUsers = await EnhancedUser.find({ status: { $ne: "inactive" } });
+      const roleDistribution: Record<string, number> = {};
 
-      allUsers.forEach(user => {
+      allUsers.forEach((user) => {
         user.roles
-          .filter(r => r.isActive)
-          .forEach(r => {
-            const roleName = r.role || 'sin_rol'
-            roleDistribution[roleName] = (roleDistribution[roleName] || 0) + 1
-          })
-      })
+          .filter((r) => r.isActive)
+          .forEach((r) => {
+            const roleName = r.role || "sin_rol";
+            roleDistribution[roleName] = (roleDistribution[roleName] || 0) + 1;
+          });
+      });
 
       // Distribución por empresa
-      const companyDistribution: Record<string, number> = {}
-      const companies = await EnhancedCompany.find({status: 'active'}).select(
-        'name'
-      )
+      const companyDistribution: Record<string, number> = {};
+      const companies = await EnhancedCompany.find({ status: "active" }).select(
+        "name"
+      );
 
       for (const company of companies) {
         const count = await EnhancedUser.countDocuments({
-          'roles.companyId': company._id,
-          'roles.isActive': true
-        })
+          "roles.companyId": company._id,
+          "roles.isActive": true,
+        });
         if (count > 0) {
-          companyDistribution[company.name] = count
+          companyDistribution[company.name] = count;
         }
       }
 
       // Usuarios sin empresa (solo roles globales)
       const usersWithoutCompany = await EnhancedUser.countDocuments({
         primaryCompanyId: null,
-        status: {$ne: 'inactive'}
-      })
+        status: { $ne: "inactive" },
+      });
       if (usersWithoutCompany > 0) {
-        companyDistribution['Sin empresa'] = usersWithoutCompany
+        companyDistribution["Sin empresa"] = usersWithoutCompany;
       }
 
       // Actividad reciente (últimos 10 usuarios activos)
-      const recentUsers = await EnhancedUser.find({status: {$ne: 'inactive'}})
-        .select('name email lastLogin createdAt')
-        .sort({lastLogin: -1})
+      const recentUsers = await EnhancedUser.find({
+        status: { $ne: "inactive" },
+      })
+        .select("name email lastLogin createdAt")
+        .sort({ lastLogin: -1 })
         .limit(10)
-        .lean()
+        .lean();
 
       const recentActivity = recentUsers.map((user: any) => ({
         userId: user._id.toString(),
         userName: user.name,
-        action: user.lastLogin ? 'Inició sesión' : 'Cuenta creada',
-        timestamp: user.lastLogin || user.createdAt
-      }))
+        action: user.lastLogin ? "Inició sesión" : "Cuenta creada",
+        timestamp: user.lastLogin || user.createdAt,
+      }));
 
       // Crecimiento mensual
-      const currentDate = new Date()
+      const currentDate = new Date();
       const firstDayOfMonth = new Date(
         currentDate.getFullYear(),
         currentDate.getMonth(),
         1
-      )
+      );
 
       const newUsersThisMonth = await EnhancedUser.countDocuments({
-        createdAt: {$gte: firstDayOfMonth}
-      })
+        createdAt: { $gte: firstDayOfMonth },
+      });
 
       // Usuarios activados este mes (cambiados de inactive a active)
       const activationsThisMonth = await EnhancedUser.countDocuments({
-        status: 'active',
-        updatedAt: {$gte: firstDayOfMonth}
-      })
+        status: "active",
+        updatedAt: { $gte: firstDayOfMonth },
+      });
 
       // Usuarios desactivados este mes
       const deactivationsThisMonth = await EnhancedUser.countDocuments({
-        status: 'inactive',
-        updatedAt: {$gte: firstDayOfMonth}
-      })
+        status: "inactive",
+        updatedAt: { $gte: firstDayOfMonth },
+      });
 
       // Tendencias mensuales (últimos 6 meses)
-      const monthlyTrends = []
+      const monthlyTrends = [];
       const monthNames = [
-        'Ene',
-        'Feb',
-        'Mar',
-        'Abr',
-        'May',
-        'Jun',
-        'Jul',
-        'Ago',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dic'
-      ]
+        "Ene",
+        "Feb",
+        "Mar",
+        "Abr",
+        "May",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dic",
+      ];
 
       for (let i = 5; i >= 0; i--) {
         const date = new Date(
           currentDate.getFullYear(),
           currentDate.getMonth() - i,
           1
-        )
+        );
         const nextDate = new Date(
           currentDate.getFullYear(),
           currentDate.getMonth() - i + 1,
           1
-        )
+        );
 
         const [totalInMonth, activeInMonth, inactiveInMonth, newInMonth] =
           await Promise.all([
             EnhancedUser.countDocuments({
-              createdAt: {$lt: nextDate}
+              createdAt: { $lt: nextDate },
             }),
             EnhancedUser.countDocuments({
-              status: 'active',
-              createdAt: {$lt: nextDate}
+              status: "active",
+              createdAt: { $lt: nextDate },
             }),
             EnhancedUser.countDocuments({
-              status: 'inactive',
-              createdAt: {$lt: nextDate}
+              status: "inactive",
+              createdAt: { $lt: nextDate },
             }),
             EnhancedUser.countDocuments({
-              createdAt: {$gte: date, $lt: nextDate}
-            })
-          ])
+              createdAt: { $gte: date, $lt: nextDate },
+            }),
+          ]);
 
         monthlyTrends.push({
           month: monthNames[date.getMonth()],
           total: totalInMonth,
           active: activeInMonth,
           inactive: inactiveInMonth,
-          newUsers: newInMonth
-        })
+          newUsers: newInMonth,
+        });
       }
 
       res.status(200).json({
@@ -1017,19 +1157,19 @@ export class MultiCompanyUserController {
           monthlyGrowth: {
             newUsers: newUsersThisMonth,
             activations: activationsThisMonth,
-            deactivations: deactivationsThisMonth
+            deactivations: deactivationsThisMonth,
           },
-          monthlyTrends
-        }
-      })
+          monthlyTrends,
+        },
+      });
     } catch (error) {
-      console.error('Error al obtener estadísticas de usuarios:', error)
+      console.error("Error al obtener estadísticas de usuarios:", error);
       res.status(500).json({
         success: false,
-        error: 'Error interno del servidor'
-      })
+        error: "Error interno del servidor",
+      });
     }
-  }
+  };
 
   /**
    * Cambiar contraseña de usuario
@@ -1038,104 +1178,234 @@ export class MultiCompanyUserController {
    */
   static changePassword = async (req: Request, res: Response) => {
     try {
-      const {id} = req.params
-      const {currentPassword, newPassword, confirmPassword} = req.body
+      const { id } = req.params;
+      const { currentPassword, newPassword, confirmPassword } = req.body;
 
       // Validar que todos los campos estén presentes
       if (!currentPassword || !newPassword || !confirmPassword) {
         return res.status(400).json({
           success: false,
-          error: 'Todos los campos son requeridos'
-        })
+          error: "Todos los campos son requeridos",
+        });
       }
 
       // Validar que las contraseñas nuevas coincidan
       if (newPassword !== confirmPassword) {
         return res.status(400).json({
           success: false,
-          error: 'La nueva contraseña y la confirmación no coinciden'
-        })
+          error: "La nueva contraseña y la confirmación no coinciden",
+        });
       }
 
       // Validar requisitos de contraseña
       if (newPassword.length < 8) {
         return res.status(400).json({
           success: false,
-          error: 'La nueva contraseña debe tener al menos 8 caracteres'
-        })
+          error: "La nueva contraseña debe tener al menos 8 caracteres",
+        });
       }
 
       if (!/[A-Z]/.test(newPassword)) {
         return res.status(400).json({
           success: false,
-          error: 'La nueva contraseña debe contener al menos una mayúscula'
-        })
+          error: "La nueva contraseña debe contener al menos una mayúscula",
+        });
       }
 
       if (!/[a-z]/.test(newPassword)) {
         return res.status(400).json({
           success: false,
-          error: 'La nueva contraseña debe contener al menos una minúscula'
-        })
+          error: "La nueva contraseña debe contener al menos una minúscula",
+        });
       }
 
       if (!/\d/.test(newPassword)) {
         return res.status(400).json({
           success: false,
-          error: 'La nueva contraseña debe contener al menos un número'
-        })
+          error: "La nueva contraseña debe contener al menos un número",
+        });
       }
 
       // Buscar usuario con contraseña
-      const user = await EnhancedUser.findById(id).select('+password')
+      const user = await EnhancedUser.findById(id).select("+password");
 
       if (!user) {
         return res.status(404).json({
           success: false,
-          error: 'Usuario no encontrado'
-        })
+          error: "Usuario no encontrado",
+        });
       }
 
       // Verificar contraseña actual
-      const isPasswordCorrect = await user.checkPassword(currentPassword)
+      const isPasswordCorrect = await user.checkPassword(currentPassword);
 
       if (!isPasswordCorrect) {
         return res.status(401).json({
           success: false,
-          error: 'La contraseña actual es incorrecta'
-        })
+          error: "La contraseña actual es incorrecta",
+        });
       }
 
       // Verificar que la nueva contraseña sea diferente
-      const isSamePassword = await user.checkPassword(newPassword)
+      const isSamePassword = await user.checkPassword(newPassword);
       if (isSamePassword) {
         return res.status(400).json({
           success: false,
-          error: 'La nueva contraseña debe ser diferente a la actual'
-        })
+          error: "La nueva contraseña debe ser diferente a la actual",
+        });
       }
 
       // Hashear y guardar nueva contraseña
-      user.password = await hashPassword(newPassword)
-      await user.save()
+      user.password = await hashPassword(newPassword);
+      await user.save();
 
       // Log de auditoría
       console.log(
         `✅ Contraseña cambiada exitosamente - Usuario: ${user.email} (${user._id})`
-      )
+      );
 
       res.status(200).json({
         success: true,
-        message: 'Contraseña actualizada exitosamente'
-      })
+        message: "Contraseña actualizada exitosamente",
+      });
     } catch (error) {
-      console.error('Error al cambiar contraseña:', error)
+      console.error("Error al cambiar contraseña:", error);
       res.status(500).json({
         success: false,
-        error: 'Error interno del servidor'
-      })
+        error: "Error interno del servidor",
+      });
     }
-  }
+  };
+
+  /**
+   * Suspender usuario
+   * @description: Suspende temporalmente un usuario (puede ser reactivado)
+   * @route PUT /api/users/:userId/suspend
+   */
+  static suspendUser = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { reason } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          error: "ID de usuario requerido",
+        });
+      }
+
+      const user = await EnhancedUser.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "Usuario no encontrado",
+        });
+      }
+
+      // No permitir suspender Super Admins
+      const isSuperAdmin = user.roles.some(
+        (r) => r.role === UserRole.SUPER_ADMIN && r.isActive
+      );
+      if (isSuperAdmin) {
+        return res.status(403).json({
+          success: false,
+          error: "No se puede suspender a un Super Administrador",
+        });
+      }
+
+      // Verificar si ya está suspendido
+      if (user.status === UserStatus.SUSPENDED) {
+        return res.status(400).json({
+          success: false,
+          error: "El usuario ya está suspendido",
+        });
+      }
+
+      // Cambiar status a suspended
+      user.status = UserStatus.SUSPENDED;
+      await user.save();
+
+      console.log(
+        `⏸️ Usuario ${user.name} (${userId}) suspendido${
+          reason ? ` - Razón: ${reason}` : ""
+        }`
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Usuario suspendido correctamente",
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          status: user.status,
+        },
+      });
+    } catch (error) {
+      console.error("Error al suspender usuario:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Error interno del servidor",
+      });
+    }
+  };
+
+  /**
+   * Reactivar usuario suspendido
+   * @description: Reactiva un usuario que fue suspendido previamente
+   * @route PUT /api/users/:userId/reactivate
+   */
+  static reactivateUser = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          error: "ID de usuario requerido",
+        });
+      }
+
+      const user = await EnhancedUser.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "Usuario no encontrado",
+        });
+      }
+
+      // Solo se puede reactivar usuarios suspendidos
+      if (user.status !== UserStatus.SUSPENDED) {
+        return res.status(400).json({
+          success: false,
+          error: `No se puede reactivar un usuario con estado: ${user.status}`,
+        });
+      }
+
+      // Cambiar status a active
+      user.status = UserStatus.ACTIVE;
+      await user.save();
+
+      console.log(`▶️ Usuario ${user.name} (${userId}) reactivado`);
+
+      return res.status(200).json({
+        success: true,
+        message: "Usuario reactivado correctamente",
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          status: user.status,
+        },
+      });
+    } catch (error) {
+      console.error("Error al reactivar usuario:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Error interno del servidor",
+      });
+    }
+  };
 }
 
-export default MultiCompanyUserController
+export default MultiCompanyUserController;

@@ -2,49 +2,50 @@
  * Autor: Esteban Soto @elsoprimeDev
  */
 
-import {UserRole, Permission} from '../types/roles'
-import {UserRole as EnhancedUserRole} from './EnhanchedCompany/MultiCompany'
+import { UserRole, Permission } from "../types/roles";
+import { UserRole as EnhancedUserRole } from "./EnhanchedCompany/MultiCompany";
 
 /** Definiendo Interface para los Campos del Formulario */
 export interface IFormField {
-  id: string
-  label?: string
+  id: string;
+  label?: string;
   type:
-    | 'text'
-    | 'email'
-    | 'password'
-    | 'checkbox'
-    | 'date'
-    | 'select'
-    | 'number'
-    | 'file'
-    | 'textarea'
-    | 'image'
-    | 'radio'
-    | 'hidden'
-    | 'url'
-  placeholder?: string
-  required?: boolean
-  isChecked?: boolean
-  validation?: (value: string | FileList) => string | null // Aceptar tanto string como archivos
-  accept?: string // Para definir los tipos de archivos permitidos, e.g., 'image/*' para solo imágenes
-  multiple?: boolean // Permitir múltiples archivos
-  maxSize?: number // Tamaño máximo permitido en bytes
-  maxLength?: number // Longitud máxima permitida
+    | "text"
+    | "email"
+    | "password"
+    | "checkbox"
+    | "date"
+    | "select"
+    | "number"
+    | "tel"
+    | "file"
+    | "textarea"
+    | "image"
+    | "radio"
+    | "hidden"
+    | "url";
+  placeholder?: string;
+  required?: boolean;
+  isChecked?: boolean;
+  validation?: (value: string | FileList) => string | null; // Aceptar tanto string como archivos
+  accept?: string; // Para definir los tipos de archivos permitidos, e.g., 'image/*' para solo imágenes
+  multiple?: boolean; // Permitir múltiples archivos
+  maxSize?: number; // Tamaño máximo permitido en bytes
+  maxLength?: number; // Longitud máxima permitida
 }
 
 /** Definiendo Interface para los Cuerpo de la Pagina */
 export interface IPageBody {
-  title: string
-  subtitle?: string
-  description?: string
-  className?: string
-  image?: string
-  icon?: JSX.Element[]
-  iconColor?: string
-  DataAOS?: string
-  Link?: string
-  IAction?: IAction[]
+  title: string;
+  subtitle?: string;
+  description?: string;
+  className?: string;
+  image?: string;
+  icon?: JSX.Element[];
+  iconColor?: string;
+  DataAOS?: string;
+  Link?: string;
+  IAction?: IAction[];
 }
 
 /**
@@ -54,40 +55,40 @@ export interface IPageBody {
  * @Author Esteban Soto Ojeda [elsoprimeDev]
  */
 export interface ITab {
-  id: string
-  title: string
-  content: JSX.Element | string
-  isActive?: boolean
-  disabled?: boolean
-  icon?: JSX.Element
-  DataAOS?: string
+  id: string;
+  title: string;
+  content: JSX.Element | string;
+  isActive?: boolean;
+  disabled?: boolean;
+  icon?: JSX.Element;
+  DataAOS?: string;
 }
 
 /** Definiendo Interface para Actions */
 interface IAction {
-  title?: string
-  href?: string
-  onClick?: () => void // Puedes agregar una función opcional para manejar el clic
+  title?: string;
+  href?: string;
+  onClick?: () => void; // Puedes agregar una función opcional para manejar el clic
 }
 
 /** Definiendo Inferface para Cards */
 export interface ICard {
-  id: string // Identificador único de la tarjeta
-  title: string // Título de la tarjeta
-  description?: string // Descripción opcional
-  body?: IPageBody[] // Cuerpo de la tarjeta
-  image?: string // URL de la imagen opcional
-  content?: JSX.Element | string // Contenido adicional de la tarjeta
-  onClick?: () => void // Acción cuando se hace clic en la tarjeta
-  footer?: JSX.Element // Pie de tarjeta opcional
-  IAction?: IAction[] // Acciones adicionales (botones, enlaces, etc.)
-  style?: React.CSSProperties // Estilos personalizados
-  className?: string // Clases CSS adicionales
-  isFeatured?: boolean // Indica si es una tarjeta destacada
-  badge?: string // Pequeño indicador de texto
-  isLoading?: boolean // Estado de carga opcional
-  link?: string // Enlace opcional
-  DataAOS?: string // Atributo de animación AOS
+  id: string; // Identificador único de la tarjeta
+  title: string; // Título de la tarjeta
+  description?: string; // Descripción opcional
+  body?: IPageBody[]; // Cuerpo de la tarjeta
+  image?: string; // URL de la imagen opcional
+  content?: JSX.Element | string; // Contenido adicional de la tarjeta
+  onClick?: () => void; // Acción cuando se hace clic en la tarjeta
+  footer?: JSX.Element; // Pie de tarjeta opcional
+  IAction?: IAction[]; // Acciones adicionales (botones, enlaces, etc.)
+  style?: React.CSSProperties; // Estilos personalizados
+  className?: string; // Clases CSS adicionales
+  isFeatured?: boolean; // Indica si es una tarjeta destacada
+  badge?: string; // Pequeño indicador de texto
+  isLoading?: boolean; // Estado de carga opcional
+  link?: string; // Enlace opcional
+  DataAOS?: string; // Atributo de animación AOS
 }
 
 /**
@@ -98,57 +99,57 @@ export interface ICard {
  */
 
 export interface ISubMenu {
-  id: number
-  title: string
-  icon: React.ReactNode
-  link: string
-  isExternal?: boolean
-  isActive?: boolean
-  requiredPermissions?: Permission[] // Permisos requeridos para ver este submenu
-  requiredRoles?: EnhancedUserRole[] // Roles requeridos para ver este submenu
+  id: number;
+  title: string;
+  icon: React.ReactNode;
+  link: string;
+  isExternal?: boolean;
+  isActive?: boolean;
+  requiredPermissions?: Permission[]; // Permisos requeridos para ver este submenu
+  requiredRoles?: EnhancedUserRole[]; // Roles requeridos para ver este submenu
 }
 
 export interface IMenu {
-  id: number
-  title: string
-  icon?: React.ReactNode
-  link?: string
-  isExternal?: boolean
-  isActive?: boolean
-  ISubMenu?: ISubMenu[]
-  requiredPermissions?: Permission[] // Permisos requeridos para ver este menu
-  requiredRoles?: EnhancedUserRole[] // Roles requeridos para ver este menu
+  id: number;
+  title: string;
+  icon?: React.ReactNode;
+  link?: string;
+  isExternal?: boolean;
+  isActive?: boolean;
+  ISubMenu?: ISubMenu[];
+  requiredPermissions?: Permission[]; // Permisos requeridos para ver este menu
+  requiredRoles?: EnhancedUserRole[]; // Roles requeridos para ver este menu
 }
 
 /** Interface para el perfil de usuario en el Header */
 export interface IUserProfile {
-  id: string
-  name: string
-  email: string
-  avatar?: string
-  role: UserRole // Cambiado de string a UserRole
-  isAuthenticated: boolean
-  permissions?: Permission[] // Permisos específicos del usuario
-  company?: string // Empresa del usuario
-  lastLogin?: Date // Último login
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  role: UserRole; // Cambiado de string a UserRole
+  isAuthenticated: boolean;
+  permissions?: Permission[]; // Permisos específicos del usuario
+  company?: string; // Empresa del usuario
+  lastLogin?: Date; // Último login
 }
 
 /** Interface para las opciones del menú de usuario */
 export interface IUserMenuOption {
-  id: string
-  label: string
-  icon?: React.ReactNode
-  href?: string
-  onClick?: () => void
-  divider?: boolean
-  requiredPermissions?: Permission[] // Permisos requeridos para ver esta opción
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  href?: string;
+  onClick?: () => void;
+  divider?: boolean;
+  requiredPermissions?: Permission[]; // Permisos requeridos para ver esta opción
 }
 
 /** Interface para el componente de navegación del Header */
 export interface IHeaderNavigation {
-  menuItems: IMenu[]
-  userProfile: IUserProfile
-  userMenuOptions: IUserMenuOption[]
-  onMenuItemClick?: (item: IMenu) => void
-  onUserMenuClick?: (option: IUserMenuOption) => void
+  menuItems: IMenu[];
+  userProfile: IUserProfile;
+  userMenuOptions: IUserMenuOption[];
+  onMenuItemClick?: (item: IMenu) => void;
+  onUserMenuClick?: (option: IUserMenuOption) => void;
 }

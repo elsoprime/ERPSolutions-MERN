@@ -8,16 +8,21 @@
 
 'use client'
 
-import React, {useState, useEffect, useMemo, useRef, useCallback} from 'react'
-import {useUserForm, useUserActions} from '@/hooks/useUserManagement'
-import {useCompanies} from '@/hooks/useCompanyManagement'
-import {RoleBadge} from '@/components/UI/MultiCompanyBadges'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import {
+  useUserForm,
+  useUserActions,
+  useRoleAssignment
+} from '@/hooks/useUserManagement'
+import { useCompanies, useActiveCompanies } from '@/hooks/CompanyManagement/useCompanyManagement'
+import { RoleBadge } from '@/components/UI/MultiCompanyBadges'
 import ChangePasswordForm from './ChangePasswordForm'
-import {rolesTranslate} from '@/locale/es'
+import { rolesTranslate } from '@/locale/es'
 import {
   PermissionUtils,
   GlobalPermission,
-  CompanyPermission
+  CompanyPermission,
+  ROLE_PERMISSIONS
 } from '@/utils/permissions'
 import {
   IEnhancedUser,
@@ -39,16 +44,36 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
-import {CheckIcon} from '@heroicons/react/24/solid'
+import { CheckIcon } from '@heroicons/react/24/solid'
+import { usePermissionCalculator, PlanFeatureKey } from '@/hooks/usePermissionCalculator'
 
 // ====== TYPES & CONSTANTS ======
+
+// 🌐 Traductor de módulos del plan
+const MODULE_TRANSLATIONS: Record<PlanFeatureKey, string> = {
+  inventoryManagement: 'Gestión de Inventario',
+  accounting: 'Contabilidad',
+  hrm: 'Recursos Humanos',
+  crm: 'CRM',
+  projectManagement: 'Gestión de Proyectos',
+  reports: 'Reportes',
+  multiCurrency: 'Multimoneda',
+  apiAccess: 'Acceso API',
+  customBranding: 'Branding Personalizado',
+  prioritySupport: 'Soporte Prioritario',
+  advancedAnalytics: 'Analítica Avanzada',
+  auditLog: 'Registro de Auditoría',
+  customIntegrations: 'Integraciones Personalizadas',
+  dedicatedAccount: 'Cuenta Dedicada'
+}
+
 type UserFormStep = 1 | 2 | 3
 
 interface UserStepConfig {
   number: UserFormStep
   title: string
   description: string
-  icon: React.ComponentType<{className?: string}>
+  icon: React.ComponentType<{ className?: string }>
 }
 
 const USER_FORM_STEPS: UserStepConfig[] = [
@@ -87,6 +112,8 @@ interface PermissionSelectorProps {
   availablePermissions: string[]
   onPermissionChange: (permissions: string[]) => void
   isGlobal?: boolean
+  restrictedModules?: PlanFeatureKey[] // Módulos restringidos por el plan
+  disabled?: boolean
 }
 
 // ====== PERMISSION SELECTOR COMPONENT ======
@@ -95,7 +122,9 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
   selectedPermissions,
   availablePermissions,
   onPermissionChange,
-  isGlobal = false
+  isGlobal = false,
+  restrictedModules = [],
+  disabled = false
 }) => {
   const permissionGroups = React.useMemo(() => {
     const permissions = isGlobal
@@ -113,7 +142,54 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
     return PermissionUtils.getCategoryLabel(category)
   }
 
+  // 🎯 Mapeo de categorías de permisos a módulos del plan
+  const categoryToModule: Record<string, PlanFeatureKey> = {
+    // Módulos principales
+    inventory: 'inventoryManagement',
+    accounting: 'accounting',
+    hrm: 'hrm',
+    crm: 'crm',
+    projects: 'projectManagement',
+    reports: 'reports',
+
+    // Ventas y Compras (requieren CRM/Contabilidad)
+    sales: 'crm',
+    purchases: 'accounting',
+
+    // Características avanzadas
+    api: 'apiAccess',
+    analytics: 'advancedAnalytics',
+    audit: 'auditLog',
+    integrations: 'customIntegrations',
+
+    // Configuraciones (no están en ningún módulo restringido - siempre disponibles)
+    // users, company, settings, system, billing, support - sin restricciones de plan
+  }
+
+  // 🎯 Verificar si un permiso está restringido por el plan
+  const isPermissionRestricted = (permission: string): boolean => {
+    if (restrictedModules.length === 0) return false
+
+    // Obtener la categoría del permiso (primera parte antes del punto)
+    const category = permission.split('.')[0]
+    const module = categoryToModule[category]
+
+    return module ? restrictedModules.includes(module) : false
+  }
+
+  // 🎯 Verificar si una categoría completa está restringida
+  const isCategoryRestricted = (category: string): boolean => {
+    if (restrictedModules.length === 0) return false
+    const module = categoryToModule[category]
+    return module ? restrictedModules.includes(module) : false
+  }
+
   const handlePermissionToggle = (permission: string) => {
+    // No permitir cambiar permisos restringidos
+    if (isPermissionRestricted(permission)) {
+      return
+    }
+
     const isSelected = selectedPermissions.includes(permission)
     if (isSelected) {
       onPermissionChange(selectedPermissions.filter(p => p !== permission))
@@ -124,17 +200,23 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 
   const handleCategoryToggle = (category: string) => {
     const categoryPermissions = permissionGroups[category]
-    const allSelected = categoryPermissions.every(p =>
+
+    // Filtrar permisos que no estén restringidos
+    const availableCategoryPermissions = categoryPermissions.filter(
+      p => !isPermissionRestricted(p)
+    )
+
+    const allSelected = availableCategoryPermissions.every(p =>
       selectedPermissions.includes(p)
     )
 
     if (allSelected) {
       onPermissionChange(
-        selectedPermissions.filter(p => !categoryPermissions.includes(p))
+        selectedPermissions.filter(p => !availableCategoryPermissions.includes(p))
       )
     } else {
       const newPermissions = [...selectedPermissions]
-      categoryPermissions.forEach(p => {
+      availableCategoryPermissions.forEach(p => {
         if (!newPermissions.includes(p)) {
           newPermissions.push(p)
         }
@@ -155,77 +237,104 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
       </div>
 
       <div
-        className={`${
-          className || 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
-        } `}
+        className={`${className || 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+          } `}
       >
-        {Object.entries(permissionGroups).map(([category, permissions]) => {
-          const allSelected = permissions.every(p =>
-            selectedPermissions.includes(p)
-          )
-          const someSelected = permissions.some(p =>
-            selectedPermissions.includes(p)
-          )
+        {Object.entries(permissionGroups)
+          .filter(([category]) => !isCategoryRestricted(category)) // 🔥 Ocultar categorías restringidas
+          .map(([category, permissions]) => {
+            const allSelected = permissions.every(p =>
+              selectedPermissions.includes(p)
+            )
+            const someSelected = permissions.some(p =>
+              selectedPermissions.includes(p)
+            )
 
-          return (
-            <div
-              key={category}
-              className='border border-gray-200 rounded-lg p-3'
-            >
-              <div className='flex items-center justify-between mb-2'>
-                <label className='flex items-center cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    checked={allSelected}
-                    ref={input => {
-                      if (input)
-                        input.indeterminate = someSelected && !allSelected
-                    }}
-                    onChange={e => {
-                      e.stopPropagation()
-                      handleCategoryToggle(category)
-                    }}
-                    onClick={e => e.stopPropagation()}
-                    className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                  />
-                  <span className='ml-2 text-sm font-medium text-gray-700'>
-                    {getCategoryLabel(category)}
-                  </span>
-                </label>
-                <span className='text-xs text-gray-500'>
-                  {
-                    permissions.filter(p => selectedPermissions.includes(p))
-                      .length
-                  }
-                  /{permissions.length}
-                </span>
-              </div>
-
-              <div className='ml-6 space-y-1'>
-                {permissions.map(permission => (
-                  <label
-                    key={permission}
-                    className='flex items-center cursor-pointer'
-                  >
+            return (
+              <div
+                key={category}
+                className='border border-gray-200 rounded-lg p-3'
+              >
+                <div className='flex items-center justify-between mb-2'>
+                  <label className='flex items-center cursor-pointer'>
                     <input
                       type='checkbox'
-                      checked={selectedPermissions.includes(permission)}
+                      checked={allSelected}
+                      ref={input => {
+                        if (input)
+                          input.indeterminate = someSelected && !allSelected
+                      }}
                       onChange={e => {
                         e.stopPropagation()
-                        handlePermissionToggle(permission)
+                        handleCategoryToggle(category)
                       }}
                       onClick={e => e.stopPropagation()}
                       className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+                      disabled={disabled}
                     />
-                    <span className='ml-2 text-sm text-gray-600'>
-                      {getPermissionLabel(permission)}
+                    <span className='ml-2 text-sm font-medium text-gray-700'>
+                      {getCategoryLabel(category)}
                     </span>
                   </label>
-                ))}
+                  <span className='text-xs text-gray-500'>
+                    {
+                      permissions.filter(p => selectedPermissions.includes(p))
+                        .length
+                    }
+                    /{permissions.length}
+                  </span>
+                </div>
+
+                <div className='space-y-1'>
+                  {permissions.map(permission => {
+                    const isRestricted = isPermissionRestricted(permission)
+                    return (
+                      <label
+                        key={permission}
+                        className={`flex items-center ${isRestricted || disabled
+                          ? 'cursor-not-allowed opacity-50'
+                          : 'cursor-pointer'
+                          }`}
+                        title={
+                          isRestricted
+                            ? 'Este permiso no está disponible en el plan actual'
+                            : disabled
+                              ? 'Calculando permisos...'
+                              : ''
+                        }
+                      >
+                        <input
+                          type='checkbox'
+                          checked={selectedPermissions.includes(permission)}
+                          disabled={isRestricted || disabled}
+                          onChange={e => {
+                            e.stopPropagation()
+                            handlePermissionToggle(permission)
+                          }}
+                          onClick={e => e.stopPropagation()}
+                          className={`rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${isRestricted || disabled ? 'cursor-not-allowed' : ''
+                            }`}
+                        />
+                        <span
+                          className={`ml-2 text-xs ${isRestricted
+                            ? 'text-gray-400 line-through'
+                            : 'text-gray-600'
+                            }`}
+                        >
+                          {getPermissionLabel(permission)}
+                        </span>
+                        {isRestricted && (
+                          <span className='ml-auto text-xs text-red-500'>
+                            🔒
+                          </span>
+                        )}
+                      </label>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
       </div>
     </div>
   )
@@ -240,20 +349,31 @@ export const UserForm: React.FC<UserFormProps> = ({
   mode,
   companyScope = false
 }) => {
-  const {formData, updateField, resetForm, validateForm, isEditing} =
+  const { formData, updateField, resetForm, validateForm, isEditing } =
     useUserForm(user)
-  const {handleCreateUser, handleUpdateUser, isLoading} = useUserActions()
+  const { handleCreateUser, handleUpdateUser, isLoading } = useUserActions()
   const {
     companies,
     isLoading: companiesLoading,
     error: companiesError
-  } = useCompanies()
+  } = useActiveCompanies() // ✅ Solo empresas ACTIVAS
+
+  // 🎯 Hook para calcular permisos automáticamente
+  const { calculatePermissions, isLoading: calculatingPermissions } =
+    usePermissionCalculator()
 
   // Form state
   const [currentStep, setCurrentStep] = useState<UserFormStep>(1)
   const [selectedCompany, setSelectedCompany] = useState<string>('')
   const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.VIEWER)
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
+  const [restrictedModules, setRestrictedModules] = useState<PlanFeatureKey[]>(
+    []
+  )
+  const [planInfo, setPlanInfo] = useState<{ name: string; type: string }>({
+    name: '',
+    type: ''
+  })
   const [isCurrentStepValid, setIsCurrentStepValid] = useState(false)
   const [validationInProgress, setValidationInProgress] = useState(false)
 
@@ -276,12 +396,12 @@ export const UserForm: React.FC<UserFormProps> = ({
   })
 
   const closeDialog = () => {
-    setDialogState(prev => ({...prev, isOpen: false}))
+    setDialogState(prev => ({ ...prev, isOpen: false }))
   }
 
   // Load user data for editing
   useEffect(() => {
-    if (mode === 'edit' && user) {
+    if (isOpen && mode === 'edit' && user) {
       updateField('name', user.name)
       updateField('email', user.email)
       updateField('phone', user.phone)
@@ -294,13 +414,13 @@ export const UserForm: React.FC<UserFormProps> = ({
           const companyIdValue =
             typeof primaryRole.companyId === 'object'
               ? (primaryRole.companyId as any)._id ||
-                (primaryRole.companyId as any).toString()
+              (primaryRole.companyId as any).toString()
               : primaryRole.companyId
           setSelectedCompany(companyIdValue)
         }
       }
     }
-  }, [user, mode, updateField])
+  }, [isOpen, user, mode, updateField])
 
   // Reset form when closed
   useEffect(() => {
@@ -310,6 +430,8 @@ export const UserForm: React.FC<UserFormProps> = ({
       setSelectedCompany('')
       setSelectedRole(UserRole.VIEWER)
       setSelectedPermissions([])
+      setRestrictedModules([])
+      setPlanInfo({ name: '', type: '' })
       updateField('password', '')
       updateField('email', '')
       setIsCurrentStepValid(false)
@@ -317,16 +439,51 @@ export const UserForm: React.FC<UserFormProps> = ({
     }
   }, [isOpen, resetForm, updateField])
 
+  // 🎯 AUTO-CARGAR PERMISOS cuando cambia empresa o rol
+  useEffect(() => {
+    const loadPermissions = async () => {
+      // Solo auto-cargar en modo creación y para roles de empresa
+      if (
+        mode === 'create' &&
+        selectedCompany &&
+        selectedRole &&
+        selectedRole !== UserRole.SUPER_ADMIN
+      ) {
+        console.log(
+          `🔄 Auto-cargando permisos para ${selectedRole} en empresa ${selectedCompany}`
+        )
+
+        const result = await calculatePermissions(selectedCompany, selectedRole)
+
+        if (result) {
+          setSelectedPermissions(result.permissions)
+          setRestrictedModules(result.restrictedModules)
+          setPlanInfo(result.planInfo)
+
+          console.log('✅ Permisos auto-cargados:', {
+            total: result.permissions.length,
+            plan: result.planInfo.name,
+            restrictedModules: result.restrictedModules.length
+          })
+        } else {
+          console.warn('⚠️ No se pudieron cargar permisos automáticamente')
+        }
+      }
+    }
+
+    loadPermissions()
+  }, [selectedCompany, selectedRole, mode, calculatePermissions])
+
   // Step validation
   const validateStep = useCallback(
     async (
       step: UserFormStep
-    ): Promise<{isValid: boolean; missingFields: string[]}> => {
+    ): Promise<{ isValid: boolean; missingFields: string[] }> => {
       const missingFields: string[] = []
 
       switch (step) {
         case 1: // Información básica
-          const {name, email, password, phone} = formData
+          const { name, email, password, phone } = formData
 
           if (!name?.trim()) missingFields.push('Nombre completo')
           if (!email?.trim()) missingFields.push('Email')
@@ -372,7 +529,7 @@ export const UserForm: React.FC<UserFormProps> = ({
             }
           }
 
-          return {isValid: missingFields.length === 0, missingFields}
+          return { isValid: missingFields.length === 0, missingFields }
 
         case 2: // Empresa y rol
           if (!selectedRole) missingFields.push('Rol')
@@ -384,17 +541,17 @@ export const UserForm: React.FC<UserFormProps> = ({
             missingFields.push('Empresa')
           }
 
-          return {isValid: missingFields.length === 0, missingFields}
+          return { isValid: missingFields.length === 0, missingFields }
 
         case 3: // Permisos
           if (selectedPermissions.length === 0) {
             missingFields.push('Al menos un permiso')
           }
 
-          return {isValid: missingFields.length === 0, missingFields}
+          return { isValid: missingFields.length === 0, missingFields }
 
         default:
-          return {isValid: false, missingFields}
+          return { isValid: false, missingFields }
       }
     },
     [
@@ -532,7 +689,7 @@ export const UserForm: React.FC<UserFormProps> = ({
     let userData: any = {
       name: formData.name!,
       email: formData.email!,
-      ...(formData.phone?.trim() && {phone: formData.phone.trim()}),
+      ...(formData.phone?.trim() && { phone: formData.phone.trim() }),
       role: selectedRole,
       permissions: selectedPermissions,
       companyId:
@@ -659,8 +816,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                     step.number < currentStep
                       ? 'completed'
                       : step.number === currentStep
-                      ? 'current'
-                      : 'pending'
+                        ? 'current'
+                        : 'pending'
                   const Icon = step.icon
 
                   return (
@@ -670,13 +827,12 @@ export const UserForm: React.FC<UserFormProps> = ({
                         <button
                           type='button'
                           onClick={e => handleStepClick(step.number, e)}
-                          className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300 ${
-                            status === 'completed'
-                              ? 'bg-gradient-to-br from-green-500 to-green-600 border-green-500 text-white shadow-lg'
-                              : status === 'current'
+                          className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300 ${status === 'completed'
+                            ? 'bg-gradient-to-br from-green-500 to-green-600 border-green-500 text-white shadow-lg'
+                            : status === 'current'
                               ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-600 text-white shadow-xl ring-4 ring-blue-600/20 scale-110'
                               : 'bg-white border-gray-300 text-gray-400'
-                          }`}
+                            }`}
                           disabled={status === 'pending'}
                         >
                           {status === 'completed' ? (
@@ -688,13 +844,12 @@ export const UserForm: React.FC<UserFormProps> = ({
 
                         <div className='mt-2 text-center'>
                           <p
-                            className={`text-xs sm:text-sm font-medium ${
-                              status === 'current'
-                                ? 'text-blue-600'
-                                : status === 'completed'
+                            className={`text-xs sm:text-sm font-medium ${status === 'current'
+                              ? 'text-blue-600'
+                              : status === 'completed'
                                 ? 'text-green-600'
                                 : 'text-gray-500'
-                            }`}
+                              }`}
                           >
                             {step.title}
                           </p>
@@ -708,11 +863,10 @@ export const UserForm: React.FC<UserFormProps> = ({
                       {index < USER_FORM_STEPS.length - 1 && (
                         <div className='flex-1 h-0.5 mx-2 -mt-12'>
                           <div
-                            className={`h-full transition-all duration-300 ${
-                              step.number < currentStep
-                                ? 'bg-gradient-to-r from-green-500 to-green-400'
-                                : 'bg-gray-300'
-                            }`}
+                            className={`h-full transition-all duration-300 ${step.number < currentStep
+                              ? 'bg-gradient-to-r from-green-500 to-green-400'
+                              : 'bg-gray-300'
+                              }`}
                           />
                         </div>
                       )}
@@ -726,9 +880,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <div
                   className='h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500 ease-out'
                   style={{
-                    width: `${
-                      ((currentStep - 1) / (USER_FORM_STEPS.length - 1)) * 100
-                    }%`
+                    width: `${((currentStep - 1) / (USER_FORM_STEPS.length - 1)) * 100
+                      }%`
                   }}
                 />
               </div>
@@ -836,11 +989,10 @@ export const UserForm: React.FC<UserFormProps> = ({
                       </p>
                       <div className='flex items-center space-x-2'>
                         <span
-                          className={`text-xs ${
-                            formData.password && formData.password.length >= 8
-                              ? 'text-green-600'
-                              : 'text-gray-500'
-                          }`}
+                          className={`text-xs ${formData.password && formData.password.length >= 8
+                            ? 'text-green-600'
+                            : 'text-gray-500'
+                            }`}
                         >
                           {formData.password && formData.password.length >= 8
                             ? '✓'
@@ -850,11 +1002,10 @@ export const UserForm: React.FC<UserFormProps> = ({
                       </div>
                       <div className='flex items-center space-x-2'>
                         <span
-                          className={`text-xs ${
-                            formData.password && /[A-Z]/.test(formData.password)
-                              ? 'text-green-600'
-                              : 'text-gray-500'
-                          }`}
+                          className={`text-xs ${formData.password && /[A-Z]/.test(formData.password)
+                            ? 'text-green-600'
+                            : 'text-gray-500'
+                            }`}
                         >
                           {formData.password && /[A-Z]/.test(formData.password)
                             ? '✓'
@@ -864,11 +1015,10 @@ export const UserForm: React.FC<UserFormProps> = ({
                       </div>
                       <div className='flex items-center space-x-2'>
                         <span
-                          className={`text-xs ${
-                            formData.password && /[a-z]/.test(formData.password)
-                              ? 'text-green-600'
-                              : 'text-gray-500'
-                          }`}
+                          className={`text-xs ${formData.password && /[a-z]/.test(formData.password)
+                            ? 'text-green-600'
+                            : 'text-gray-500'
+                            }`}
                         >
                           {formData.password && /[a-z]/.test(formData.password)
                             ? '✓'
@@ -878,11 +1028,10 @@ export const UserForm: React.FC<UserFormProps> = ({
                       </div>
                       <div className='flex items-center space-x-2'>
                         <span
-                          className={`text-xs ${
-                            formData.password && /\d/.test(formData.password)
-                              ? 'text-green-600'
-                              : 'text-gray-500'
-                          }`}
+                          className={`text-xs ${formData.password && /\d/.test(formData.password)
+                            ? 'text-green-600'
+                            : 'text-gray-500'
+                            }`}
                         >
                           {formData.password && /\d/.test(formData.password)
                             ? '✓'
@@ -960,6 +1109,46 @@ export const UserForm: React.FC<UserFormProps> = ({
                   </p>
                 </div>
               )}
+
+              {/* 🎯 Indicador de cálculo de permisos */}
+              {calculatingPermissions && (
+                <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
+                  <div className='flex items-center space-x-3'>
+                    <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600'></div>
+                    <p className='text-sm text-blue-800 font-medium'>
+                      Calculando permisos automáticamente...
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 🎯 Indicador de permisos cargados */}
+              {!calculatingPermissions &&
+                selectedPermissions.length > 0 &&
+                mode === 'create' &&
+                planInfo.name && (
+                  <div className='bg-green-50 border border-green-200 rounded-lg p-4'>
+                    <div className='flex items-start space-x-3'>
+                      <CheckCircleIcon className='h-5 w-5 text-green-600 mt-0.5' />
+                      <div className='flex-1'>
+                        <p className='text-sm font-medium text-green-800'>
+                          ✅ {selectedPermissions.length} permisos asignados
+                          automáticamente
+                        </p>
+                        <p className='text-xs text-green-600 mt-1'>
+                          Según el rol "{rolesTranslate[selectedRole]}" y el
+                          plan "{planInfo.name}"
+                        </p>
+                        {restrictedModules.length > 0 && (
+                          <p className='text-xs text-orange-600 mt-2'>
+                            ⚠️ {restrictedModules.length} módulos no
+                            disponibles en este plan
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
             </div>
           )}
 
@@ -971,7 +1160,9 @@ export const UserForm: React.FC<UserFormProps> = ({
               <div className='bg-blue-50 border-l-4 border-blue-600 p-4'>
                 <div className='flex items-center justify-between'>
                   <p className='text-sm text-blue-700'>
-                    Configura los permisos específicos para este usuario
+                    {mode === 'create'
+                      ? 'Los permisos se han calculado automáticamente. Puedes ajustarlos si es necesario.'
+                      : 'Configura los permisos específicos para este usuario'}
                   </p>
                   <span className='text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded'>
                     {selectedPermissions.length} permiso
@@ -986,6 +1177,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                 availablePermissions={getAvailablePermissions()}
                 onPermissionChange={setSelectedPermissions}
                 isGlobal={selectedRole === UserRole.SUPER_ADMIN}
+                restrictedModules={restrictedModules}
               />
 
               {selectedPermissions.length === 0 && (
@@ -1054,11 +1246,10 @@ export const UserForm: React.FC<UserFormProps> = ({
                   type='button'
                   onClick={e => nextStep(e)}
                   disabled={!isCurrentStepValid || validationInProgress}
-                  className={`px-6 py-2 rounded-md transition-colors ${
-                    isCurrentStepValid && !validationInProgress
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
+                  className={`px-6 py-2 rounded-md transition-colors ${isCurrentStepValid && !validationInProgress
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   title={
                     !isCurrentStepValid
                       ? 'Complete todos los campos requeridos para continuar'
@@ -1074,17 +1265,16 @@ export const UserForm: React.FC<UserFormProps> = ({
                     isExplicitSubmitRef.current = true
                   }}
                   disabled={isLoading || !isCurrentStepValid}
-                  className={`px-6 py-2 rounded-md transition-colors ${
-                    !isLoading && isCurrentStepValid
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
+                  className={`px-6 py-2 rounded-md transition-colors ${!isLoading && isCurrentStepValid
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                 >
                   {isLoading
                     ? 'Procesando...'
                     : mode === 'edit'
-                    ? 'Actualizar Usuario'
-                    : 'Crear Usuario'}
+                      ? 'Actualizar Usuario'
+                      : 'Crear Usuario'}
                 </button>
               )}
             </div>
@@ -1105,169 +1295,6 @@ export const UserForm: React.FC<UserFormProps> = ({
   )
 }
 
-// ====== ROLE ASSIGNMENT COMPONENT ======
-interface RoleAssignmentProps {
-  userId: string
-  currentRoles: IEnhancedUser['roles']
-  isOpen: boolean
-  onClose: () => void
-  onSuccess?: () => void
-}
-
-export const RoleAssignmentForm: React.FC<RoleAssignmentProps> = ({
-  userId,
-  currentRoles,
-  isOpen,
-  onClose,
-  onSuccess
-}) => {
-  const {companies} = useCompanies()
-  const {handleCreateUser} = useUserActions() // Reutilizamos para asignación de roles
-
-  const [selectedCompany, setSelectedCompany] = useState<string>('')
-  const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.VIEWER)
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
-
-  if (!isOpen) return null
-
-  return (
-    <div className='fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto w-full h-full z-50'>
-      <div className='relative top-20 mx-auto p-5 border w-full max-w-5xl shadow-lg rounded-md bg-white'>
-        <div className='mt-3'>
-          <div className='flex items-center justify-between mb-4'>
-            <h3 className='text-lg font-medium text-gray-900'>
-              Asignar Nuevo Rol
-            </h3>
-            <button
-              onClick={onClose}
-              className='text-gray-400 hover:text-gray-600'
-            >
-              <span className='sr-only'>Cerrar</span>
-              <svg
-                className='h-6 w-6'
-                fill='none'
-                viewBox='0 0 24 24'
-                stroke='currentColor'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M6 18L18 6M6 6l12 12'
-                />
-              </svg>
-            </button>
-          </div>
-
-          {/* Roles actuales */}
-          <div className='mb-6 '>
-            <h4 className='text-sm font-medium text-gray-700 mb-2'>
-              Roles Actuales
-            </h4>
-            <div className='space-y-2'>
-              {currentRoles.map((roleAssignment, index) => (
-                <div
-                  key={index}
-                  className='flex items-center justify-between p-2 bg-gray-50 rounded'
-                >
-                  <div className='flex items-center space-x-2'>
-                    <RoleBadge role={roleAssignment.role} size='sm' />
-                    {roleAssignment.companyId && (
-                      <span className='text-sm text-gray-600'>
-                        en{' '}
-                        {companies.find(c => c._id === roleAssignment.companyId)
-                          ?.name || 'Empresa'}
-                      </span>
-                    )}
-                  </div>
-                  <button className='text-red-600 hover:text-red-800 text-sm'>
-                    Revocar
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <form className='space-y-4'>
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Empresa
-              </label>
-              <select
-                value={selectedCompany}
-                onChange={e => setSelectedCompany(e.target.value)}
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                required
-              >
-                <option value=''>Seleccionar empresa...</option>
-                {companies.map(company => (
-                  <option key={company._id} value={company._id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Rol
-              </label>
-              <select
-                value={selectedRole}
-                onChange={e => setSelectedRole(e.target.value as UserRole)}
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                required
-              >
-                {[
-                  UserRole.ADMIN_EMPRESA,
-                  UserRole.MANAGER,
-                  UserRole.EMPLOYEE,
-                  UserRole.VIEWER
-                ].map(role => (
-                  <option key={role} value={role}>
-                    {role
-                      .split('_')
-                      .map(
-                        word =>
-                          word.charAt(0).toUpperCase() +
-                          word.slice(1).toLowerCase()
-                      )
-                      .join(' ')}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <PermissionSelector
-              className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
-              selectedPermissions={selectedPermissions}
-              availablePermissions={PermissionUtils.getAllCompanyPermissions()}
-              onPermissionChange={setSelectedPermissions}
-              isGlobal={false}
-            />
-
-            <div className='flex items-center justify-end space-x-3 pt-4 border-t'>
-              <button
-                type='button'
-                onClick={onClose}
-                className='px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors'
-              >
-                Cancelar
-              </button>
-              <button
-                type='submit'
-                className='px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors'
-              >
-                Asignar Rol
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Exportar componentes
-export {ChangePasswordForm}
+// Exportar componentes y constantes
+export { ChangePasswordForm, MODULE_TRANSLATIONS }
 export default UserForm

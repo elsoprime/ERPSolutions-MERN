@@ -5,7 +5,7 @@
  */
 
 'use client'
-import React, {useState, useEffect} from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   IEnhancedCompany,
   ICompanyFilters,
@@ -17,8 +17,6 @@ import ConfirmationDialog, {
 } from '@/components/Shared/ConfirmationDialog'
 import UserProgressCell from './UserProgressCell'
 import {
-  MagnifyingGlassIcon,
-  FunnelIcon,
   PlusIcon,
   PencilIcon,
   TrashIcon,
@@ -29,17 +27,18 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline'
-import {toast} from 'react-toastify'
+import { toast } from 'react-toastify'
+import { TableControlsHeader } from '@/components/Shared/Table'
+import CreateCompanyFormInline from '../Forms/CreateCompanyFormInline'
+import EditCompanyFormInline from '../Forms/EditCompanyFormInline'
 
 interface CompaniesTableProps {
-  onCreateCompany: () => void
-  onEditCompany: (company: IEnhancedCompany) => void
+  onEditCompany?: (company: IEnhancedCompany) => void
   onViewCompany: (company: IEnhancedCompany) => void
   refreshTrigger?: number
 }
 
 export default function CompaniesTable({
-  onCreateCompany,
   onEditCompany,
   onViewCompany,
   refreshTrigger = 0
@@ -52,7 +51,14 @@ export default function CompaniesTable({
   const [filters, setFilters] = useState<ICompanyFilters>({})
   const [showFilters, setShowFilters] = useState(false)
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([])
-  const [pageSize, setPageSize] = useState(5) // Estado para el tamaño de página configurable
+  const [pageSize, setPageSize] = useState(5)
+
+  // 🆕 Estado para controlar si se está creando una empresa inline
+  const [isCreatingCompany, setIsCreatingCompany] = useState(false)
+
+  // 🆕 Estado para controlar si se está editando una empresa inline
+  const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null)
+  const [editingCompany, setEditingCompany] = useState<IEnhancedCompany | null>(null)
 
   // Estado para el diálogo de confirmación
   const [dialogState, setDialogState] = useState<{
@@ -105,6 +111,15 @@ export default function CompaniesTable({
 
       console.log('✅ Companies procesadas:', companies.length)
       console.log('✅ Total count final:', total)
+
+      // 🔍 Debug: Verificar cómo vienen los planes
+      if (companies.length > 0) {
+        console.log('🔍 FRONTEND - Ejemplo de empresa con plan:', {
+          name: companies[0].name,
+          plan: companies[0].plan,
+          planType: typeof companies[0].plan
+        })
+      }
 
       setCompanies(companies)
       setTotalCount(total)
@@ -163,7 +178,7 @@ export default function CompaniesTable({
   }
 
   const closeDialog = () => {
-    setDialogState(prev => ({...prev, isOpen: false}))
+    setDialogState(prev => ({ ...prev, isOpen: false }))
     setActionLoading(false)
   }
 
@@ -486,9 +501,8 @@ export default function CompaniesTable({
             const a = document.createElement('a')
             a.style.display = 'none'
             a.href = url
-            a.download = `empresas_seleccionadas_${
-              new Date().toISOString().split('T')[0]
-            }.csv`
+            a.download = `empresas_seleccionadas_${new Date().toISOString().split('T')[0]
+              }.csv`
             document.body.appendChild(a)
             a.click()
             window.URL.revokeObjectURL(url)
@@ -517,10 +531,9 @@ export default function CompaniesTable({
       openDialog(
         'warning',
         'Exportar Todas las Empresas',
-        `¿Desea exportar todas las empresas ${
-          Object.keys(filters).length > 0
-            ? 'que coinciden con los filtros aplicados'
-            : 'del sistema'
+        `¿Desea exportar todas las empresas ${Object.keys(filters).length > 0
+          ? 'que coinciden con los filtros aplicados'
+          : 'del sistema'
         } a un archivo CSV?`,
         null, // 🔥 FIX: Pasar null para acciones en lote
         async () => {
@@ -531,9 +544,8 @@ export default function CompaniesTable({
             const a = document.createElement('a')
             a.style.display = 'none'
             a.href = url
-            a.download = `empresas_${
-              new Date().toISOString().split('T')[0]
-            }.csv`
+            a.download = `empresas_${new Date().toISOString().split('T')[0]
+              }.csv`
             document.body.appendChild(a)
             a.click()
             window.URL.revokeObjectURL(url)
@@ -575,9 +587,15 @@ export default function CompaniesTable({
   }
 
   // 🔥 FIX: Función para sanitizar el status antes de mostrarlo
-  const sanitizeStatus = (status: string, plan: string): string => {
+  const sanitizeStatus = (
+    status: string,
+    plan: string | { _id: string; name: string; type: string } | undefined
+  ): string => {
+    // Obtener el tipo de plan
+    const planType = typeof plan === 'object' && plan !== null ? plan.type : plan || 'free';
+
     // Si el status es 'trial' pero el plan no es 'trial', corregir según el plan
-    if (status === 'trial' && plan !== 'trial') {
+    if (status === 'trial' && planType !== 'trial') {
       // Corrección silenciosa: Para planes free/basic/professional/enterprise,
       // el status debería ser 'active' en lugar de 'trial'
       return 'active'
@@ -594,10 +612,10 @@ export default function CompaniesTable({
   const getStatusBadge = (
     status: string,
     subscriptionStatus: string,
-    plan?: string
+    plan?: string | { _id: string; name: string; type: string }
   ) => {
     // 🔥 FIX: Sanitizar status antes de procesarlo
-    const cleanStatus = sanitizeStatus(status || 'active', plan || 'free')
+    const cleanStatus = sanitizeStatus(status || 'active', plan)
 
     // 🔥 FIX: Verificar estado suspendido de manera consistente
     if (subscriptionStatus === 'suspended' || cleanStatus === 'suspended') {
@@ -636,30 +654,89 @@ export default function CompaniesTable({
     }
   }
 
-  const getPlanBadge = (planId: string) => {
-    const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId)
+  const getPlanBadge = (planId: string | { _id: string; name: string; type: string }) => {
+    // Si el plan ya viene populated del backend, usar directamente
+    if (typeof planId === 'object' && planId !== null) {
+      const colors = {
+        trial: 'bg-amber-100 text-amber-800',
+        free: 'bg-gray-100 text-gray-800',
+        basic: 'bg-blue-100 text-blue-800',
+        professional: 'bg-purple-100 text-purple-800',
+        enterprise: 'bg-orange-100 text-orange-800'
+      };
+
+      return (
+        <span
+          className={`px-3 py-1 text-xs font-medium rounded-full shadow-sm ${colors[planId.type as keyof typeof colors] || colors.free
+            }`}
+        >
+          {planId.name}
+        </span>
+      );
+    }
+
+    // Fallback: buscar en SUBSCRIPTION_PLANS (por si viene como string)
+    const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
     const colors = {
       trial: 'bg-amber-100 text-amber-800',
       free: 'bg-gray-100 text-gray-800',
       basic: 'bg-blue-100 text-blue-800',
       professional: 'bg-purple-100 text-purple-800',
       enterprise: 'bg-orange-100 text-orange-800'
-    }
+    };
 
     return (
       <span
-        className={`px-3 py-1 text-xs font-medium rounded-full shadow-sm ${
-          colors[planId as keyof typeof colors] || colors.free
-        }`}
+        className={`px-3 py-1 text-xs font-medium rounded-full shadow-sm ${colors[planId as keyof typeof colors] || colors.free
+          }`}
       >
         {plan?.name || planId}
       </span>
-    )
+    );
   }
 
   const getPlanUserLimit = (planId: string): number => {
     const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId)
     return plan?.limits.maxUsers || 2 // Default al plan free (2 usuarios)
+  }
+
+  // 🆕 Handlers para el formulario inline de creación
+  const handleFormCancel = () => {
+    setIsCreatingCompany(false)
+  }
+
+  const handleFormSuccess = (company: IEnhancedCompany) => {
+    setIsCreatingCompany(false)
+    loadCompanies()
+    toast.success(`Empresa "${company.name}" creada exitosamente`, {
+      position: 'top-right',
+      autoClose: 3000
+    })
+  }
+
+  // 🆕 Handlers para el formulario inline de edición
+  const handleEditCompanyInline = (company: IEnhancedCompany) => {
+    setEditingCompanyId(company._id)
+    setEditingCompany(company)
+  }
+
+  const handleEditCancel = () => {
+    setEditingCompanyId(null)
+    setEditingCompany(null)
+  }
+
+  const handleEditSuccess = (company: IEnhancedCompany) => {
+    console.log('✅ FRONTEND - Empresa actualizada recibida:', company)
+    console.log('📌 FRONTEND - Plan de la empresa:', company.plan)
+    console.log('📌 FRONTEND - Tipo de plan:', typeof company.plan)
+
+    setEditingCompanyId(null)
+    setEditingCompany(null)
+    loadCompanies()
+    toast.success(`Empresa "${company.name}" actualizada correctamente`, {
+      position: 'top-right',
+      autoClose: 3000
+    })
   }
 
   // 🔍 Debug: Mostrar estado actual en consola
@@ -669,227 +746,131 @@ export default function CompaniesTable({
     companiesLength: companies?.length,
     currentPage,
     searchTerm,
-    filters
+    filters,
+    isCreatingCompany,
+    editingCompanyId
   })
+
+  // 🆕 Si está creando una empresa, mostrar formulario inline
+  if (isCreatingCompany) {
+    return (
+      <CreateCompanyFormInline
+        onCancel={handleFormCancel}
+        onSuccess={handleFormSuccess}
+      />
+    )
+  }
+
+  // 🆕 Si está editando una empresa, mostrar formulario inline
+  if (editingCompanyId && editingCompany) {
+    return (
+      <EditCompanyFormInline
+        company={editingCompany}
+        onCancel={handleEditCancel}
+        onSuccess={handleEditSuccess}
+      />
+    )
+  }
 
   return (
     <div className='bg-white shadow-sm rounded-lg'>
       {/* Header y controles */}
-      <div className='p-3 sm:p-4 md:p-6 border-b border-gray-200'>
-        <div className='flex flex-col space-y-4'>
-          {/* Título y contador */}
-          <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
-            <div className='flex-1'>
-              <h2 className='text-base sm:text-lg font-medium text-gray-900'>
-                Gestión de Empresas
-              </h2>
-              {/* Contador de empresas y seleccionadas */}
-              <div className='flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1'>
-                <p className='text-xs sm:text-sm text-gray-600'>
-                  {totalCount === 0 && loading
-                    ? 'Cargando...'
-                    : `${totalCount} empresas • ${pageSize}/página`}
-                </p>
-                {selectedCompanies.length > 0 && (
-                  <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 w-fit'>
-                    {selectedCompanies.length} seleccionadas
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Controles - Layout responsive mejorado */}
-          <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3'>
-            {/* Grupo izquierdo: Selector de página y Nueva Empresa */}
-            <div className='flex flex-col sm:flex-row gap-3 sm:items-center'>
-              {/* Selector de registros por página */}
-              <div className='flex items-center gap-2 flex-shrink-0'>
-                <label className='text-xs sm:text-sm text-gray-600 whitespace-nowrap'>
-                  Mostrar:
-                </label>
-                <select
-                  value={pageSize}
-                  onChange={e => handlePageSizeChange(Number(e.target.value))}
-                  className='px-2 sm:px-3 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[70px]'
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={15}>15</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
-                <span className='text-xs sm:text-sm text-gray-600 whitespace-nowrap hidden sm:inline'>
-                  por página
-                </span>
-              </div>
-            </div>
-
-            {/* Grupo derecho: Acciones múltiples y controles secundarios */}
-            <div className='flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0'>
-              {/* Acciones múltiples (solo aparecen cuando hay empresas seleccionadas) */}
-              {selectedCompanies.length > 0 && (
-                <div className='flex gap-2 flex-wrap'>
-                  <button
-                    onClick={handleBulkSuspend}
-                    className='inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border border-yellow-300 rounded-md text-xs sm:text-sm font-medium text-yellow-700 bg-yellow-50 hover:bg-yellow-100 transition-colors'
-                    title='Suspender empresas seleccionadas'
-                  >
-                    <PauseIcon className='w-4 h-4 sm:mr-2' />
-                    <span className='hidden sm:inline'>Suspender</span>
-                  </button>
-
-                  <button
-                    onClick={handleBulkReactivate}
-                    className='inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border border-green-300 rounded-md text-xs sm:text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 transition-colors'
-                    title='Reactivar empresas seleccionadas'
-                  >
-                    <PlayIcon className='w-4 h-4 sm:mr-2' />
-                    <span className='hidden sm:inline'>Reactivar</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Botones de filtros y exportar */}
-              <div className='flex gap-2'>
-                <button
-                  onClick={handleExport}
-                  className={`inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                    selectedCompanies.length > 0
-                      ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100'
-                      : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
-                  }`}
-                  title={
-                    selectedCompanies.length > 0
-                      ? `Exportar ${selectedCompanies.length} empresas seleccionadas`
-                      : 'Exportar todas las empresas'
-                  }
-                >
-                  <ArrowDownTrayIcon className='w-4 h-4 sm:mr-2' />
-                  <span className='hidden sm:inline'>
-                    {selectedCompanies.length > 0
-                      ? `Exportar (${selectedCompanies.length})`
-                      : 'Exportar'}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                    showFilters
-                      ? 'border-blue-300 text-blue-700 bg-blue-50'
-                      : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
-                  }`}
-                >
-                  <FunnelIcon className='w-4 h-4 sm:mr-2' />
-                  <span className='hidden sm:inline'>Filtros</span>
-                </button>
-              </div>
-              {/* Botón Nueva Empresa */}
-              <div className='flex gap-2'>
-                <button
-                  onClick={onCreateCompany}
-                  className='inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors w-full sm:w-auto'
-                >
-                  <PlusIcon className='w-4 h-4 mr-2' />
-                  Nueva Empresa
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Barra de búsqueda */}
-        <div className='mt-4'>
-          <div className='relative'>
-            <MagnifyingGlassIcon className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
-            <input
-              type='text'
-              placeholder='Buscar por nombre, email, RUT...'
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-        </div>
-
-        {/* Panel de filtros */}
-        {showFilters && (
-          <div className='mt-4 p-3 sm:p-4 bg-gray-50 rounded-lg'>
-            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4'>
-              <div>
-                <label className='block text-xs sm:text-sm font-medium text-gray-700 mb-1'>
-                  Plan
-                </label>
-                <select
-                  value={filters.plan || ''}
-                  onChange={e => handleFilterChange('plan', e.target.value)}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-                >
-                  <option value=''>Todos los planes</option>
-                  {SUBSCRIPTION_PLANS.map(plan => (
-                    <option key={plan.id} value={plan.id}>
-                      {plan.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className='block text-xs sm:text-sm font-medium text-gray-700 mb-1'>
-                  Estado
-                </label>
-                <select
-                  value={filters.status || ''}
-                  onChange={e => handleFilterChange('status', e.target.value)}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-                >
-                  <option value=''>Todos los estados</option>
-                  <option value='active'>Activa</option>
-                  <option value='inactive'>Inactiva</option>
-                  <option value='suspended'>Suspendida</option>
-                </select>
-              </div>
-
-              <div>
-                <label className='block text-xs sm:text-sm font-medium text-gray-700 mb-1'>
-                  Industria
-                </label>
-                <select
-                  value={filters.industry || ''}
-                  onChange={e => handleFilterChange('industry', e.target.value)}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-                >
-                  <option value=''>Todas las industrias</option>
-                  <option value='Tecnología y Software'>
-                    Tecnología y Software
-                  </option>
-                  <option value='Comercio y Retail'>Comercio y Retail</option>
-                  <option value='Manufactura'>Manufactura</option>
-                  <option value='Servicios Profesionales'>
-                    Servicios Profesionales
-                  </option>
-                  <option value='Salud y Medicina'>Salud y Medicina</option>
-                </select>
-              </div>
-
-              <div className='flex items-end sm:col-span-2 lg:col-span-1'>
-                <button
-                  onClick={clearFilters}
-                  className='w-full px-3 py-2 text-xs sm:text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors'
-                >
-                  Limpiar filtros
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      <TableControlsHeader
+        title="Listado de Empresas"
+        totalCount={totalCount}
+        pageSize={pageSize}
+        selectedCount={selectedCompanies.length}
+        loading={loading}
+        onPageSizeChange={handlePageSizeChange}
+        searchPlaceholder="Buscar por nombre, email, RUT..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters(!showFilters)}
+        filters={[
+          {
+            key: 'plan',
+            label: 'Plan',
+            type: 'select',
+            value: filters.plan || '',
+            onChange: (v) => handleFilterChange('plan', v),
+            options: [
+              { value: '', label: 'Todos los planes' },
+              ...SUBSCRIPTION_PLANS.map(plan => ({
+                value: plan.id,
+                label: plan.name
+              }))
+            ]
+          },
+          {
+            key: 'status',
+            label: 'Estado',
+            type: 'select',
+            value: filters.status || '',
+            onChange: (v) => handleFilterChange('status', v),
+            options: [
+              { value: '', label: 'Todos los estados' },
+              { value: 'active', label: 'Activa' },
+              { value: 'inactive', label: 'Inactiva' },
+              { value: 'suspended', label: 'Suspendida' }
+            ]
+          },
+          {
+            key: 'industry',
+            label: 'Industria',
+            type: 'select',
+            value: filters.industry || '',
+            onChange: (v) => handleFilterChange('industry', v),
+            options: [
+              { value: '', label: 'Todas las industrias' },
+              { value: 'Tecnología y Software', label: 'Tecnología y Software' },
+              { value: 'Comercio y Retail', label: 'Comercio y Retail' },
+              { value: 'Manufactura', label: 'Manufactura' },
+              { value: 'Servicios Profesionales', label: 'Servicios Profesionales' },
+              { value: 'Salud y Medicina', label: 'Salud y Medicina' }
+            ]
+          }
+        ]}
+        onClearFilters={clearFilters}
+        filterGridCols={3}
+        primaryAction={{
+          label: 'Nueva Empresa',
+          icon: PlusIcon,
+          onClick: () => setIsCreatingCompany(true)
+        }}
+        bulkActions={[
+          {
+            label: 'Suspender',
+            icon: PauseIcon,
+            onClick: handleBulkSuspend,
+            variant: 'warning',
+            showOnSelection: true
+          },
+          {
+            label: 'Reactivar',
+            icon: PlayIcon,
+            onClick: handleBulkReactivate,
+            variant: 'success',
+            showOnSelection: true
+          }
+        ]}
+        secondaryActions={[
+          {
+            label: selectedCompanies.length > 0
+              ? `Exportar (${selectedCompanies.length})`
+              : 'Exportar',
+            icon: ArrowDownTrayIcon,
+            onClick: handleExport,
+            variant: selectedCompanies.length > 0 ? 'info' : 'secondary'
+          }
+        ]}
+      />
 
       {/* Tabla */}
       <div className='overflow-x-auto -mx-3 sm:mx-0'>
         <div className='inline-block min-w-full align-middle'>
           <table className='min-w-full divide-y divide-gray-200'>
+            {/** Encabezado de la tabla */}
             <thead className='bg-gray-50'>
               <tr>
                 <th className='px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
@@ -901,6 +882,7 @@ export default function CompaniesTable({
                     }
                     onChange={toggleSelectAll}
                     className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+                    aria-label='Seleccionar todas las empresas'
                   />
                 </th>
                 <th className='px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
@@ -930,7 +912,7 @@ export default function CompaniesTable({
                     <div className='flex items-center justify-center'>
                       <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500'></div>
                       <span className='ml-2 text-sm text-gray-500'>
-                        Cargando...
+                        Cargando Información...
                       </span>
                     </div>
                   </td>
@@ -950,16 +932,19 @@ export default function CompaniesTable({
                     key={company._id}
                     className='hover:bg-gray-50 transition-colors'
                   >
+                    {/** Checkbox para seleccionar la empresa */}
                     <td className='px-3 sm:px-6 py-4 whitespace-nowrap'>
                       <input
                         type='checkbox'
                         checked={selectedCompanies.includes(company._id)}
                         onChange={() => toggleSelectCompany(company._id)}
                         className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+                        aria-label={`Seleccionar empresa ${company.name}`}
                       />
                     </td>
                     <td className='px-3 sm:px-6 py-4'>
                       <div className='flex items-center'>
+                        {/** Logo de la empresa */}
                         <div className='flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10'>
                           <div
                             className='h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center text-white font-semibold text-xs sm:text-sm'
@@ -1000,9 +985,11 @@ export default function CompaniesTable({
                         </div>
                       </div>
                     </td>
+                    {/** Columna de Plan */}
                     <td className='hidden md:table-cell px-3 sm:px-6 py-4 whitespace-nowrap'>
                       {getPlanBadge(company.plan || 'free')}
                     </td>
+                    {/** Columna de Estado */}
                     <td className='hidden lg:table-cell px-3 sm:px-6 py-4 whitespace-nowrap'>
                       {getStatusBadge(
                         company.status || 'active',
@@ -1031,38 +1018,45 @@ export default function CompaniesTable({
                         </button>
 
                         <button
-                          onClick={() => onEditCompany(company)}
+                          onClick={() => handleEditCompanyInline(company)}
                           className='text-green-600 hover:text-green-900 p-1 rounded-full hover:bg-green-50 transition-colors'
                           title='Editar'
                         >
                           <PencilIcon className='w-4 h-4' />
                         </button>
 
+                        {/* Mostrar botón de activar solo si está suspendida */}
                         {isCompanySuspended(company) ? (
                           <button
                             onClick={() => handleReactivateCompany(company)}
                             className='text-green-600 hover:text-green-900 p-1 rounded-full hover:bg-green-50 transition-colors'
-                            title='Reactivar'
+                            title='Activar'
                           >
                             <PlayIcon className='w-4 h-4' />
                           </button>
                         ) : (
-                          <button
-                            onClick={() => handleSuspendCompany(company)}
-                            className='text-yellow-600 hover:text-yellow-900 p-1 rounded-full hover:bg-yellow-50 transition-colors'
-                            title='Suspender'
-                          >
-                            <PauseIcon className='w-4 h-4' />
-                          </button>
+                          // Mostrar botón de suspender solo si está activa
+                          company.status === 'active' && (
+                            <button
+                              onClick={() => handleSuspendCompany(company)}
+                              className='text-yellow-600 hover:text-yellow-900 p-1 rounded-full hover:bg-yellow-50 transition-colors'
+                              title='Suspender'
+                            >
+                              <PauseIcon className='w-4 h-4' />
+                            </button>
+                          )
                         )}
 
-                        <button
-                          onClick={() => handleDeleteCompany(company)}
-                          className='text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50 transition-colors'
-                          title='Eliminar'
-                        >
-                          <TrashIcon className='w-4 h-4' />
-                        </button>
+                        { /* Botón de eliminar empresa */}
+                        {company.status !== 'inactive' && (
+                          <button
+                            onClick={() => handleDeleteCompany(company)}
+                            className='text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50 transition-colors'
+                            title='Eliminar'
+                          >
+                            <TrashIcon className='w-4 h-4' />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1135,12 +1129,13 @@ export default function CompaniesTable({
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
                   className='relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed'
+                  aria-label='Página anterior'
                 >
                   <ChevronLeftIcon className='h-5 w-5' />
                 </button>
 
                 {/* Números de página inteligentes */}
-                {Array.from({length: Math.min(totalPages, 5)}, (_, i) => {
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                   let page: number
 
                   if (totalPages <= 5) {
@@ -1157,11 +1152,10 @@ export default function CompaniesTable({
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`relative inline-flex items-center px-3 md:px-4 py-2 border text-xs md:text-sm font-medium ${
-                        currentPage === page
-                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
+                      className={`relative inline-flex items-center px-3 md:px-4 py-2 border text-xs md:text-sm font-medium ${currentPage === page
+                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }`}
                     >
                       {page}
                     </button>
@@ -1189,6 +1183,7 @@ export default function CompaniesTable({
                   }
                   disabled={currentPage === totalPages}
                   className='relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed'
+                  aria-label='Página siguiente'
                 >
                   <ChevronRightIcon className='h-5 w-5' />
                 </button>
@@ -1202,7 +1197,7 @@ export default function CompaniesTable({
       <ConfirmationDialog
         isOpen={dialogState.isOpen}
         onClose={closeDialog}
-        onConfirm={dialogState.onConfirm || (() => {})}
+        onConfirm={dialogState.onConfirm || (() => { })}
         title={dialogState.title}
         message={dialogState.message}
         confirmText={dialogState.confirmText}
@@ -1211,12 +1206,11 @@ export default function CompaniesTable({
         data={
           dialogState.company
             ? {
-                name: dialogState.company.name,
-                email: dialogState.company.email,
-                details: `Plan: ${
-                  dialogState.company.plan || 'free'
+              name: dialogState.company.name,
+              email: dialogState.company.email,
+              details: `Plan: ${dialogState.company.plan || 'free'
                 } | Estado: ${dialogState.company.status}`
-              }
+            }
             : undefined
         }
       />

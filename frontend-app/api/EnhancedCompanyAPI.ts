@@ -4,7 +4,7 @@
  * @author: Esteban Soto Ojeda @elsoprimeDev
  */
 
-import api from './axios'
+import api from "./axios";
 import {
   IEnhancedCompany,
   ICreateCompanyFormData,
@@ -12,11 +12,12 @@ import {
   ICompanyFilters,
   ICompanyListResponse,
   ICompanyActionResult,
-  ICompanyStatistics
-} from '@/interfaces/EnhanchedCompany/EnhancedCompany'
+  ICompanyStatistics,
+} from "@/interfaces/EnhanchedCompany/EnhancedCompany";
+import PlanAPI from "./PlanAPI";
 
 export class EnhancedCompanyAPI {
-  private static baseURL = '/v2/enhanced-companies'
+  private static baseURL = "/v2/enhanced-companies";
 
   /**
    * Obtener todas las empresas para dashboard (Solo Super Admin)
@@ -25,14 +26,14 @@ export class EnhancedCompanyAPI {
   static async getAllCompaniesForDashboard(): Promise<ICompanyListResponse> {
     try {
       // Usar el endpoint existente con límite alto para dashboard
-      const response = await api.get(`${this.baseURL}?limit=100`)
+      const response = await api.get(`${this.baseURL}?limit=100`);
       console.log(
-        '📊 Dashboard: Usando endpoint principal /v2/enhanced-companies'
-      )
-      return response.data
+        "📊 Dashboard: Usando endpoint principal /v2/enhanced-companies"
+      );
+      return response.data;
     } catch (error) {
-      console.error('Error al obtener empresas para dashboard:', error)
-      throw error
+      console.error("Error al obtener empresas para dashboard:", error);
+      throw error;
     }
   }
 
@@ -40,32 +41,33 @@ export class EnhancedCompanyAPI {
    * Obtener todas las empresas (Solo Super Admin)
    */
   static async getAllCompanies(params?: {
-    page?: number
-    limit?: number
-    filters?: ICompanyFilters
+    page?: number;
+    limit?: number;
+    filters?: ICompanyFilters;
   }): Promise<ICompanyListResponse> {
     try {
-      const queryParams = new URLSearchParams()
+      const queryParams = new URLSearchParams();
 
-      if (params?.page) queryParams.append('page', params.page.toString())
-      if (params?.limit) queryParams.append('limit', params.limit.toString())
+      if (params?.page) queryParams.append("page", params.page.toString());
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
       if (params?.filters?.search)
-        queryParams.append('search', params.filters.search)
-      if (params?.filters?.plan) queryParams.append('plan', params.filters.plan)
+        queryParams.append("search", params.filters.search);
+      if (params?.filters?.plan)
+        queryParams.append("plan", params.filters.plan);
       if (params?.filters?.status)
-        queryParams.append('status', params.filters.status)
+        queryParams.append("status", params.filters.status);
       if (params?.filters?.industry)
-        queryParams.append('industry', params.filters.industry)
+        queryParams.append("industry", params.filters.industry);
       if (params?.filters?.businessType)
-        queryParams.append('businessType', params.filters.businessType)
+        queryParams.append("businessType", params.filters.businessType);
 
       const response = await api.get(
         `${this.baseURL}?${queryParams.toString()}`
-      )
-      return response.data
+      );
+      return response.data;
     } catch (error) {
-      console.error('Error al obtener empresas:', error)
-      throw error
+      console.error("Error al obtener empresas:", error);
+      throw error;
     }
   }
 
@@ -74,11 +76,11 @@ export class EnhancedCompanyAPI {
    */
   static async getCompanyById(companyId: string): Promise<IEnhancedCompany> {
     try {
-      const response = await api.get(`${this.baseURL}/${companyId}`)
-      return response.data
+      const response = await api.get(`${this.baseURL}/${companyId}`);
+      return response.data;
     } catch (error) {
-      console.error('Error al obtener empresa:', error)
-      throw error
+      console.error("Error al obtener empresa:", error);
+      throw error;
     }
   }
 
@@ -89,6 +91,17 @@ export class EnhancedCompanyAPI {
     companyData: ICreateCompanyFormData
   ): Promise<ICompanyActionResult> {
     try {
+      // 1. Obtener plan completo desde API ✅ (usar planId en lugar de plan)
+      const planResponse = await PlanAPI.getPlanById(
+        companyData.subscription.planId
+      );
+
+      if (!planResponse) {
+        throw new Error(
+          `Plan ${companyData.subscription.planId} no encontrado`
+        );
+      }
+
       // Transformar datos del frontend al formato del backend
       const backendData = {
         name: companyData.name,
@@ -97,33 +110,33 @@ export class EnhancedCompanyAPI {
         website: companyData.website,
         phone: companyData.phone,
         address: companyData.address,
-        // Mapear subscription.plan a plan
-        plan: companyData.subscription.plan,
+        // Mapear subscription.planId a plan (el backend espera 'plan' en raíz)
+        plan: companyData.subscription.planId,
         // Mapear settings con todos los campos necesarios
         settings: {
           ...companyData.settings,
           // Asegurar que los features estén en settings
           features: companyData.features,
           // Mapear branding dentro de settings
-          branding: companyData.branding
-        }
-      }
+          branding: companyData.branding,
+        },
+      };
 
-      console.log('📤 Datos transformados para backend:', backendData)
+      console.log("📤 Datos transformados para backend:", backendData);
 
-      const url = this.baseURL
-      const response = await api.post(url, backendData)
+      const url = this.baseURL;
+      const response = await api.post(url, backendData);
       return {
         success: true,
-        message: 'Empresa creada exitosamente',
-        company: response.data.company
-      }
+        message: "Empresa creada exitosamente",
+        company: response.data.company,
+      };
     } catch (error: any) {
-      console.error('Error al crear empresa:', error)
+      console.error("Error al crear empresa:", error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Error al crear la empresa'
-      }
+        message: error.response?.data?.message || "Error al crear la empresa",
+      };
     }
   }
 
@@ -144,8 +157,8 @@ export class EnhancedCompanyAPI {
         website: companyData.website,
         phone: companyData.phone,
         address: companyData.address,
-        // Mapear subscription.plan a plan
-        plan: companyData.subscription?.plan,
+        // Mapear subscription.planId a plan (el backend espera 'plan' en raíz)
+        plan: companyData.subscription?.planId,
         // Mapear settings con todos los campos necesarios
         settings: companyData.settings
           ? {
@@ -153,36 +166,36 @@ export class EnhancedCompanyAPI {
               // Asegurar que los features estén en settings
               features: companyData.features,
               // Mapear branding dentro de settings
-              branding: companyData.branding
+              branding: companyData.branding,
             }
-          : undefined
-      }
+          : undefined,
+      };
 
       // Remover campos undefined para evitar sobrescribir con valores vacíos
-      Object.keys(backendData).forEach(key => {
+      Object.keys(backendData).forEach((key) => {
         if (backendData[key as keyof typeof backendData] === undefined) {
-          delete backendData[key as keyof typeof backendData]
+          delete backendData[key as keyof typeof backendData];
         }
-      })
+      });
 
-      console.log('📤 Datos transformados para actualización:', backendData)
+      console.log("📤 Datos transformados para actualización:", backendData);
 
       const response = await api.put(
         `${this.baseURL}/${companyId}`,
         backendData
-      )
+      );
       return {
         success: true,
-        message: 'Empresa actualizada exitosamente',
-        company: response.data.company
-      }
+        message: "Empresa actualizada exitosamente",
+        company: response.data.company,
+      };
     } catch (error: any) {
-      console.error('Error al actualizar empresa:', error)
+      console.error("Error al actualizar empresa:", error);
       return {
         success: false,
         message:
-          error.response?.data?.message || 'Error al actualizar la empresa'
-      }
+          error.response?.data?.message || "Error al actualizar la empresa",
+      };
     }
   }
 
@@ -195,21 +208,24 @@ export class EnhancedCompanyAPI {
     reason?: string
   ): Promise<ICompanyActionResult> {
     try {
-      const response = await api.delete(`${this.baseURL}/${companyId}`, {
-        data: {reason: reason || 'manual_admin'}
-      })
+      const response = await api.delete(
+        `${this.baseURL}/${companyId}/suspend`,
+        {
+          data: { reason: reason || "manual_admin" },
+        }
+      );
       return {
         success: true,
-        message: response.data.message || 'Empresa suspendida exitosamente',
-        company: response.data.data
-      }
+        message: response.data.message || "Empresa suspendida exitosamente",
+        company: response.data.data,
+      };
     } catch (error: any) {
-      console.error('Error al suspender empresa:', error)
+      console.error("Error al suspender empresa:", error);
       return {
         success: false,
         message:
-          error.response?.data?.message || 'Error al suspender la empresa'
-      }
+          error.response?.data?.message || "Error al suspender la empresa",
+      };
     }
   }
 
@@ -220,19 +236,21 @@ export class EnhancedCompanyAPI {
     companyId: string
   ): Promise<ICompanyActionResult> {
     try {
-      const response = await api.post(`${this.baseURL}/${companyId}/reactivate`)
+      const response = await api.post(
+        `${this.baseURL}/${companyId}/reactivate`
+      );
       return {
         success: true,
-        message: response.data.message || 'Empresa reactivada exitosamente',
-        company: response.data.data
-      }
+        message: response.data.message || "Empresa reactivada exitosamente",
+        company: response.data.data,
+      };
     } catch (error: any) {
-      console.error('Error al reactivar empresa:', error)
+      console.error("Error al reactivar empresa:", error);
       return {
         success: false,
         message:
-          error.response?.data?.message || 'Error al reactivar la empresa'
-      }
+          error.response?.data?.message || "Error al reactivar la empresa",
+      };
     }
   }
 
@@ -241,32 +259,52 @@ export class EnhancedCompanyAPI {
    */
   static async deleteCompany(companyId: string): Promise<ICompanyActionResult> {
     try {
-      const response = await api.delete(`${this.baseURL}/${companyId}`)
+      const response = await api.delete(`${this.baseURL}/${companyId}`);
       return {
         success: true,
-        message: 'Empresa eliminada exitosamente'
-      }
+        message: "Empresa eliminada exitosamente",
+      };
     } catch (error: any) {
-      console.error('Error al eliminar empresa:', error)
+      console.error("Error al eliminar empresa:", error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Error al eliminar la empresa'
-      }
+        message:
+          error.response?.data?.message || "Error al eliminar la empresa",
+      };
     }
   }
 
   /**
-   * Obtener estadísticas de empresa
+   * Obtener estadísticas detalladas de empresa para gráficas
+   * Endpoint: GET /api/companies/:id/stats
    */
   static async getCompanyStatistics(
     companyId: string
-  ): Promise<ICompanyStatistics> {
+  ): Promise<
+    import("@/interfaces/EnhanchedCompany/EnhancedCompany").ICompanyChartData
+  > {
     try {
-      const response = await api.get(`${this.baseURL}/${companyId}/stats`)
-      return response.data
+      const response = await api.get(`${this.baseURL}/${companyId}/stats`);
+      return response.data.data; // Backend retorna {success, data, message}
     } catch (error) {
-      console.error('Error al obtener estadísticas:', error)
-      throw error
+      console.error("Error al obtener estadísticas:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener resumen global de empresas con tendencias
+   * Endpoint: GET /api/companies/summary
+   */
+  static async getCompaniesSummaryExtended(): Promise<
+    import("@/interfaces/EnhanchedCompany/EnhancedCompany").ICompaniesSummaryExtended
+  > {
+    try {
+      const response = await api.get(`${this.baseURL}/summary`);
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener resumen extendido:", error);
+      throw error;
     }
   }
 
@@ -277,27 +315,27 @@ export class EnhancedCompanyAPI {
   static async updateSubscription(
     companyId: string,
     subscriptionData: {
-      plan: 'free' | 'basic' | 'professional' | 'enterprise'
-      autoRenew?: boolean
-      endDate?: Date
+      plan: "free" | "basic" | "professional" | "enterprise";
+      autoRenew?: boolean;
+      endDate?: Date;
     }
   ): Promise<ICompanyActionResult> {
     try {
       const response = await api.put(`${this.baseURL}/${companyId}`, {
-        plan: subscriptionData.plan
-      })
+        plan: subscriptionData.plan,
+      });
       return {
         success: true,
-        message: 'Suscripción actualizada exitosamente',
-        company: response.data.company
-      }
+        message: "Suscripción actualizada exitosamente",
+        company: response.data.company,
+      };
     } catch (error: any) {
-      console.error('Error al actualizar suscripción:', error)
+      console.error("Error al actualizar suscripción:", error);
       return {
         success: false,
         message:
-          error.response?.data?.message || 'Error al actualizar la suscripción'
-      }
+          error.response?.data?.message || "Error al actualizar la suscripción",
+      };
     }
   }
 
@@ -312,11 +350,13 @@ export class EnhancedCompanyAPI {
     try {
       // Por ahora retornamos true (disponible)
       // TODO: Implementar endpoint en backend
-      console.warn('checkSlugAvailability: Endpoint no implementado en backend')
-      return true
+      console.warn(
+        "checkSlugAvailability: Endpoint no implementado en backend"
+      );
+      return true;
     } catch (error) {
-      console.error('Error al verificar slug:', error)
-      return false
+      console.error("Error al verificar slug:", error);
+      return false;
     }
   }
 
@@ -332,12 +372,12 @@ export class EnhancedCompanyAPI {
       // Por ahora retornamos true (disponible)
       // TODO: Implementar endpoint en backend
       console.warn(
-        'checkTaxIdAvailability: Endpoint no implementado en backend'
-      )
-      return true
+        "checkTaxIdAvailability: Endpoint no implementado en backend"
+      );
+      return true;
     } catch (error) {
-      console.error('Error al verificar Tax ID:', error)
-      return false
+      console.error("Error al verificar Tax ID:", error);
+      return false;
     }
   }
 
@@ -345,25 +385,25 @@ export class EnhancedCompanyAPI {
    * Obtener resumen general de todas las empresas (Dashboard Super Admin)
    */
   static async getCompaniesSummary(): Promise<{
-    totalCompanies: number
-    activeCompanies: number
-    suspendedCompanies: number
-    trialCompanies: number
-    planDistribution: Record<string, number>
-    industryDistribution: Record<string, number>
+    totalCompanies: number;
+    activeCompanies: number;
+    suspendedCompanies: number;
+    trialCompanies: number;
+    planDistribution: Record<string, number>;
+    industryDistribution: Record<string, number>;
     recentActivity: Array<{
-      companyId: string
-      companyName: string
-      action: string
-      timestamp: Date
-    }>
+      companyId: string;
+      companyName: string;
+      action: string;
+      timestamp: Date;
+    }>;
   }> {
     try {
-      const response = await api.get(`${this.baseURL}/summary`)
-      return response.data
+      const response = await api.get(`${this.baseURL}/summary`);
+      return response.data;
     } catch (error) {
-      console.error('Error al obtener resumen de empresas:', error)
-      throw error
+      console.error("Error al obtener resumen de empresas:", error);
+      throw error;
     }
   }
 
@@ -374,10 +414,12 @@ export class EnhancedCompanyAPI {
   static async exportCompaniesToCSV(filters?: ICompanyFilters): Promise<Blob> {
     try {
       // Por ahora lanzamos error indicando que no está implementado
-      throw new Error('Funcionalidad de exportación no implementada en backend')
+      throw new Error(
+        "Funcionalidad de exportación no implementada en backend"
+      );
     } catch (error) {
-      console.error('Error al exportar empresas:', error)
-      throw error
+      console.error("Error al exportar empresas:", error);
+      throw error;
     }
   }
 
@@ -391,15 +433,15 @@ export class EnhancedCompanyAPI {
   ): Promise<ICompanyActionResult> {
     try {
       // Por ahora lanzamos error indicando que no está implementado
-      throw new Error('Funcionalidad de clonación no implementada en backend')
+      throw new Error("Funcionalidad de clonación no implementada en backend");
     } catch (error: any) {
-      console.error('Error al clonar empresa:', error)
+      console.error("Error al clonar empresa:", error);
       return {
         success: false,
-        message: 'Funcionalidad de clonación no implementada en backend'
-      }
+        message: "Funcionalidad de clonación no implementada en backend",
+      };
     }
   }
 }
 
-export default EnhancedCompanyAPI
+export default EnhancedCompanyAPI;

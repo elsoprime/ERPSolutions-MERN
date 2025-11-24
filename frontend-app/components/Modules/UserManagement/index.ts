@@ -5,18 +5,14 @@
  */
 
 // Main Page Component
-export {default as UserManagementPage} from './Views/UserManagementPage'
+export { default as UserManagementPage } from "./Views/UserManagementPage";
 
 // Dashboard Components
-export {default as UserOverviewDashboard} from './Views/UserOverviewDashboard'
-export {default as UsersAdminDashboard} from './Views/UsersAdminDashboard'
+export { default as UserOverviewDashboard } from "./Views/UserOverviewDashboard";
+export { default as UsersAdminDashboard } from "./Views/UsersAdminDashboard";
 
 // Form Components
-export {
-  UserForm,
-  RoleAssignmentForm,
-  PermissionSelector
-} from './Forms/UserForms'
+export { UserForm, PermissionSelector } from "./Forms/UserForms";
 
 // Table Components
-export {default as UserTable} from './UI/UserTable'
+export { default as UserTable } from "./UI/UserTable";

@@ -6,9 +6,9 @@
 
 'use client'
 
-import React, {useState} from 'react'
-import {useRouter} from 'next/navigation'
-import {useDashboard} from '@/hooks/useDashboard'
+import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useDashboard } from '@/hooks/useDashboard'
 import useModuleNavigation from '@/hooks/useModuleNavigation'
 import ModuleNavigation from './ModuleNavigation'
 import {
@@ -19,10 +19,11 @@ import {
 } from '@/components/UI/MultiCompanyBadges'
 import {
   IEnhancedCompany,
-  CompanyPlan,
+
   CompanyStatus
 } from '@/interfaces/EnhanchedCompany/MultiCompany'
-import {IUser} from '@/api/UserAPI'
+import { IUser } from '@/api/UserAPI'
+import { PlanType } from '@/types/plan'
 
 interface QuickAction {
   id: string
@@ -36,7 +37,7 @@ interface QuickAction {
 
 export const SuperAdminDashboard: React.FC = () => {
   const router = useRouter()
-  const {navigateToCompanies, navigateToUsers, navigateToSettings} =
+  const { navigateToCompanies, navigateToUsers, navigateToSettings } =
     useModuleNavigation()
   const [selectedTimeRange, setSelectedTimeRange] = useState<
     '7d' | '30d' | '90d'
@@ -45,7 +46,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const [showCreateUserModal, setShowCreateUserModal] = useState(false)
 
   // Usar el nuevo hook del dashboard
-  const {companies, users, stats, isLoading, error, refreshAll} = useDashboard()
+  const { companies, users, stats, isLoading, error, refreshAll } = useDashboard()
 
   // Acciones rápidas con navegación a módulos
   const quickActions: QuickAction[] = [
@@ -151,6 +152,7 @@ export const SuperAdminDashboard: React.FC = () => {
                 setSelectedTimeRange(e.target.value as '7d' | '30d' | '90d')
               }
               className='rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
+              aria-label='Seleccionar rango de tiempo para las estadísticas'
             >
               <option value='7d'>Últimos 7 días</option>
               <option value='30d'>Últimos 30 días</option>
@@ -242,7 +244,7 @@ export const SuperAdminDashboard: React.FC = () => {
           </div>
           <div className='mt-4'>
             <div className='flex items-center space-x-2'>
-              <PlanBadge plan={CompanyPlan.PROFESSIONAL} size='sm' />
+              <PlanBadge plan={PlanType.PROFESSIONAL} size='sm' />
               <span className='text-sm text-gray-600'>
                 {stats?.companiesByPlan?.professional || 0}
               </span>
@@ -294,13 +296,12 @@ export const SuperAdminDashboard: React.FC = () => {
             <button
               key={action.id}
               onClick={action.action}
-              className={`p-4 rounded-lg border-2 border-dashed transition-colors text-left ${
-                action.variant === 'primary'
-                  ? 'border-blue-300 hover:border-blue-400 hover:bg-blue-50'
-                  : action.variant === 'danger'
+              className={`p-4 rounded-lg border-2 border-dashed transition-colors text-left ${action.variant === 'primary'
+                ? 'border-blue-300 hover:border-blue-400 hover:bg-blue-50'
+                : action.variant === 'danger'
                   ? 'border-red-300 hover:border-red-400 hover:bg-red-50'
                   : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <div className='flex items-center mb-2'>
                 <span className='text-2xl mr-3'>{action.icon}</span>
@@ -396,10 +397,10 @@ export const SuperAdminDashboard: React.FC = () => {
                 </div>
               </div>
             )) || (
-              <div className='text-center py-4 text-gray-500'>
-                No hay actividad reciente
-              </div>
-            )}
+                <div className='text-center py-4 text-gray-500'>
+                  No hay actividad reciente
+                </div>
+              )}
           </div>
         </div>
       </div>
@@ -414,7 +415,7 @@ export const SuperAdminDashboard: React.FC = () => {
             Object.entries(stats.companiesByPlan).map(([plan, count]) => (
               <div key={plan} className='text-center'>
                 <div className='mb-2'>
-                  <PlanBadge plan={plan as CompanyPlan} size='lg' />
+                  <PlanBadge plan={plan as PlanType} size='md' />
                 </div>
                 <div className='text-2xl font-bold text-gray-900'>{count}</div>
                 <div className='text-sm text-gray-600'>empresas</div>
@@ -422,10 +423,10 @@ export const SuperAdminDashboard: React.FC = () => {
             ))}
           {(!stats?.companiesByPlan ||
             Object.keys(stats.companiesByPlan).length === 0) && (
-            <div className='col-span-4 text-center py-8 text-gray-500'>
-              No hay datos de planes disponibles
-            </div>
-          )}
+              <div className='col-span-4 text-center py-8 text-gray-500'>
+                No hay datos de planes disponibles
+              </div>
+            )}
         </div>
       </div>
     </div>

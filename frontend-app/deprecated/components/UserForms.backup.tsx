@@ -7,10 +7,10 @@
 
 'use client'
 
-import React, {useState, useEffect, useMemo, useRef} from 'react'
-import {useUserForm, useUserActions} from '@/hooks/useUserManagement'
-import {useCompanies} from '@/hooks/useCompanyManagement'
-import {RoleBadge, StatusBadge} from '@/components/UI/MultiCompanyBadges'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { useUserForm, useUserActions } from '@/hooks/useUserManagement'
+import { useCompanies } from '@/hooks/CompanyManagement/useCompanyManagement'
+import { RoleBadge, StatusBadge } from '@/components/UI/MultiCompanyBadges'
 import {
   PermissionUtils,
   GlobalPermission,
@@ -39,7 +39,7 @@ interface StepConfig {
   number: UserFormStep
   title: string
   description: string
-  icon: React.ComponentType<{className?: string}>
+  icon: React.ComponentType<{ className?: string }>
 }
 
 const USER_FORM_STEPS: StepConfig[] = [
@@ -159,9 +159,8 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
       </div>
 
       <div
-        className={`${
-          className || 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
-        } `}
+        className={`${className || 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+          } `}
       >
         {Object.entries(permissionGroups).map(([category, permissions]) => {
           const allSelected = permissions.every(p =>
@@ -241,9 +240,9 @@ export const UserForm: React.FC<UserFormProps> = ({
   mode,
   companyScope = false
 }) => {
-  const {formData, updateField, resetForm, validateForm, isEditing} =
+  const { formData, updateField, resetForm, validateForm, isEditing } =
     useUserForm(user)
-  const {handleCreateUser, handleUpdateUser, isLoading} = useUserActions()
+  const { handleCreateUser, handleUpdateUser, isLoading } = useUserActions()
   const {
     companies,
     isLoading: companiesLoading,
@@ -277,7 +276,7 @@ export const UserForm: React.FC<UserFormProps> = ({
           const companyIdValue =
             typeof primaryRole.companyId === 'object'
               ? (primaryRole.companyId as any)._id ||
-                (primaryRole.companyId as any).toString()
+              (primaryRole.companyId as any).toString()
               : primaryRole.companyId
           setSelectedCompany(companyIdValue)
         }
@@ -303,7 +302,7 @@ export const UserForm: React.FC<UserFormProps> = ({
   const canProceedToNextStep = useMemo(() => {
     switch (currentStep) {
       case 1: // Información básica
-        const {name, email, password, phone} = formData
+        const { name, email, password, phone } = formData
 
         // Validar campos básicos
         if (!name?.trim() || !email?.trim()) return false
@@ -344,9 +343,9 @@ export const UserForm: React.FC<UserFormProps> = ({
       case 2: // Empresa y rol
         return Boolean(
           selectedRole &&
-            (selectedRole === UserRole.SUPER_ADMIN ||
-              companyScope ||
-              selectedCompany)
+          (selectedRole === UserRole.SUPER_ADMIN ||
+            companyScope ||
+            selectedCompany)
         )
       case 3: // Permisos (requiere al menos un permiso seleccionado)
         return selectedPermissions.length > 0
@@ -416,7 +415,7 @@ export const UserForm: React.FC<UserFormProps> = ({
       name: formData.name!,
       email: formData.email!,
       // Solo enviar phone si no está vacío (backend requiere formato chileno si se envía)
-      ...(formData.phone?.trim() && {phone: formData.phone.trim()}),
+      ...(formData.phone?.trim() && { phone: formData.phone.trim() }),
       role: selectedRole,
       permissions: selectedPermissions,
       companyId:
@@ -508,17 +507,15 @@ export const UserForm: React.FC<UserFormProps> = ({
                       disabled={!isClickable}
                       className={`
                         flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all
-                        ${
-                          isCompleted
-                            ? 'bg-green-600 border-green-600 text-white'
-                            : isCurrent
+                        ${isCompleted
+                          ? 'bg-green-600 border-green-600 text-white'
+                          : isCurrent
                             ? 'bg-blue-600 border-blue-600 text-white ring-4 ring-blue-600/20'
                             : 'bg-white border-gray-300 text-gray-400'
                         }
-                        ${
-                          isClickable
-                            ? 'cursor-pointer hover:scale-105'
-                            : 'cursor-default'
+                        ${isClickable
+                          ? 'cursor-pointer hover:scale-105'
+                          : 'cursor-default'
                         }
                       `}
                     >
@@ -526,13 +523,12 @@ export const UserForm: React.FC<UserFormProps> = ({
                     </button>
                     <div className='mt-2 text-center max-w-24'>
                       <div
-                        className={`text-xs font-medium ${
-                          isCurrent
-                            ? 'text-blue-600'
-                            : isCompleted
+                        className={`text-xs font-medium ${isCurrent
+                          ? 'text-blue-600'
+                          : isCompleted
                             ? 'text-green-600'
                             : 'text-gray-500'
-                        }`}
+                          }`}
                       >
                         {step.title}
                       </div>
@@ -542,9 +538,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                   {index < USER_FORM_STEPS.length - 1 && (
                     <div className='flex-1 flex items-center px-2 pb-8'>
                       <div
-                        className={`h-0.5 w-full ${
-                          isCompleted ? 'bg-green-600' : 'bg-gray-300'
-                        }`}
+                        className={`h-0.5 w-full ${isCompleted ? 'bg-green-600' : 'bg-gray-300'
+                          }`}
                       />
                     </div>
                   )}
@@ -648,11 +643,10 @@ export const UserForm: React.FC<UserFormProps> = ({
                         </p>
                         <div className='flex items-center space-x-2'>
                           <span
-                            className={`text-xs ${
-                              formData.password && formData.password.length >= 8
-                                ? 'text-green-600'
-                                : 'text-gray-500'
-                            }`}
+                            className={`text-xs ${formData.password && formData.password.length >= 8
+                              ? 'text-green-600'
+                              : 'text-gray-500'
+                              }`}
                           >
                             {formData.password && formData.password.length >= 8
                               ? '✓'
@@ -662,15 +656,14 @@ export const UserForm: React.FC<UserFormProps> = ({
                         </div>
                         <div className='flex items-center space-x-2'>
                           <span
-                            className={`text-xs ${
-                              formData.password &&
+                            className={`text-xs ${formData.password &&
                               /[A-Z]/.test(formData.password)
-                                ? 'text-green-600'
-                                : 'text-gray-500'
-                            }`}
+                              ? 'text-green-600'
+                              : 'text-gray-500'
+                              }`}
                           >
                             {formData.password &&
-                            /[A-Z]/.test(formData.password)
+                              /[A-Z]/.test(formData.password)
                               ? '✓'
                               : '○'}{' '}
                             Una mayúscula
@@ -678,15 +671,14 @@ export const UserForm: React.FC<UserFormProps> = ({
                         </div>
                         <div className='flex items-center space-x-2'>
                           <span
-                            className={`text-xs ${
-                              formData.password &&
+                            className={`text-xs ${formData.password &&
                               /[a-z]/.test(formData.password)
-                                ? 'text-green-600'
-                                : 'text-gray-500'
-                            }`}
+                              ? 'text-green-600'
+                              : 'text-gray-500'
+                              }`}
                           >
                             {formData.password &&
-                            /[a-z]/.test(formData.password)
+                              /[a-z]/.test(formData.password)
                               ? '✓'
                               : '○'}{' '}
                             Una minúscula
@@ -694,11 +686,10 @@ export const UserForm: React.FC<UserFormProps> = ({
                         </div>
                         <div className='flex items-center space-x-2'>
                           <span
-                            className={`text-xs ${
-                              formData.password && /\d/.test(formData.password)
-                                ? 'text-green-600'
-                                : 'text-gray-500'
-                            }`}
+                            className={`text-xs ${formData.password && /\d/.test(formData.password)
+                              ? 'text-green-600'
+                              : 'text-gray-500'
+                              }`}
                           >
                             {formData.password && /\d/.test(formData.password)
                               ? '✓'
@@ -777,9 +768,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                       {companies.length === 0 && !companiesLoading && (
                         <p className='mt-1 text-xs text-amber-600'>
                           {companiesError
-                            ? `Error al cargar empresas: ${
-                                companiesError.message || 'Error desconocido'
-                              }`
+                            ? `Error al cargar empresas: ${companiesError.message || 'Error desconocido'
+                            }`
                             : 'No hay empresas disponibles. Crea una empresa primero.'}
                         </p>
                       )}
@@ -852,11 +842,10 @@ export const UserForm: React.FC<UserFormProps> = ({
               type='button'
               onClick={e => handlePrevious(e)}
               disabled={currentStep === 1}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                currentStep === 1
-                  ? 'text-gray-400 cursor-not-allowed'
-                  : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${currentStep === 1
+                ? 'text-gray-400 cursor-not-allowed'
+                : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+                }`}
             >
               Anterior
             </button>
@@ -878,8 +867,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                 {isLoading
                   ? 'Procesando...'
                   : mode === 'edit'
-                  ? 'Actualizar'
-                  : 'Crear Usuario'}
+                    ? 'Actualizar'
+                    : 'Crear Usuario'}
               </button>
             ) : (
               <button
@@ -906,8 +895,8 @@ export const RoleAssignmentForm: React.FC<RoleAssignmentProps> = ({
   onClose,
   onSuccess
 }) => {
-  const {companies} = useCompanies()
-  const {handleCreateUser} = useUserActions() // Reutilizamos para asignación de roles
+  const { companies } = useCompanies()
+  const { handleCreateUser } = useUserActions() // Reutilizamos para asignación de roles
 
   const [selectedCompany, setSelectedCompany] = useState<string>('')
   const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.VIEWER)

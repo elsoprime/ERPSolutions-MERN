@@ -6,20 +6,15 @@
  *  */
 
 'use client'
-import React, {useEffect, useState} from 'react'
+import React, { useEffect, useState } from 'react'
 import Logo from '@/components/Shared/Logo'
 import UserProfile from './UserProfile'
 import MobileMenu from './MobileMenu'
-import {getMenuByRole} from '@/data/Menu'
-import {IUserProfile, IMenu} from '@/interfaces/IComponents'
-import {getUserData} from '@/api/AuthAPI'
-import {getHighestRole} from '@/utils/roleRouting'
-
-import {
-  createDemoUserFromToken,
-  testCurrentToken
-} from '@/utils/testTokenDecoding'
-import {UserRole} from '../../types/roles'
+import { getMenuByRole } from '@/data/Menu'
+import { IUserProfile, IMenu } from '@/interfaces/IComponents'
+import { getUserData } from '@/api/AuthAPI'
+import { getHighestRole } from '@/utils/roleRouting'
+import { UserRole } from '../../types/roles'
 
 interface HeaderProps {
   userProfile?: IUserProfile
@@ -48,10 +43,6 @@ export default function Header({
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
-        // Test del token actual para debugging
-        console.log('=== DEBUGGING TOKEN CURRENT ===')
-        testCurrentToken()
-
         const localUserData = getUserData()
         console.log('Header - Datos del localStorage:', localUserData)
 
@@ -68,7 +59,7 @@ export default function Header({
           ]
           const userRole =
             localUserData.role &&
-            validRoles.includes(localUserData.role as UserRole)
+              validRoles.includes(localUserData.role as UserRole)
               ? (localUserData.role as UserRole)
               : ('viewer' as UserRole)
 
@@ -86,14 +77,10 @@ export default function Header({
           })
         } else {
           console.log(
-            'Header - No hay datos en localStorage, creando desde token...'
+            'Header - No hay datos en localStorage, usando fallback profile'
           )
-
-          // Usar la función mejorada para crear datos del usuario
-          const userFromToken = createDemoUserFromToken()
-          console.log('Header - Datos creados desde token:', userFromToken)
-
-          setCurrentUserProfile(userFromToken)
+          // Mantener el perfil fallback si no hay datos
+          setCurrentUserProfile(fallbackProfile)
         }
       } catch (error) {
         console.error('Error al cargar perfil de usuario:', error)

@@ -6,24 +6,24 @@
 
 'use client'
 
-import React, {useState} from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   useUsers,
   useUserActions,
   useUserFilters
 } from '@/hooks/useUserManagement'
-import {useCompanies} from '@/hooks/useCompanyManagement'
+import { useActiveCompanies } from '@/hooks/CompanyManagement/useCompanyManagement'
+import { getUserData } from '@/api/AuthAPI'
 import {
   StatusBadge,
   RoleBadge,
   MultiRoleBadge
 } from '@/components/UI/MultiCompanyBadges'
-import {
-  UserForm,
-  RoleAssignmentForm,
-  ChangePasswordForm
-} from '../Forms/UserForms'
+import UserFormInline from '../Forms/UserFormInline'
+import { RoleAssignmentForm } from '../Forms/RoleAssigmentForm'
+import { ChangePasswordForm } from '../Forms/UserForms'
 import ConfirmationDialog from '@/components/Shared/ConfirmationDialog'
+import { TableControlsHeader } from '@/components/Shared/Table'
 import {
   IEnhancedUser,
   IEnhancedCompany,
@@ -31,17 +31,18 @@ import {
   UserStatus
 } from '@/interfaces/EnhanchedCompany/MultiCompany'
 import {
-  MagnifyingGlassIcon,
-  FunnelIcon,
   PlusIcon,
   PauseIcon,
   PlayIcon,
   TrashIcon,
-  PencilIcon,
-  ShieldCheckIcon,
-  ArrowDownTrayIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  PauseCircleIcon,
+  PlayCircleIcon,
+  PencilSquareIcon,
+  AdjustmentsHorizontalIcon,
+  KeyIcon,
+  GlobeAltIcon
 } from '@heroicons/react/24/outline'
 
 interface UserTableProps {
@@ -55,14 +56,17 @@ interface UserRowProps {
   user: IEnhancedUser
   companies: IEnhancedCompany[]
   onEdit: (user: IEnhancedUser) => void
-  onDelete: (user: IEnhancedUser) => void
-  onToggleStatus: (user: IEnhancedUser) => void
+  onDelete?: (user: IEnhancedUser) => void
+  onSuspend: (user: IEnhancedUser) => void
+  onReactivate: (user: IEnhancedUser) => void
   onAssignRole: (user: IEnhancedUser) => void
   onChangePassword: (user: IEnhancedUser) => void
   showActions: boolean
   companyScope: boolean
   isSelected: boolean
   onToggleSelect: () => void
+  disableSelection?: boolean
+  canAssignRoles?: boolean // 🔒 NUEVO: Indica si el usuario actual puede asignar roles
 }
 
 // ====== USER ROW COMPONENT ======
@@ -71,13 +75,16 @@ const UserRow: React.FC<UserRowProps> = ({
   companies,
   onEdit,
   onDelete,
-  onToggleStatus,
+  onSuspend,
+  onReactivate,
   onAssignRole,
   onChangePassword,
   showActions,
   companyScope,
   isSelected,
-  onToggleSelect
+  onToggleSelect,
+  disableSelection = false, // 🔒 Por defecto no deshabilitado
+  canAssignRoles = true // 🔒 Por defecto puede asignar roles
 }) => {
   const getUserCompanies = () => {
     if (companyScope) return []
@@ -93,14 +100,14 @@ const UserRow: React.FC<UserRowProps> = ({
             name: companyId.name,
             slug: companyId.slug,
             role: role.role
-          } as IEnhancedCompany & {role: UserRole}
+          } as IEnhancedCompany & { role: UserRole }
         }
 
         // Si es solo un ID string, buscar en la lista de companies
         const company = companies.find(c => c._id === companyId)
-        return company ? {...company, role: role.role} : null
+        return company ? { ...company, role: role.role } : null
       })
-      .filter(Boolean) as (IEnhancedCompany & {role: UserRole})[]
+      .filter(Boolean) as (IEnhancedCompany & { role: UserRole })[]
   }
 
   const hasGlobalRole = () => {
@@ -149,7 +156,16 @@ const UserRow: React.FC<UserRowProps> = ({
           type='checkbox'
           checked={isSelected}
           onChange={onToggleSelect}
-          className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+          disabled={disableSelection}
+          className={`rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${disableSelection
+            ? 'opacity-50 cursor-not-allowed'
+            : 'cursor-pointer'
+            }`}
+          title={
+            disableSelection
+              ? 'Selección deshabilitada para usuarios inactivos'
+              : 'Seleccionar usuario'
+          }
         />
       </td>
       <td className='px-3 sm:px-6 py-4'>
@@ -229,19 +245,7 @@ const UserRow: React.FC<UserRowProps> = ({
             {userCompanies.length === 0 ? (
               hasGlobalRole() ? (
                 <div className='flex items-center space-x-1'>
-                  <svg
-                    className='w-4 h-4 text-purple-500'
-                    fill='none'
-                    stroke='currentColor'
-                    viewBox='0 0 24 24'
-                  >
-                    <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      strokeWidth={2}
-                      d='M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
-                    />
-                  </svg>
+                  <GlobeAltIcon className='w-4 h-4 text-purple-500' />
                   <span className='font-medium text-purple-600'>
                     Acceso Global
                   </span>
@@ -279,127 +283,99 @@ const UserRow: React.FC<UserRowProps> = ({
       {showActions && (
         <td className='px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium'>
           <div className='flex items-center justify-end space-x-2'>
-            <button
-              onClick={() => onEdit(user)}
-              className='text-blue-600 hover:text-blue-900 p-1 rounded'
-              title='Editar usuario'
-            >
-              <svg
-                className='w-4 h-4'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
-                />
-              </svg>
-            </button>
-
-            <button
-              onClick={() => onAssignRole(user)}
-              className='hidden sm:inline-block text-purple-600 hover:text-purple-900 p-1 rounded'
-              title='Asignar rol'
-            >
-              <svg
-                className='w-4 h-4'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4'
-                />
-              </svg>
-            </button>
-
-            <button
-              onClick={() => onChangePassword(user)}
-              className='hidden sm:inline-block text-indigo-600 hover:text-indigo-900 p-1 rounded'
-              title='Cambiar contraseña'
-            >
-              <svg
-                className='w-4 h-4'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z'
-                />
-              </svg>
-            </button>
-
-            <button
-              onClick={() => onToggleStatus(user)}
-              className={`p-1 rounded ${
-                user.status === UserStatus.ACTIVE
-                  ? 'text-yellow-600 hover:text-yellow-900'
-                  : 'text-green-600 hover:text-green-900'
-              }`}
-              title={
-                user.status === UserStatus.ACTIVE ? 'Desactivar' : 'Activar'
-              }
-            >
-              {user.status === UserStatus.ACTIVE ? (
-                <svg
-                  className='w-4 h-4'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
+            {/* Si está INACTIVO, sin acciones */}
+            {user.status === UserStatus.INACTIVE ? (
+              <span className='text-gray-400'>Sin acciones</span>
+            ) : user.status === UserStatus.SUSPENDED ? (
+              <>
+                <button
+                  onClick={() => onEdit(user)}
+                  className='text-blue-600 hover:text-blue-900 p-1 rounded'
+                  title='Editar usuario'
                 >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z'
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className='w-4 h-4'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
+                  <PencilSquareIcon className='w-4 h-4' />
+                </button>
+                {canAssignRoles &&
+                  !user.roles.some(r => r.role === UserRole.SUPER_ADMIN) &&
+                  !user.roles.some(r => [UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.VIEWER].includes(r.role)) && (
+                    <button
+                      onClick={() => onAssignRole(user)}
+                      className='hidden sm:inline-block text-purple-600 hover:text-purple-900 p-1 rounded'
+                      title='Asignar rol'
+                    >
+                      <AdjustmentsHorizontalIcon className='w-4 h-4' />
+                    </button>
+                  )}
+                {!user.roles.some(r => r.role === UserRole.SUPER_ADMIN) && (
+                  <button
+                    onClick={() => onChangePassword(user)}
+                    className='hidden sm:inline-block text-indigo-600 hover:text-indigo-900 p-1 rounded'
+                    title='Cambiar contraseña'
+                  >
+                    <KeyIcon className='w-4 h-4' />
+                  </button>
+                )}
+                <button
+                  onClick={() => onReactivate(user)}
+                  className='p-1 rounded text-green-600 hover:text-green-900'
+                  title='Reactivar usuario'
                 >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m-9-4V7a3 3 0 116 0v3M9 21h6a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z'
-                  />
-                </svg>
-              )}
-            </button>
+                  <PlayCircleIcon className='w-4 h-4' />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => onEdit(user)}
+                  className='text-blue-600 hover:text-blue-900 p-1 rounded'
+                  title='Editar usuario'
+                >
+                  <PencilSquareIcon className='w-4 h-4' />
+                </button>
+                {canAssignRoles &&
+                  !user.roles.some(r => r.role === UserRole.SUPER_ADMIN) &&
+                  !user.roles.some(r => [UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.VIEWER].includes(r.role)) && (
+                    <button
+                      onClick={() => onAssignRole(user)}
+                      className='hidden sm:inline-block text-purple-600 hover:text-purple-900 p-1 rounded'
+                      title='Asignar rol'
+                    >
+                      <AdjustmentsHorizontalIcon className='w-4 h-4' />
+                    </button>
+                  )}
+                {!user.roles.some(r => r.role === UserRole.SUPER_ADMIN) && (
+                  <button
+                    onClick={() => onChangePassword(user)}
+                    className='hidden sm:inline-block text-indigo-600 hover:text-indigo-900 p-1 rounded'
+                    title='Cambiar contraseña'
+                  >
+                    <KeyIcon className='w-4 h-4' />
+                  </button>
+                )}
 
-            <button
-              onClick={() => onDelete(user)}
-              className='hidden sm:inline-block text-red-600 hover:text-red-900 p-1 rounded'
-              title='Eliminar usuario'
-            >
-              <svg
-                className='w-4 h-4'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16'
-                />
-              </svg>
-            </button>
+                {/* Ocultar botón suspender y eliminar para Super Admins */}
+
+                {!user.roles.some(r => r.role === UserRole.SUPER_ADMIN) && (
+                  <button
+                    onClick={() => onSuspend(user)}
+                    className='p-1 rounded text-yellow-600 hover:text-yellow-900'
+                    title='Suspender usuario'
+                  >
+                    <PauseCircleIcon className='w-4 h-4' />
+                  </button>
+                )}
+
+                {!user.roles.some(r => r.role === UserRole.SUPER_ADMIN) && (
+                  <button
+                    onClick={() => onDelete?.(user)}
+                    className='hidden sm:inline-block text-red-600 hover:text-red-900 p-1 rounded'
+                    title='Eliminar usuario'
+                  >
+                    <TrashIcon className='w-4 h-4' />
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </td>
       )}
@@ -414,11 +390,20 @@ export const UserTable: React.FC<UserTableProps> = ({
   maxHeight = 'max-h-96',
   onUserSelect
 }) => {
+  // Estados para modales - Separados para evitar conflictos
   const [selectedUser, setSelectedUser] = useState<IEnhancedUser | null>(null)
+  const [roleAssignmentUser, setRoleAssignmentUser] = useState<IEnhancedUser | null>(null)
   const [showUserForm, setShowUserForm] = useState(false)
   const [showRoleForm, setShowRoleForm] = useState(false)
   const [showChangePasswordForm, setShowChangePasswordForm] = useState(false)
   const [userFormMode, setUserFormMode] = useState<'create' | 'edit'>('create')
+
+  // 🆕 Estado para controlar si se está creando un Usuario
+  const [isCreatingUser, setIsCreatingUser] = useState(false)
+
+  // 🆕 Estado para controlar si se está editando un usuario inline
+  const [editingUserId, setEditingUserId] = useState<string | null>(null)
+  const [editingUser, setEditingUser] = useState<IEnhancedUser | null>(null)
 
   // Estados para selección múltiple
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
@@ -426,45 +411,130 @@ export const UserTable: React.FC<UserTableProps> = ({
   const [searchTerm, setSearchTerm] = useState('')
   const [pageSize, setPageSize] = useState(5)
 
+  // 🔒 Estado para el rol del usuario actual
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(null)
+  const [currentUserCompanies, setCurrentUserCompanies] = useState<string[]>([])
+
   // Estados para los diálogos de confirmación
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showToggleStatusDialog, setShowToggleStatusDialog] = useState(false)
+  const [showSuspendDialog, setShowSuspendDialog] = useState(false)
+  const [showReactivateDialog, setShowReactivateDialog] = useState(false)
   const [userToDelete, setUserToDelete] = useState<IEnhancedUser | null>(null)
-  const [userToToggle, setUserToToggle] = useState<IEnhancedUser | null>(null)
+  const [userToSuspend, setUserToSuspend] = useState<IEnhancedUser | null>(null)
+  const [userToReactivate, setUserToReactivate] = useState<IEnhancedUser | null>(null)
 
   // Hooks
-  const {filters, updateFilter, clearFilters, setPage, setLimit} =
+  const { filters, updateFilter, clearFilters, setPage, setLimit } =
     useUserFilters()
-  const {users, pagination, isLoading, refetch} = useUsers(
+  const { users, pagination, isLoading, refetch } = useUsers(
     filters,
     companyScope
   )
-  const {companies} = useCompanies()
+  const { companies } = useActiveCompanies()
+
+  // 🔍 Detectar si se está filtrando usuarios inactivos (modo solo lectura)
+  const isFilteringInactive = filters.status === UserStatus.INACTIVE
+
+  // 🔒 Obtener el rol del usuario actual al montar el componente
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const userData = getUserData()
+        console.log('🔍 UserTable - userData:', userData)
+
+        if (userData) {
+          // Verificar si tiene el formato nuevo (con array de roles)
+          if (userData.roles && Array.isArray(userData.roles) && userData.roles.length > 0) {
+            console.log('✅ Formato nuevo detectado - usando userData.roles')
+            const globalRole = userData.roles.find((r: any) => r.roleType === 'global')
+            const roleToUse = globalRole || userData.roles[0]
+
+            setCurrentUserRole(roleToUse.role)
+
+            const companyIds = userData.roles
+              .filter((r: any) => r.companyId)
+              .map((r: any) => typeof r.companyId === 'object' ? r.companyId._id : r.companyId)
+              .filter(Boolean)
+            setCurrentUserCompanies(companyIds)
+          }
+          // Formato antiguo/simplificado (propiedades directas: role, roleType, companyId)
+          else if (userData.role) {
+            console.log('✅ Formato antiguo detectado - usando userData.role:', userData.role)
+            setCurrentUserRole(userData.role as UserRole)
+
+            // Si tiene companyId, agregarlo al array de empresas
+            if (userData.companyId) {
+              const companyId = typeof userData.companyId === 'object'
+                ? (userData.companyId as any)._id || (userData.companyId as any).id
+                : userData.companyId
+              setCurrentUserCompanies([companyId])
+            }
+
+            // Si tiene array de companies (formato alternativo)
+            if (userData.companies && Array.isArray(userData.companies)) {
+              const companyIds = userData.companies
+                .map((c: any) => typeof c === 'object' ? c._id || c.id : c)
+                .filter(Boolean)
+              setCurrentUserCompanies(companyIds)
+            }
+          }
+
+          console.log('🔍 UserTable - rol configurado')
+        } else {
+          console.warn('⚠️ UserTable - No hay userData en localStorage')
+        }
+      } catch (error) {
+        console.error('❌ Error al obtener usuario actual:', error)
+      }
+    }
+    fetchCurrentUser()
+  }, [])  // 🔒 Determinar si el usuario actual puede asignar roles
+  // Si aún no ha cargado (null), permitir por defecto para evitar parpadeo
+  const canAssignRoles = currentUserRole === null
+    ? true // Mientras carga, mostrar el botón
+    : [UserRole.SUPER_ADMIN, UserRole.ADMIN_EMPRESA, UserRole.MANAGER].includes(currentUserRole)
+
+  console.log('🔍 UserTable - canAssignRoles:', canAssignRoles, 'currentUserRole:', currentUserRole)
+
+  // Acciones de usuario
   const {
     handleUpdateUser,
+    handleSuspendUser,
+    handleReactivateUser,
     handleDeleteUser: deleteUser,
-    handleToggleUserStatus,
     isLoading: actionsLoading
   } = useUserActions()
 
   // Handlers
   const handleCreateUser = () => {
-    setSelectedUser(null)
-    setUserFormMode('create')
-    setShowUserForm(true)
+    setIsCreatingUser(true)
   }
 
+  // Editar usuario -> abrir formulario inline con datos precargados
   const handleEditUser = (user: IEnhancedUser) => {
-    setSelectedUser(user)
-    setUserFormMode('edit')
-    setShowUserForm(true)
+    setEditingUserId(user._id)
+    setEditingUser(user)
   }
 
+  // Eliminar usuario -> abrir diálogo de confirmación
   const handleDeleteUser = (user: IEnhancedUser) => {
     setUserToDelete(user)
     setShowDeleteDialog(true)
   }
 
+  // Suspender usuario -> abrir diálogo de confirmación
+  const handleSuspendUserClick = (user: IEnhancedUser) => {
+    setUserToSuspend(user)
+    setShowSuspendDialog(true)
+  }
+
+  // Reactivar usuario -> abrir diálogo de confirmación
+  const handleReactivateUserClick = (user: IEnhancedUser) => {
+    setUserToReactivate(user)
+    setShowReactivateDialog(true)
+  }
+
+  // Confirmar eliminación de usuario
   const confirmDelete = async () => {
     if (!userToDelete) return
 
@@ -474,38 +544,52 @@ export const UserTable: React.FC<UserTableProps> = ({
     refetch()
   }
 
-  const handleToggleStatus = (user: IEnhancedUser) => {
-    setUserToToggle(user)
-    setShowToggleStatusDialog(true)
-  }
+  // Confirmar suspensión de usuario
+  const confirmSuspend = async () => {
+    if (!userToSuspend) return
 
-  const confirmToggleStatus = async () => {
-    if (!userToToggle) return
-
-    await handleToggleUserStatus(userToToggle)
-    setShowToggleStatusDialog(false)
-    setUserToToggle(null)
+    await handleSuspendUser(userToSuspend._id)
+    setShowSuspendDialog(false)
+    setUserToSuspend(null)
     refetch()
   }
 
+  // Confirmar reactivación de usuario
+  const confirmReactivate = async () => {
+    if (!userToReactivate) return
+
+    await handleReactivateUser(userToReactivate._id)
+    setShowReactivateDialog(false)
+    setUserToReactivate(null)
+    refetch()
+  }
+
+  // Asignar rol a usuario
   const handleAssignRole = (user: IEnhancedUser) => {
-    setSelectedUser(user)
+    setRoleAssignmentUser(user)
     setShowRoleForm(true)
   }
 
+  // Cambiar contraseña
   const handleChangePassword = (user: IEnhancedUser) => {
     setSelectedUser(user)
     setShowChangePasswordForm(true)
   }
 
+  // Después de crear/editar usuario o asignar rol
   const handleFormSuccess = () => {
     refetch()
     setShowUserForm(false)
     setShowRoleForm(false)
     setShowChangePasswordForm(false)
     setSelectedUser(null)
+    setRoleAssignmentUser(null)
+    setIsCreatingUser(false)
+    setEditingUserId(null)
+    setEditingUser(null)
   }
 
+  // Filas de usuario
   const handleRowClick = (user: IEnhancedUser) => {
     onUserSelect?.(user)
   }
@@ -535,7 +619,7 @@ export const UserTable: React.FC<UserTableProps> = ({
     for (const user of selectedUsersData) {
       // Solo activar si está inactivo
       if (user.status !== UserStatus.ACTIVE) {
-        await handleUpdateUser(user._id, {status: UserStatus.ACTIVE})
+        await handleUpdateUser(user._id, { status: UserStatus.ACTIVE })
       }
     }
     setSelectedUsers([])
@@ -550,7 +634,7 @@ export const UserTable: React.FC<UserTableProps> = ({
     for (const user of selectedUsersData) {
       // Solo desactivar si está activo
       if (user.status === UserStatus.ACTIVE) {
-        await handleUpdateUser(user._id, {status: UserStatus.INACTIVE})
+        await handleUpdateUser(user._id, { status: UserStatus.INACTIVE })
       }
     }
     setSelectedUsers([])
@@ -584,223 +668,160 @@ export const UserTable: React.FC<UserTableProps> = ({
     setSearchTerm('')
   }
 
+  // 🆕 Handlers para el formulario inline de creación
+  const handleFormCancel = () => {
+    setIsCreatingUser(false)
+  }
+
+  const handleCreateFormSuccess = () => {
+    setIsCreatingUser(false)
+    refetch()
+  }
+
+  // 🆕 Handlers para el formulario inline de edición
+  const handleEditCancel = () => {
+    setEditingUserId(null)
+    setEditingUser(null)
+  }
+
+  const handleEditFormSuccess = () => {
+    setEditingUserId(null)
+    setEditingUser(null)
+    refetch()
+  }
+
+  // 🆕 Si está creando un usuario, mostrar formulario inline
+  if (isCreatingUser) {
+    return (
+      <UserFormInline
+        onCancel={handleFormCancel}
+        onSuccess={handleCreateFormSuccess}
+        mode='create'
+        companyScope={companyScope}
+      />
+    )
+  }
+
+  // 🆕 Si está editando un usuario, mostrar formulario inline
+  if (editingUserId && editingUser) {
+    return (
+      <UserFormInline
+        user={editingUser}
+        onCancel={handleEditCancel}
+        onSuccess={handleEditFormSuccess}
+        mode='edit'
+        companyScope={companyScope}
+      />
+    )
+  }
+
   return (
     <div className='bg-white shadow-sm rounded-lg'>
       {/* Header */}
-      <div className='p-4 sm:p-6 border-b border-gray-200'>
-        {/* Título y estadísticas */}
-        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4'>
-          <div>
-            <h2 className='text-xl sm:text-2xl font-bold text-gray-900'>
-              {companyScope ? 'Usuarios de la Empresa' : 'Gestión de Usuarios'}
-            </h2>
-            <p className='mt-1 text-xs sm:text-sm text-gray-500'>
-              {isLoading
-                ? 'Cargando...'
-                : `${pagination?.total || 0} usuarios • ${pageSize}/página`}
-            </p>
-          </div>
-
-          {/* Indicador de selección */}
-          {selectedUsers.length > 0 && (
-            <div className='text-sm text-blue-600 font-medium'>
-              {selectedUsers.length} usuario(s) seleccionado(s)
-            </div>
-          )}
-        </div>
-
-        {/* Controles - Layout responsive mejorado */}
-        <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3'>
-          {/* Grupo izquierdo: Selector de página */}
-          <div className='flex flex-col sm:flex-row gap-3 sm:items-center'>
-            {/* Selector de registros por página */}
-            <div className='flex items-center gap-2 flex-shrink-0'>
-              <label className='text-xs sm:text-sm text-gray-600 whitespace-nowrap'>
-                Mostrar:
-              </label>
-              <select
-                value={pageSize}
-                onChange={e => handlePageSizeChange(Number(e.target.value))}
-                className='px-2 sm:px-3 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[70px]'
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={15}>15</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-              <span className='text-xs sm:text-sm text-gray-600 whitespace-nowrap hidden sm:inline'>
-                por página
-              </span>
-            </div>
-          </div>
-
-          {/* Grupo derecho: Acciones múltiples y controles secundarios */}
-          <div className='flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0'>
-            {/* Acciones múltiples (solo aparecen cuando hay usuarios seleccionados) */}
-            {selectedUsers.length > 0 && (
-              <div className='flex gap-2 flex-wrap'>
-                <button
-                  onClick={handleBulkActivate}
-                  className='inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border border-green-300 rounded-md text-xs sm:text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 transition-colors'
-                  title='Activar usuarios seleccionados'
-                >
-                  <PlayIcon className='w-4 h-4 sm:mr-2' />
-                  <span className='hidden sm:inline'>Activar</span>
-                </button>
-
-                <button
-                  onClick={handleBulkDeactivate}
-                  className='inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border border-yellow-300 rounded-md text-xs sm:text-sm font-medium text-yellow-700 bg-yellow-50 hover:bg-yellow-100 transition-colors'
-                  title='Desactivar usuarios seleccionados'
-                >
-                  <PauseIcon className='w-4 h-4 sm:mr-2' />
-                  <span className='hidden sm:inline'>Desactivar</span>
-                </button>
-
-                <button
-                  onClick={handleBulkDelete}
-                  className='inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border border-red-300 rounded-md text-xs sm:text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors'
-                  title='Eliminar usuarios seleccionados'
-                >
-                  <TrashIcon className='w-4 h-4 sm:mr-2' />
-                  <span className='hidden sm:inline'>Eliminar</span>
-                </button>
-              </div>
-            )}
-
-            {/* Botones de filtros */}
-            <div className='flex gap-2'>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center justify-center flex-1 sm:flex-none px-3 py-2 border rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                  showFilters
-                    ? 'border-blue-300 text-blue-700 bg-blue-50'
-                    : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
-                }`}
-              >
-                <FunnelIcon className='w-4 h-4 sm:mr-2' />
-                <span className='hidden sm:inline'>Filtros</span>
-              </button>
-            </div>
-
-            {/* Botón Nuevo Usuario */}
-            {showActions && (
-              <div className='flex gap-2'>
-                <button
-                  onClick={handleCreateUser}
-                  className='inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors w-full sm:w-auto'
-                >
-                  <PlusIcon className='w-4 h-4 mr-2' />
-                  {companyScope ? 'Invitar Usuario' : 'Crear Usuario'}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Barra de búsqueda */}
-        <div className='mt-4'>
-          <div className='relative'>
-            <MagnifyingGlassIcon className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
-            <input
-              type='text'
-              placeholder='Buscar por nombre, email...'
-              value={searchTerm}
-              onChange={e => {
-                setSearchTerm(e.target.value)
-                updateFilter('search', e.target.value)
-              }}
-              className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-        </div>
-
-        {/* Panel de filtros */}
-        {showFilters && (
-          <div className='mt-4 p-3 sm:p-4 bg-gray-50 rounded-lg'>
-            <div
-              className={`grid grid-cols-1 ${
-                companyScope
-                  ? 'sm:grid-cols-2 lg:grid-cols-3'
-                  : 'sm:grid-cols-2 lg:grid-cols-4'
-              } gap-3 sm:gap-4`}
-            >
-              {!companyScope && (
-                <div>
-                  <label className='block text-xs sm:text-sm font-medium text-gray-700 mb-1'>
-                    Empresa
-                  </label>
-                  <select
-                    value={filters.companyId || ''}
-                    onChange={e =>
-                      handleFilterChange('companyId', e.target.value)
-                    }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-                  >
-                    <option value=''>Todas las empresas</option>
-                    {companies.map(c => (
-                      <option key={c._id} value={c._id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label className='block text-xs sm:text-sm font-medium text-gray-700 mb-1'>
-                  Rol
-                </label>
-                <select
-                  value={filters.role || ''}
-                  onChange={e => handleFilterChange('role', e.target.value)}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-                >
-                  <option value=''>Todos los roles</option>
-                  <option value={UserRole.SUPER_ADMIN}>
-                    Super Administrador
-                  </option>
-                  <option value={UserRole.ADMIN_EMPRESA}>Admin Empresa</option>
-                  <option value={UserRole.MANAGER}>Manager</option>
-                  <option value={UserRole.EMPLOYEE}>Empleado</option>
-                  <option value={UserRole.VIEWER}>Visor</option>
-                </select>
-              </div>
-
-              <div>
-                <label className='block text-xs sm:text-sm font-medium text-gray-700 mb-1'>
-                  Estado
-                </label>
-                <select
-                  value={filters.status || ''}
-                  onChange={e => handleFilterChange('status', e.target.value)}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-                >
-                  <option value=''>Todos los estados</option>
-                  <option value={UserStatus.ACTIVE}>Activo</option>
-                  <option value={UserStatus.INACTIVE}>Inactivo</option>
-                </select>
-              </div>
-
-              <div
-                className={`flex items-end ${
-                  companyScope
-                    ? 'sm:col-span-2 lg:col-span-1'
-                    : 'sm:col-span-2 lg:col-span-1'
-                }`}
-              >
-                <button
-                  onClick={clearAllFilters}
-                  className='w-full px-3 py-2 text-xs sm:text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors'
-                >
-                  Limpiar filtros
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      <TableControlsHeader
+        title={companyScope ? 'Usuarios de la Empresa' : 'Gestión de Usuarios'}
+        subtitle={companyScope ? "Gestión de usuarios de la empresa" : "Administración completa de usuarios del sistema"}
+        totalCount={pagination?.total || 0}
+        pageSize={pageSize}
+        selectedCount={selectedUsers.length}
+        loading={isLoading}
+        onPageSizeChange={handlePageSizeChange}
+        searchPlaceholder="Buscar por nombre, email..."
+        searchValue={searchTerm}
+        onSearchChange={(value) => {
+          setSearchTerm(value)
+          updateFilter('search', value)
+        }}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters(!showFilters)}
+        filters={[
+          {
+            key: 'company',
+            label: 'Empresa',
+            type: 'select',
+            value: filters.companyId || '',
+            onChange: (v) => handleFilterChange('companyId', v),
+            options: [
+              { value: '', label: 'Todas las empresas' },
+              ...companies.map(c => ({
+                value: c._id,
+                label: c.name
+              }))
+            ],
+            hidden: companyScope
+          },
+          {
+            key: 'role',
+            label: 'Rol',
+            type: 'select',
+            value: filters.role || '',
+            onChange: (v) => handleFilterChange('role', v),
+            options: [
+              { value: '', label: 'Todos los roles' },
+              { value: UserRole.SUPER_ADMIN, label: 'Super Administrador' },
+              { value: UserRole.ADMIN_EMPRESA, label: 'Admin Empresa' },
+              { value: UserRole.MANAGER, label: 'Manager' },
+              { value: UserRole.EMPLOYEE, label: 'Empleado' },
+              { value: UserRole.VIEWER, label: 'Visor' }
+            ]
+          },
+          {
+            key: 'status',
+            label: 'Estado',
+            type: 'select',
+            value: filters.status || '',
+            onChange: (v) => handleFilterChange('status', v),
+            options: [
+              { value: '', label: 'Todos los estados' },
+              { value: UserStatus.ACTIVE, label: 'Activo' },
+              { value: UserStatus.INACTIVE, label: 'Inactivo' }
+            ]
+          }
+        ]}
+        onClearFilters={clearAllFilters}
+        filterGridCols={companyScope ? 2 : 3}
+        primaryAction={showActions ? {
+          label: companyScope ? 'Invitar Usuario' : 'Crear Usuario',
+          icon: PlusIcon,
+          onClick: handleCreateUser
+        } : undefined}
+        bulkActions={[
+          {
+            label: 'Activar',
+            icon: PlayIcon,
+            onClick: handleBulkActivate,
+            variant: 'success',
+            showOnSelection: true,
+            hidden: isFilteringInactive
+          },
+          {
+            label: 'Desactivar',
+            icon: PauseIcon,
+            onClick: handleBulkDeactivate,
+            variant: 'warning',
+            showOnSelection: true,
+            hidden: isFilteringInactive
+          },
+          {
+            label: 'Eliminar',
+            icon: TrashIcon,
+            onClick: handleBulkDelete,
+            variant: 'danger',
+            showOnSelection: true,
+            hidden: isFilteringInactive
+          }
+        ]}
+        banner={isFilteringInactive ? {
+          type: 'warning',
+          title: 'Modo Solo Lectura',
+          message: 'Mostrando usuarios inactivos. La selección múltiple y acciones masivas están deshabilitadas.',
+          dismissible: true,
+          onDismiss: () => {
+            // Limpiar filtro de inactivos
+            handleFilterChange('status', '')
+          }
+        } : undefined}
+      />
 
       {/* Tabla */}
       <div className='overflow-x-auto -mx-3 sm:mx-0'>
@@ -845,7 +866,16 @@ export const UserTable: React.FC<UserTableProps> = ({
                         selectedUsers.length === users.length
                       }
                       onChange={toggleSelectAll}
-                      className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+                      disabled={isFilteringInactive}
+                      className={`rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${isFilteringInactive
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'cursor-pointer'
+                        }`}
+                      title={
+                        isFilteringInactive
+                          ? 'Selección deshabilitada para usuarios inactivos'
+                          : 'Seleccionar todos'
+                      }
                     />
                   </th>
                   <th className='px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
@@ -883,13 +913,16 @@ export const UserTable: React.FC<UserTableProps> = ({
                     companies={companies}
                     onEdit={handleEditUser}
                     onDelete={handleDeleteUser}
-                    onToggleStatus={handleToggleStatus}
+                    onSuspend={handleSuspendUserClick}
+                    onReactivate={handleReactivateUserClick}
                     onAssignRole={handleAssignRole}
                     onChangePassword={handleChangePassword}
                     showActions={showActions}
                     companyScope={companyScope}
                     isSelected={selectedUsers.includes(user._id)}
                     onToggleSelect={() => toggleSelectUser(user._id)}
+                    disableSelection={isFilteringInactive}
+                    canAssignRoles={canAssignRoles}
                   />
                 ))}
               </tbody>
@@ -976,7 +1009,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                 </button>
 
                 {/* Números de página inteligentes */}
-                {Array.from({length: Math.min(pagination.pages, 5)}, (_, i) => {
+                {Array.from({ length: Math.min(pagination.pages, 5) }, (_, i) => {
                   let page: number
 
                   if (pagination.pages <= 5) {
@@ -993,11 +1026,10 @@ export const UserTable: React.FC<UserTableProps> = ({
                     <button
                       key={page}
                       onClick={() => setPage(page)}
-                      className={`relative inline-flex items-center px-3 md:px-4 py-2 border text-xs md:text-sm font-medium ${
-                        pagination.page === page
-                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
+                      className={`relative inline-flex items-center px-3 md:px-4 py-2 border text-xs md:text-sm font-medium ${pagination.page === page
+                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }`}
                     >
                       {page}
                     </button>
@@ -1035,34 +1067,31 @@ export const UserTable: React.FC<UserTableProps> = ({
         </div>
       )}
 
-      {/* Modales */}
-      <UserForm
-        user={selectedUser || undefined}
-        isOpen={showUserForm}
-        onClose={() => setShowUserForm(false)}
-        onSuccess={handleFormSuccess}
-        mode={userFormMode}
-        companyScope={companyScope}
-      />
+      {/* RoleAssignmentForm con estado separado */}
+      {roleAssignmentUser && (
+        <RoleAssignmentForm
+          userId={roleAssignmentUser._id}
+          currentRoles={roleAssignmentUser.roles}
+          isOpen={showRoleForm}
+          onClose={() => {
+            setShowRoleForm(false)
+            setRoleAssignmentUser(null)
+          }}
+          onSuccess={handleFormSuccess}
+          currentUserRole={currentUserRole || undefined}
+          currentUserCompanies={currentUserCompanies}
+        />
+      )}
 
+      {/* ChangePasswordForm */}
       {selectedUser && (
-        <>
-          <RoleAssignmentForm
-            userId={selectedUser._id}
-            currentRoles={selectedUser.roles}
-            isOpen={showRoleForm}
-            onClose={() => setShowRoleForm(false)}
-            onSuccess={handleFormSuccess}
-          />
-
-          <ChangePasswordForm
-            userId={selectedUser._id}
-            userName={selectedUser.name}
-            isOpen={showChangePasswordForm}
-            onClose={() => setShowChangePasswordForm(false)}
-            onSuccess={handleFormSuccess}
-          />
-        </>
+        <ChangePasswordForm
+          userId={selectedUser._id}
+          userName={selectedUser.name}
+          isOpen={showChangePasswordForm}
+          onClose={() => setShowChangePasswordForm(false)}
+          onSuccess={handleFormSuccess}
+        />
       )}
 
       {/* Diálogo de confirmación para eliminar */}
@@ -1081,50 +1110,58 @@ export const UserTable: React.FC<UserTableProps> = ({
         data={
           userToDelete
             ? {
-                name: userToDelete.name,
-                email: userToDelete.email,
-                details: `Rol: ${userToDelete.roles[0]?.role || 'No asignado'}`
-              }
+              name: userToDelete.name,
+              email: userToDelete.email,
+              details: `Rol: ${userToDelete.roles[0]?.role || 'No asignado'}`
+            }
             : undefined
         }
       />
 
-      {/* Diálogo de confirmación para cambiar estado */}
+      {/* Diálogo de confirmación para suspender */}
       <ConfirmationDialog
-        isOpen={showToggleStatusDialog}
+        isOpen={showSuspendDialog}
         onClose={() => {
-          setShowToggleStatusDialog(false)
-          setUserToToggle(null)
+          setShowSuspendDialog(false)
+          setUserToSuspend(null)
         }}
-        onConfirm={confirmToggleStatus}
-        title={
-          userToToggle?.status === UserStatus.ACTIVE
-            ? 'Desactivar Usuario'
-            : 'Activar Usuario'
-        }
-        message={
-          userToToggle?.status === UserStatus.ACTIVE
-            ? '¿Estás seguro de que deseas desactivar este usuario? No podrá acceder al sistema hasta que sea reactivado.'
-            : '¿Estás seguro de que deseas activar este usuario? Tendrá acceso inmediato al sistema.'
-        }
-        confirmText={
-          userToToggle?.status === UserStatus.ACTIVE ? 'Desactivar' : 'Activar'
-        }
-        action={
-          userToToggle?.status === UserStatus.ACTIVE ? 'suspend' : 'reactivate'
-        }
+        onConfirm={confirmSuspend}
+        title='Suspender Usuario'
+        message='¿Estás seguro de que deseas suspender este usuario? No podrá acceder al sistema hasta que sea reactivado.'
+        confirmText='Suspender'
+        action='suspend'
         loading={actionsLoading}
         data={
-          userToToggle
+          userToSuspend
             ? {
-                name: userToToggle.name,
-                email: userToToggle.email,
-                details: `Estado actual: ${
-                  userToToggle.status === UserStatus.ACTIVE
-                    ? 'Activo'
-                    : 'Inactivo'
-                }`
-              }
+              name: userToSuspend.name,
+              email: userToSuspend.email,
+              details: `Rol: ${userToSuspend.roles[0]?.role || 'No asignado'}`
+            }
+            : undefined
+        }
+      />
+
+      {/* Diálogo de confirmación para reactivar */}
+      <ConfirmationDialog
+        isOpen={showReactivateDialog}
+        onClose={() => {
+          setShowReactivateDialog(false)
+          setUserToReactivate(null)
+        }}
+        onConfirm={confirmReactivate}
+        title='Reactivar Usuario'
+        message='¿Estás seguro de que deseas reactivar este usuario? Tendrá acceso inmediato al sistema.'
+        confirmText='Reactivar'
+        action='reactivate'
+        loading={actionsLoading}
+        data={
+          userToReactivate
+            ? {
+              name: userToReactivate.name,
+              email: userToReactivate.email,
+              details: `Rol: ${userToReactivate.roles[0]?.role || 'No asignado'}`
+            }
             : undefined
         }
       />

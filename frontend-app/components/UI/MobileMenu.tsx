@@ -5,17 +5,18 @@
  */
 
 'use client'
-import React, {useState} from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
-import {usePathname} from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
   Bars3Icon,
   XMarkIcon,
   ChevronDownIcon,
   ChevronRightIcon
 } from '@heroicons/react/20/solid'
-import {IMenu} from '@/interfaces/IComponents'
-import {useLogout} from '@/hooks/useLogout'
+import { IMenu } from '@/interfaces/IComponents'
+import { useLogout } from '@/hooks/useLogout'
+import { AuthLoadingState } from '@/components/Modules/Auth/States/AuthLoadingState'
 
 interface MobileMenuProps {
   menuItems: IMenu[]
@@ -29,7 +30,7 @@ export default function MobileMenu({
   const [isOpen, setIsOpen] = useState(false)
   const [expandedItems, setExpandedItems] = useState<number[]>([])
   const pathname = usePathname()
-  const {handleLogout, isLoggingOut, isLogoutItem} = useLogout()
+  const { handleLogout, isLoggingOut, isLogoutItem } = useLogout()
 
   const toggleMenu = () => {
     setIsOpen(!isOpen)
@@ -141,11 +142,10 @@ export default function MobileMenu({
                           <Link
                             key={subItem.id}
                             href={subItem.link}
-                            className={`flex items-center px-3 py-2 text-sm rounded-lg transition-colors duration-200 ${
-                              isActiveLink(subItem.link)
+                            className={`flex items-center px-3 py-2 text-sm rounded-lg transition-colors duration-200 ${isActiveLink(subItem.link)
                                 ? 'text-purple-600 bg-purple-50'
                                 : 'text-gray-600 hover:text-purple-600 hover:bg-gray-50'
-                            }`}
+                              }`}
                             onClick={handleSubMenuClick}
                           >
                             {subItem.icon && (
@@ -161,15 +161,13 @@ export default function MobileMenu({
                   // Simple menu item
                   <Link
                     href={item.link || '#'}
-                    className={`flex items-center px-3 py-2 rounded-lg transition-colors duration-200 ${
-                      isActiveLink(item.link || '')
+                    className={`flex items-center px-3 py-2 rounded-lg transition-colors duration-200 ${isActiveLink(item.link || '')
                         ? 'text-purple-600 bg-purple-50'
                         : 'text-gray-700 hover:text-purple-600 hover:bg-gray-50'
-                    } ${
-                      isLogoutItem(item.title, item.id) && isLoggingOut
+                      } ${isLogoutItem(item.title, item.id) && isLoggingOut
                         ? 'opacity-50 cursor-not-allowed'
                         : ''
-                    }`}
+                      }`}
                     onClick={e => {
                       if (isLogoutItem(item.title, item.id)) {
                         e.preventDefault()
@@ -197,6 +195,9 @@ export default function MobileMenu({
           </div>
         </nav>
       </div>
+
+      {/* Overlay de logout */}
+      {isLoggingOut && <AuthLoadingState type='logout' message='Cerrando sesión...' />}
     </div>
   )
 }

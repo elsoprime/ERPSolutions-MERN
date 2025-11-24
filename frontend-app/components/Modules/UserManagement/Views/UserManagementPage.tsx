@@ -6,24 +6,25 @@
 
 'use client'
 
-import React, {useState, useEffect} from 'react'
-import {useQueryClient} from '@tanstack/react-query'
-import {UserTable} from '@/components/Modules/UserManagement'
-import {useAuth} from '@/hooks/useAuth'
-import {UserRole} from '@/interfaces/EnhanchedCompany/MultiCompany'
+import React, { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { UserTable } from '@/components/Modules/UserManagement'
+import { useAuth } from '@/hooks/useAuth'
+import { UserRole } from '@/interfaces/EnhanchedCompany/MultiCompany'
 import UserOverviewDashboard from './UserOverviewDashboard'
 import {
   LockClosedIcon,
   UserGroupIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  ChartBarIcon
 } from '@heroicons/react/20/solid'
-import {DocumentArrowUpIcon} from '@heroicons/react/24/outline'
+import { DocumentArrowUpIcon } from '@heroicons/react/24/outline'
 
 type ViewMode = 'dashboard' | 'users'
 
 export const UserManagementPage: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewMode>('dashboard')
-  const {getUserData} = useAuth()
+  const { getUserData } = useAuth()
   const queryClient = useQueryClient()
   const user = getUserData() // Obtener datos del usuario autenticado
 
@@ -31,7 +32,7 @@ export const UserManagementPage: React.FC = () => {
   useEffect(() => {
     if (currentView === 'users') {
       // Invalidar queries de usuarios para forzar refetch
-      queryClient.invalidateQueries({queryKey: ['users']})
+      queryClient.invalidateQueries({ queryKey: ['users'] })
     }
   }, [currentView, queryClient])
 
@@ -161,36 +162,32 @@ export const UserManagementPage: React.FC = () => {
               >
                 <button
                   onClick={() => setCurrentView('dashboard')}
-                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap ${
-                    currentView === 'dashboard'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <DocumentArrowUpIcon
-                    className={`mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 ${
-                      currentView === 'dashboard'
-                        ? 'text-blue-500'
-                        : 'text-gray-400 group-hover:text-gray-500'
+                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap ${currentView === 'dashboard'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
+                >
+                  <ChartBarIcon
+                    className={`mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 ${currentView === 'dashboard'
+                      ? 'text-blue-500'
+                      : 'text-gray-400 group-hover:text-gray-500'
+                      }`}
                   />
                   Dashboard
                 </button>
 
                 <button
                   onClick={() => setCurrentView('users')}
-                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap ${
-                    currentView === 'users'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap ${currentView === 'users'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   <UserGroupIcon
-                    className={`mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 ${
-                      currentView === 'users'
-                        ? 'text-blue-500'
-                        : 'text-gray-400 group-hover:text-gray-500'
-                    }`}
+                    className={`mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 ${currentView === 'users'
+                      ? 'text-blue-500'
+                      : 'text-gray-400 group-hover:text-gray-500'
+                      }`}
                   />
                   Lista de Usuarios
                 </button>

@@ -5,13 +5,16 @@
  */
 
 'use client'
-import React, {useState, useEffect} from 'react'
+import React, { useState, useEffect } from 'react'
 import EnhancedCompanyAPI from '@/api/EnhancedCompanyAPI'
-import {LoadingSpinner} from '@/components/Shared/LoadingSpinner'
+import { LoadingSpinner } from '@/components/Shared/LoadingSpinner'
+import { PlanBadge } from '@/components/UI/MultiCompanyBadges'
+import {
+  PieChartCard,
+  AreaChartCard,
+} from '@/components/UI/Charts'
 import {
   BuildingOfficeIcon,
-  UserGroupIcon,
-  CurrencyDollarIcon,
   ChartBarIcon,
   ArrowTrendingUpIcon,
   ExclamationTriangleIcon,
@@ -37,6 +40,15 @@ interface DashboardStats {
     upgrades: number
     cancellations: number
   }
+  monthlyTrends?: Array<{
+    month: string
+    total: number
+    active: number
+    inactive?: number
+    suspended?: number
+    trial?: number
+    newCompanies?: number
+  }>
 }
 
 export default function CompanyOverviewDashboard() {
@@ -51,7 +63,7 @@ export default function CompanyOverviewDashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true)
-      const data = await EnhancedCompanyAPI.getCompaniesSummary()
+      const data = await EnhancedCompanyAPI.getCompaniesSummaryExtended()
       setStats(data)
       setError(null)
     } catch (err) {
@@ -94,7 +106,7 @@ export default function CompanyOverviewDashboard() {
       return '0.0'
     }
 
-    const {newCompanies} = stats.monthlyGrowth
+    const { newCompanies } = stats.monthlyGrowth
     const previousTotal = stats.totalCompanies - newCompanies
 
     if (previousTotal === 0) {
@@ -119,13 +131,6 @@ export default function CompanyOverviewDashboard() {
       default:
         return <ClockIcon className='w-5 h-5 text-gray-500' />
     }
-  }
-
-  const planColors = {
-    free: 'bg-gray-100 text-gray-800',
-    basic: 'bg-blue-100 text-blue-800',
-    professional: 'bg-purple-100 text-purple-800',
-    enterprise: 'bg-orange-100 text-orange-800'
   }
 
   return (
@@ -287,56 +292,43 @@ export default function CompanyOverviewDashboard() {
         </div>
       </div>
 
-      {/* Gráficos y distribuciones */}
-      <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
-        {/* Distribución por planes */}
-        <div className='bg-white shadow rounded-lg border border-gray-200'>
-          <div className='px-6 py-4 border-b border-gray-200'>
-            <h3 className='text-lg font-medium text-gray-900'>
-              Distribución por Planes
-            </h3>
-            <p className='text-sm text-gray-500 mt-1'>
-              Número de empresas por plan de suscripción
-            </p>
-          </div>
-          <div className='p-6'>
-            <div className='space-y-4'>
-              {Object.entries(stats.planDistribution).map(([plan, count]) => {
-                const percentage = (count / stats.totalCompanies) * 100
-                const planName = plan.charAt(0).toUpperCase() + plan.slice(1)
+      {/* Gráficos de distribución */}
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+        {/* Distribución por planes - MEJORADO CON PIECHART */}
+        <PieChartCard
+          title="Distribución por Planes"
+          subtitle="Número de empresas por plan de suscripción"
+          data={(() => {
+            const { transformPlanDistribution } = require('@/utils/chartTransformers');
+            return transformPlanDistribution(stats.planDistribution);
+          })()}
+          height={300}
+          innerRadius={60}
+          outerRadius={100}
+          showStats={false}
+          showLegend={true}
+          legendPosition="bottom"
+        />
 
-                return (
-                  <div key={plan}>
-                    <div className='flex items-center justify-between mb-2'>
-                      <div className='flex items-center'>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            planColors[plan as keyof typeof planColors] ||
-                            planColors.free
-                          }`}
-                        >
-                          {planName}
-                        </span>
-                        <span className='ml-3 text-sm text-gray-900'>
-                          {count} empresas
-                        </span>
-                      </div>
-                      <span className='text-sm text-gray-500'>
-                        {percentage.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className='w-full bg-gray-200 rounded-full h-2'>
-                      <div
-                        className='bg-blue-600 h-2 rounded-full transition-all duration-300'
-                        style={{width: `${percentage}%`}}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
+        {/* Distribución por industria - MEJORADO CON PIECHART */}
+        <PieChartCard
+          title="Distribución por Industria"
+          subtitle="Sectores más populares entre las empresas registradas"
+          data={(() => {
+            const { transformIndustryDistribution } = require('@/utils/chartTransformers');
+            return transformIndustryDistribution(stats.industryDistribution);
+          })()}
+          height={300}
+          innerRadius={60}
+          outerRadius={100}
+          showStats={false}
+          showLegend={true}
+          legendPosition="bottom"
+        />
+      </div>
+
+      {/* Grid de gráficos y actividad */}
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
 
         {/* Actividad reciente */}
         <div className='bg-white shadow rounded-lg border border-gray-200'>
@@ -357,8 +349,8 @@ export default function CompanyOverviewDashboard() {
                       <div className='relative pb-8'>
                         {index !==
                           stats.recentActivity.slice(0, 5).length - 1 && (
-                          <span className='absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200' />
-                        )}
+                            <span className='absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200' />
+                          )}
                         <div className='relative flex space-x-3'>
                           <div>
                             <span className='h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center ring-8 ring-white'>
@@ -405,48 +397,32 @@ export default function CompanyOverviewDashboard() {
             )}
           </div>
         </div>
-      </div>
 
-      {/* Distribución por industria */}
-      <div className='bg-white shadow rounded-lg border border-gray-200'>
-        <div className='px-6 py-4 border-b border-gray-200'>
-          <h3 className='text-lg font-medium text-gray-900'>
-            Distribución por Industria
-          </h3>
-          <p className='text-sm text-gray-500 mt-1'>
-            Sectores más populares entre las empresas registradas
-          </p>
-        </div>
-        <div className='p-6'>
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-            {Object.entries(stats.industryDistribution)
-              .sort(([, a], [, b]) => b - a)
-              .slice(0, 6)
-              .map(([industry, count]) => {
-                const percentage = (count / stats.totalCompanies) * 100
-
-                return (
-                  <div key={industry} className='bg-gray-50 rounded-lg p-4'>
-                    <div className='flex items-center justify-between mb-2'>
-                      <h4 className='text-sm font-medium text-gray-900 truncate'>
-                        {industry}
-                      </h4>
-                      <span className='text-sm text-gray-500'>{count}</span>
-                    </div>
-                    <div className='w-full bg-gray-200 rounded-full h-2 mb-1'>
-                      <div
-                        className='bg-green-600 h-2 rounded-full'
-                        style={{width: `${percentage}%`}}
-                      />
-                    </div>
-                    <p className='text-xs text-gray-500'>
-                      {percentage.toFixed(1)}% del total
-                    </p>
-                  </div>
-                )
-              })}
-          </div>
-        </div>
+        {/* NUEVO: Tendencias Mensuales */}
+        {stats.monthlyTrends && stats.monthlyTrends.length > 0 && (
+          <AreaChartCard
+            title="Tendencias Mensuales de Empresas"
+            subtitle="Evolución en los últimos 6 meses"
+            data={stats.monthlyTrends.map((trend: any) => ({
+              name: trend.month,
+              total: trend.total,
+              active: trend.active,
+              trial: trend.trial || 0,
+              suspended: trend.suspended || 0,
+            }))}
+            xAxisKey="name"
+            dataKeys={[
+              { key: 'total', name: 'Total', color: 'blue' },
+              { key: 'active', name: 'Activas', color: 'green' },
+              { key: 'trial', name: 'Prueba', color: 'yellow' },
+              { key: 'suspended', name: 'Suspendidas', color: 'red', type: 'line' },
+            ]}
+            height={350}
+            gradientFill={true}
+            showGrid={true}
+            showLegend={true}
+          />
+        )}
       </div>
 
       {/* Botón de actualización */}

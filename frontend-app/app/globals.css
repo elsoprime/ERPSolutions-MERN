@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --font-noto-sans: 'Noto Sans', sans-serif;
-  --font-roboto-light: 'Roboto-Light', sans-serif;
-  --font-roboto-regular: 'Roboto-Regular', sans-serif;
-  --font-roboto-bold: 'Roboto-Bold', sans-serif;
-  --font-poppins: 'Poppins', sans-serif;
+  --font-noto-sans: "Noto Sans", sans-serif;
+  --font-roboto-light: "Roboto-Light", sans-serif;
+  --font-roboto-regular: "Roboto-Regular", sans-serif;
+  --font-roboto-bold: "Roboto-Bold", sans-serif;
+  --font-poppins: "Poppins", sans-serif;
 }
 
 body {
@@ -74,4 +74,96 @@ pre {
 .font-button {
   font-family: var(--font-roboto-bold);
   font-weight: 600;
+}
+
+/* ========================================
+   ANIMACIONES PARA FORMULARIOS INLINE
+   ======================================== */
+
+/* Animación fade-in para componentes inline */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slide-out-left {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+/* Clases de animación */
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out;
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 0.3s ease-out;
+}
+
+.animate-slide-out-left {
+  animation: slide-out-left 0.3s ease-out;
+}
+
+/* Respetar preferencias de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-in-right,
+  .animate-slide-in-left,
+  .animate-slide-out-right,
+  .animate-slide-out-left {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }

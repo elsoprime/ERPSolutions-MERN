@@ -5,14 +5,9 @@
  */
 
 'use client'
-import React, {useEffect, useState} from 'react'
-import {useTokenRefresh} from '@/hooks/useTokenRefresh'
-import {toast} from 'react-toastify'
-
-// Importar utilidades de testing en desarrollo
-if (process.env.NODE_ENV === 'development') {
-  import('@/utils/tokenRefreshTesting')
-}
+import React, { useEffect, useState } from 'react'
+import { useTokenRefresh } from '@/hooks/useTokenRefresh'
+import { toast } from 'react-toastify'
 
 interface TokenRefreshProviderProps {
   children: React.ReactNode
@@ -62,7 +57,7 @@ export default function TokenRefreshProvider({
         if (e.ctrlKey && e.shiftKey && e.key === 'T') {
           setShowDebugInfo(prev => !prev)
         }
-        
+
         // Ctrl + Shift + R para refresh manual
         if (e.ctrlKey && e.shiftKey && e.key === 'R') {
           refreshToken()
@@ -77,7 +72,7 @@ export default function TokenRefreshProvider({
   return (
     <>
       {children}
-      
+
       {/* Panel de debug en desarrollo */}
       {process.env.NODE_ENV === 'development' && showDebugInfo && (
         <div className='fixed bottom-4 right-4 bg-white border border-gray-300 rounded-lg shadow-lg p-4 max-w-sm z-50'>
@@ -90,7 +85,7 @@ export default function TokenRefreshProvider({
               ✕
             </button>
           </div>
-          
+
           <div className='space-y-2 text-xs'>
             <div className='flex justify-between'>
               <span>Estado:</span>
@@ -98,28 +93,28 @@ export default function TokenRefreshProvider({
                 {isTokenValid ? 'Válido' : 'Inválido'}
               </span>
             </div>
-            
+
             <div className='flex justify-between'>
               <span>Tiempo restante:</span>
               <span className={getStatusColor()}>
                 {formatTimeRemaining()}
               </span>
             </div>
-            
+
             <div className='flex justify-between'>
               <span>Necesita refresh:</span>
               <span className={needsRefresh ? 'text-yellow-500' : 'text-green-500'}>
                 {needsRefresh ? 'Sí' : 'No'}
               </span>
             </div>
-            
+
             <div className='flex justify-between'>
               <span>Renovando:</span>
               <span className={tokenStatus.isRefreshing ? 'text-blue-500' : 'text-gray-500'}>
                 {tokenStatus.isRefreshing ? 'Sí' : 'No'}
               </span>
             </div>
-            
+
             <button
               onClick={refreshToken}
               disabled={isLoading || tokenStatus.isRefreshing}
@@ -128,7 +123,7 @@ export default function TokenRefreshProvider({
               {isLoading ? 'Renovando...' : 'Renovar Token'}
             </button>
           </div>
-          
+
           <div className='mt-3 pt-2 border-t border-gray-200 text-xs text-gray-500'>
             <div>Ctrl+Shift+T: Toggle debug</div>
             <div>Ctrl+Shift+R: Refresh manual</div>

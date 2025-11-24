@@ -1,27 +1,29 @@
-import {FieldErrors, UseFormRegister} from 'react-hook-form'
+import { FieldErrors, UseFormRegister } from 'react-hook-form'
 import ErrorMessage from '@/components/Shared/ErrorMessage'
-import {AuthForm} from '@/data/Auth'
-import {UserLoginForm} from '@/schemas/userSchema'
+import { AuthForm } from '@/data/Auth'
+import { UserLoginForm } from '@/schemas/userSchema'
 import Link from 'next/link'
 
 type AuthFormProps = {
   register: UseFormRegister<UserLoginForm>
   errors: FieldErrors<UserLoginForm>
   onRecoveryClick?: () => void
+  disabled?: boolean
 }
 
 /**
  * @description Componente de formulario de inicio de sesión que utiliza react-hook-form para la gestión de formularios y validación.
- * @param {AuthFormProps} props - Props que incluyen register, errors y onRecoveryClick.
+ * @param {AuthFormProps} props - Props que incluyen register, errors, onRecoveryClick y disabled.
  * @returns {JSX.Element} Componente de formulario de inicio de sesión.
- * @example < LoginForm register={register} errors={errors} onRecoveryClick={handleRecoveryClick} />
+ * @example < LoginForm register={register} errors={errors} onRecoveryClick={handleRecoveryClick} disabled={isLoading} />
  * @author Esteban Leonardo Soto @elsoprimeDev
  * @version 1.0.0
  */
 export default function LoginForm({
   register,
   errors,
-  onRecoveryClick
+  onRecoveryClick,
+  disabled = false
 }: AuthFormProps) {
   return (
     <>
@@ -37,14 +39,14 @@ export default function LoginForm({
             {field.type === 'email' ? (
               <>
                 <input
-                  className={`px-3 py-2 block w-full font-roboto-light text-sm text-gray-500 border rounded-lg focus:outline-none focus:ring-orange-500 focus-border-orange-500  ${
-                    errors[field.id as keyof UserLoginForm]
+                  className={`px-3 py-2 block w-full font-roboto-light text-sm text-gray-500 border rounded-lg focus:outline-none focus:ring-orange-500 focus-border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 ${errors[field.id as keyof UserLoginForm]
                       ? 'border-red-500'
                       : 'border-sky-500'
-                  }`}
+                    }`}
                   id={field.id}
                   type={field.type}
                   placeholder={field.placeholder}
+                  disabled={disabled}
                   {...register(field.id as keyof UserLoginForm, {
                     required: field.required
                       ? `${field.label} es requerido`
@@ -64,14 +66,14 @@ export default function LoginForm({
             ) : (
               <>
                 <input
-                  className={`px-3 py-2 block w-full font-roboto-light text-sm text-gray-500 border rounded-lg focus:outline-none focus:ring-orange-500 focus-border-orange-500  ${
-                    errors[field.id as keyof UserLoginForm]
+                  className={`px-3 py-2 block w-full font-roboto-light text-sm text-gray-500 border rounded-lg focus:outline-none focus:ring-orange-500 focus-border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 ${errors[field.id as keyof UserLoginForm]
                       ? 'border-red-500'
                       : 'border-sky-500'
-                  }`}
+                    }`}
                   id={field.id}
                   type={field.type}
                   placeholder={field.placeholder}
+                  disabled={disabled}
                   {...register(field.id as keyof UserLoginForm, {
                     required: field.required
                       ? `${field.label} es requerido`
