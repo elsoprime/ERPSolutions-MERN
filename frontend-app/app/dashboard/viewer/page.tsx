@@ -59,7 +59,7 @@ export default function ViewerDashboardPage() {
         title='Dashboard Viewer'
         subtitle='Panel de Visualización'
         description='Acceso de solo lectura para visualizar información y reportes del sistema.'
-        backgroundImage='bg-gradient-to-r from-gray-100 via-gray-200 to-gray-600'
+        backgroundImageUrl='bg-gradient-to-r from-gray-100 via-gray-200 to-gray-600'
       />
 
       {/* Welcome Card */}

@@ -35,7 +35,7 @@ export default function ManagerDashboardPage() {
         title='Dashboard Manager'
         subtitle='Panel de Control Gerencial'
         description='Gestión operativa y supervisión de equipos'
-        backgroundImage='bg-gradient-to-r from-green-600 to-teal-600'
+        backgroundImageUrl='bg-gradient-to-r from-green-600 to-teal-600'
       />
 
       {/* Welcome Card */}
