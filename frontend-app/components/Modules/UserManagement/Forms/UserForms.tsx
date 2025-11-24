@@ -172,16 +172,16 @@ export const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 
     // Obtener la categoría del permiso (primera parte antes del punto)
     const category = permission.split('.')[0]
-    const module = categoryToModule[category]
+    const moduleKey = categoryToModule[category]
 
-    return module ? restrictedModules.includes(module) : false
+    return moduleKey ? restrictedModules.includes(moduleKey) : false
   }
 
   // 🎯 Verificar si una categoría completa está restringida
   const isCategoryRestricted = (category: string): boolean => {
     if (restrictedModules.length === 0) return false
-    const module = categoryToModule[category]
-    return module ? restrictedModules.includes(module) : false
+    const moduleKey = categoryToModule[category]
+    return moduleKey ? restrictedModules.includes(moduleKey) : false
   }
 
   const handlePermissionToggle = (permission: string) => {
@@ -1136,8 +1136,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                           automáticamente
                         </p>
                         <p className='text-xs text-green-600 mt-1'>
-                          Según el rol "{rolesTranslate[selectedRole]}" y el
-                          plan "{planInfo.name}"
+                          Según el rol &quot;{rolesTranslate[selectedRole]}&quot; y el
+                          plan &quot;{planInfo.name}&quot;
                         </p>
                         {restrictedModules.length > 0 && (
                           <p className='text-xs text-orange-600 mt-2'>

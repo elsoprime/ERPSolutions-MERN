@@ -130,7 +130,7 @@ export default function DebugPage() {
               </span>
             </p>
             <p>
-              <code>userRole === 'super_admin'</code>:{' '}
+              <code>userRole === &apos;super_admin&apos;</code>:{' '}
               <span className='font-mono'>
                 {String(userRole === 'super_admin')}
               </span>

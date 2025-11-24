@@ -11,7 +11,7 @@ type EditProductPageProps = {
 
 export default function EditProduct({ params }: EditProductPageProps) {
   const { productId } = params
-  
+
   return (
     <>
       <Header
