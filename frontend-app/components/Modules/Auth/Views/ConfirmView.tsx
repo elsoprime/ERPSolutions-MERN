@@ -68,7 +68,7 @@ export default function ConfirmView({token: initialToken}: ConfirmViewProps) {
     }
 
     if (error) {
-      return <InvalidTokenState />
+      return <InvalidTokenState pathname='/auth/login' />
     }
 
     if (validationData?.alreadyConfirmed) {
