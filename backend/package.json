@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "start": "node -r tsconfig-paths/register -r ts-node/register src/index.ts",
+    "scripts": {
     "dev": "nodemon --exec ts-node -r tsconfig-paths/register src/index.ts",
+    "build": "tsc && tsc-alias",
+    "start": "node dist/index.js",
+    "start:dev": "ts-node -r tsconfig-paths/register src/index.ts",
     "clean:db": "ts-node -r tsconfig-paths/register src/scripts/utilities/cleanDatabase.ts",
     "verify:db": "ts-node -r tsconfig-paths/register src/scripts/utilities/verifyDatabase.ts",
     "verify:enhanced": "ts-node -r tsconfig-paths/register src/scripts/utilities/verifyEnhancedDatabase.ts",
@@ -58,6 +60,7 @@
     "jest": "^30.2.0",
     "nodemon": "^3.1.4",
     "supertest": "^7.1.4",
-    "ts-jest": "^29.4.5"
+    "ts-jest": "^29.4.5",
+    "tsc-alias": "^1.8.16"
   }
 }

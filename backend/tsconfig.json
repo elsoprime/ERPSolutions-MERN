@@ -1,14 +1,17 @@
 {
   "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
     "outDir": "./dist",
     "rootDir": "./src",
-    "lib": ["esnext"],
-    "target": "ESNext",
-    "moduleResolution": "NodeNext",
-    "module": "NodeNext",
     "strict": false,
     "sourceMap": true,
     "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
     "declaration": true,
     "baseUrl": "./src",
     "paths": {
@@ -18,5 +21,6 @@
       "@middleware/*": ["middleware/*"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
