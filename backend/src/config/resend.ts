@@ -3,18 +3,20 @@
  * @author Esteban Soto Ojeda @elsoprimeDev
  */
 
-import {Resend} from 'resend'
+import { Resend } from "resend";
 
 if (!process.env.API_KEY_RESEND) {
-  throw new Error(
-    'API_KEY_RESEND no está configurada en las variables de entorno'
-  )
+  console.warn(
+    "⚠️ WARNING: API_KEY_RESEND no está configurada. Las funciones de email estarán deshabilitadas."
+  );
 }
 
-export const resend = new Resend(process.env.API_KEY_RESEND)
+export const resend = process.env.API_KEY_RESEND
+  ? new Resend(process.env.API_KEY_RESEND)
+  : null;
 
 // Configuración por defecto para los emails
 export const EMAIL_CONFIG = {
-  from: 'ERPSolutions <onboarding@resend.dev>', // Usar el dominio verificado de Resend
-  replyTo: 'noreply@erpsolutions.com'
-}
+  from: "ERPSolutions <onboarding@resend.dev>", // Usar el dominio verificado de Resend
+  replyTo: "noreply@erpsolutions.com",
+};
