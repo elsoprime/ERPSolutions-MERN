@@ -10,7 +10,6 @@ import servicesRoutes from "./routes/servicesRoutes";
 import healthRoutes from "./routes/healthRoutes";
 import planRoutes from "./routes/planRoutes";
 
-import { connectDB } from "./config/database";
 import { globalErrorHandler } from "./middleware/global";
 
 // Importar modelos explícitamente para asegurar registro en Mongoose
@@ -18,8 +17,6 @@ import "@/modules/userManagement/models/EnhancedUser";
 import "@/modules/companiesManagement/models/EnhancedCompany";
 
 dotenv.config();
-
-connectDB();
 
 const app = express();
 app.use(cors(corsConfig));
