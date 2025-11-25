@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node -r tsconfig-paths/register -r ts-node/register src/index.ts",
     "dev": "nodemon --exec ts-node -r tsconfig-paths/register src/index.ts",
     "clean:db": "ts-node -r tsconfig-paths/register src/scripts/utilities/cleanDatabase.ts",
     "verify:db": "ts-node -r tsconfig-paths/register src/scripts/utilities/verifyDatabase.ts",
