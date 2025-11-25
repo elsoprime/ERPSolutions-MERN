@@ -2,50 +2,45 @@
 
 import mongoose from "mongoose";
 import colors from "colors";
-// import {
-//   getOrCreateCompany,
-//   initializeAdminUser
-// } from '@/scripts/initialization/initializeEnhancedNew'
-
-// import {initializeApplication} from '@/scripts/initialization/initializeSettings'
 
 export const connectDB = async () => {
   try {
-    // Conectar a la base de datos usando Mongoose
     const DATABASE = process.env.DATABASE_URL;
+
     if (!DATABASE) {
-      console.log(
-        colors.bgBlack.bgRed.bold(
-          `La URL de la base de datos no está definida.`
-        )
+      throw new Error(
+        "DATABASE_URL no está definida en las variables de entorno"
       );
-      return;
     }
-    const connection = await mongoose.connect(DATABASE);
 
-    // ⚠️ NOTA: La inicialización automática está deshabilitada
-    // Para inicializar la base de datos, ejecuta: npm run init:fresh
-    // const results = await Promise.allSettled([
-    //   getOrCreateCompany(),
-    //   initializeAdminUser(),
-    //   initializeApplication()
-    // ])
-    // results.forEach((result, index) => {
-    //   if (result.status === 'rejected') {
-    //     console.log(
-    //       colors.bgRed(`Error en la inicialización ${index + 1}:`),
-    //       result.reason
-    //     )
-    //   }
-    // })
+    console.log(colors.yellow("🔌 Intentando conectar a la base de datos..."));
 
-    console.log(colors.bgBlue.white(`Conectado a la base de datos`));
-  } catch (error) {
+    const connection = await mongoose.connect(DATABASE, {
+      serverSelectionTimeoutMS: 5000, // Timeout de 5 segundos
+      socketTimeoutMS: 45000,
+    });
+
     console.log(
-      colors.bgBlack.bgYellow.red.bold(
-        `Ha ocurrido un error al conectar con la base de datos `
-      ),
-      error
+      colors.bgBlue.white.bold(
+        `✅ Conectado a la base de datos: ${connection.connection.host}`
+      )
     );
+
+    return connection;
+  } catch (error) {
+    console.error(
+      colors.bgRed.white.bold(`❌ Error al conectar con la base de datos:`),
+      error.message
+    );
+    throw error; // ⚠️ IMPORTANTE: Lanzar el error para que se maneje arriba
   }
 };
+
+// Manejar eventos de conexión
+mongoose.connection.on("disconnected", () => {
+  console.log(colors.yellow.bold("⚠️ Mongoose desconectado de la BD"));
+});
+
+mongoose.connection.on("error", (err) => {
+  console.error(colors.red.bold("❌ Error en la conexión de Mongoose:"), err);
+});
