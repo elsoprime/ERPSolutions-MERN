@@ -1,9 +1,11 @@
 /**
  * Autor: Esteban Soto Ojeda @elsoprimeDev
+ * versión: 1.0.0
+ * Descripción: Página de inicio de sesión y registro
  */
 'use client'
 import Image from 'next/image'
-import {useEffect, useState} from 'react'
+import { useEffect, useState } from 'react'
 import AOS from 'aos'
 import AuthView from '@/components/Modules/Auth/Views/AuthView'
 import AuthGuard from '@/components/Modules/Auth/Protected/AuthGuard'
