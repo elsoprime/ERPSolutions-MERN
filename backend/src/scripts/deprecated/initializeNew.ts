@@ -53,7 +53,7 @@ const COMPANIES_DATA: ICreateCompanyRequest[] = [
       country: "Chile",
       postalCode: "8320000",
     },
-    plan: PlanType.ENTERPRISE,
+    plan: null, // TODO: Asignar ObjectId del plan correcto desde la BD
     settings: {
       businessType: BusinessType.TECHNOLOGY,
       industry: "Technology",
@@ -78,7 +78,7 @@ const COMPANIES_DATA: ICreateCompanyRequest[] = [
       country: "Chile",
       postalCode: "7550000",
     },
-    plan: PlanType.PROFESSIONAL,
+    plan: null, // TODO: Asignar ObjectId del plan correcto desde la BD
     settings: {
       businessType: BusinessType.RETAIL,
       industry: "Comercio y Retail",
@@ -103,7 +103,7 @@ const COMPANIES_DATA: ICreateCompanyRequest[] = [
       country: "Chile",
       postalCode: "8700000",
     },
-    plan: PlanType.BASIC,
+    plan: null, // TODO: Asignar ObjectId del plan correcto desde la BD
     settings: {
       businessType: BusinessType.MANUFACTURING,
       industry: "Manufactura",

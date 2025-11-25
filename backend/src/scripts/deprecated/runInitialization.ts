@@ -4,73 +4,73 @@
  * @author: Esteban Soto Ojeda @elsoprimeDev
  */
 
-import {config} from 'dotenv'
-import {connectDB} from '@/config/database'
-import {initializeDatabase} from './initializeNew'
-import {cleanDatabase} from './cleanDatabase'
-import colors from 'colors'
+import { config } from "dotenv";
+import { connectDB } from "@/config/database";
+import { initializeDatabase } from "./initializeNew";
+import { cleanDatabase } from "@/scripts/utilities/cleanDatabase";
+import colors from "colors";
 
 // Cargar variables de entorno
-config()
+config();
 
 async function runInitialization() {
   try {
     console.log(
-      colors.bold.magenta('🎯 Script de Inicialización de Base de Datos')
-    )
-    console.log(colors.bold.magenta('='.repeat(60)))
+      colors.bold.magenta("🎯 Script de Inicialización de Base de Datos")
+    );
+    console.log(colors.bold.magenta("=".repeat(60)));
 
     // Conectar a la base de datos
-    console.log(colors.cyan('🔌 Conectando a la base de datos...'))
-    await connectDB()
-    console.log(colors.green('✅ Conexión establecida exitosamente'))
+    console.log(colors.cyan("🔌 Conectando a la base de datos..."));
+    await connectDB();
+    console.log(colors.green("✅ Conexión establecida exitosamente"));
 
     // Verificar argumentos de línea de comandos
     const includeTestUsers =
-      process.argv.includes('--test-users') || process.argv.includes('-t')
+      process.argv.includes("--test-users") || process.argv.includes("-t");
     const shouldClean =
-      process.argv.includes('--clean') || process.argv.includes('-c')
+      process.argv.includes("--clean") || process.argv.includes("-c");
 
     if (shouldClean) {
       console.log(
         colors.red(
-          '🧹 Modo de limpieza activado - Se eliminarán todos los datos existentes'
+          "🧹 Modo de limpieza activado - Se eliminarán todos los datos existentes"
         )
-      )
-      await cleanDatabase()
+      );
+      await cleanDatabase();
     }
 
     if (includeTestUsers) {
       console.log(
         colors.yellow(
-          '🧪 Modo de prueba activado - Se crearán usuarios adicionales de testing'
+          "🧪 Modo de prueba activado - Se crearán usuarios adicionales de testing"
         )
-      )
+      );
     }
 
     // Ejecutar inicialización
-    await initializeDatabase(includeTestUsers)
+    await initializeDatabase(includeTestUsers);
 
     console.log(
-      colors.bold.green('\n🎉 ¡Inicialización completada exitosamente!')
-    )
-    console.log(colors.bold.cyan('\n📖 Próximos pasos:'))
-    console.log(colors.cyan('1. Inicia tu servidor backend'))
+      colors.bold.green("\n🎉 ¡Inicialización completada exitosamente!")
+    );
+    console.log(colors.bold.cyan("\n📖 Próximos pasos:"));
+    console.log(colors.cyan("1. Inicia tu servidor backend"));
     console.log(
-      colors.cyan('2. Accede al frontend con las credenciales mostradas')
-    )
+      colors.cyan("2. Accede al frontend con las credenciales mostradas")
+    );
     console.log(
-      colors.cyan('3. Explora los diferentes dashboards según los roles')
-    )
+      colors.cyan("3. Explora los diferentes dashboards según los roles")
+    );
   } catch (error) {
-    console.error(colors.red.bold('❌ Error durante la inicialización:'))
-    console.error(colors.red(error))
-    process.exit(1)
+    console.error(colors.red.bold("❌ Error durante la inicialización:"));
+    console.error(colors.red(error));
+    process.exit(1);
   } finally {
     // Cerrar conexión y terminar proceso
-    process.exit(0)
+    process.exit(0);
   }
 }
 
 // Ejecutar script
-runInitialization()
+runInitialization();

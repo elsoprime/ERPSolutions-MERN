@@ -59,7 +59,7 @@ const ENHANCED_COMPANIES_DATA: Partial<IEnhancedCompany>[] = [
       postalCode: "7500000",
     },
     status: CompanyStatus.ACTIVE,
-    plan: PlanType.ENTERPRISE,
+    plan: null, // TODO: Asignar ObjectId del plan correcto desde la BD
     settings: {
       businessType: BusinessType.SERVICES,
       industry: "Tecnología y Software",
@@ -128,7 +128,7 @@ const ENHANCED_COMPANIES_DATA: Partial<IEnhancedCompany>[] = [
       postalCode: "7550000",
     },
     status: CompanyStatus.ACTIVE,
-    plan: PlanType.PROFESSIONAL,
+    plan: null, // TODO: Asignar ObjectId del plan correcto desde la BD
     settings: {
       businessType: BusinessType.RETAIL,
       industry: "Comercio y Retail",
@@ -145,12 +145,22 @@ const ENHANCED_COMPANIES_DATA: Partial<IEnhancedCompany>[] = [
         crm: true,
         projectManagement: false,
         reports: true,
+        multiCurrency: false,
+        apiAccess: false,
+        customBranding: false,
+        prioritySupport: false,
+        advancedAnalytics: false,
+        auditLog: false,
+        customIntegrations: false,
+        dedicatedAccount: false,
       },
       limits: {
         maxUsers: 25,
         maxProducts: 5000,
-        maxTransactions: 25000,
+        maxMonthlyTransactions: 25000,
         storageGB: 10,
+        maxApiCalls: 20000,
+        maxBranches: 10,
       },
       branding: {
         logo: null,
@@ -188,7 +198,7 @@ const ENHANCED_COMPANIES_DATA: Partial<IEnhancedCompany>[] = [
       postalCode: "8150000",
     },
     status: CompanyStatus.ACTIVE,
-    plan: PlanType.BASIC,
+    plan: null, // TODO: Asignar ObjectId del plan correcto desde la BD
     settings: {
       businessType: BusinessType.MANUFACTURING,
       industry: "Manufactura",
@@ -199,17 +209,28 @@ const ENHANCED_COMPANIES_DATA: Partial<IEnhancedCompany>[] = [
         endMonth: 12,
       },
       features: {
-        inventory: true,
+        inventoryManagement: true,
         accounting: false,
         hrm: true,
         crm: false,
-        projects: true,
+        projectManagement: true,
+        reports: false,
+        multiCurrency: false,
+        apiAccess: false,
+        customBranding: false,
+        prioritySupport: false,
+        advancedAnalytics: false,
+        auditLog: false,
+        customIntegrations: false,
+        dedicatedAccount: false,
       },
       limits: {
         maxUsers: 10,
         maxProducts: 1000,
-        maxTransactions: 5000,
+        maxMonthlyTransactions: 5000,
         storageGB: 5,
+        maxApiCalls: 5000,
+        maxBranches: 5,
       },
       branding: {
         logo: null,
