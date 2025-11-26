@@ -15,7 +15,7 @@ export default function ChangePasswordPage() {
         backdropFilter: 'blur(4px)'
       }}
     >
-      <div className='absolute inset-0 bg-gradient-to-br from-black via-blue-600/20  to-blue-900/70 backdrop-blur-md'></div>
+      <div className='absolute inset-0 bg-gradient-to-br from-black via-black/50  to-black/70 backdrop-blur-md'></div>
 
       <div className='relative z-10 px-4 xl:px-0 w-full max-w-md mx-auto'>
         <div className='-mt-36 relative justify-center mb-8'>

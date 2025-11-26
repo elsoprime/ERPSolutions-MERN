@@ -3,13 +3,12 @@
 'use client'
 
 import Header from '@/components/UI/Header'
-import HeaderNavigation from '@/components/UI/HeaderNavigation'
 import Sidebar from '@/components/UI/Sidebar'
 import AuthGuard from '@/components/Modules/Auth/Protected/AuthGuard'
 import TokenRefreshProvider from '@/components/Modules/Auth/Protected/TokenRefreshProvider'
 import AuthLoadingScreen from '@/components/Shared/AuthLoadingScreen'
-import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
-import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 export default function HomeLayout({
   children

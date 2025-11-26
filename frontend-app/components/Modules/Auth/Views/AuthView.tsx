@@ -163,11 +163,13 @@ export default function AuthView({ onRegisterClick, dataAOS }: AuthViewProps) {
             type='submit'
             disabled={isProcessing}
             className={`${isProcessing
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-l from-sky-600 to-sky-500 hover:transform hover:scale-105'
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-gradient-to-l from-sky-600 to-sky-500 hover:transform hover:scale-105'
               } shadow-lg text-white transition-all duration-300`}
           />
           <div className='flex items-center justify-center mt-2'>
+            {/*
+            Nota: El registro de nuevos usuarios está deshabilitado temporalmente
             <button
               className={`text-sm ${isProcessing
                   ? 'text-gray-400 cursor-not-allowed'
@@ -179,6 +181,7 @@ export default function AuthView({ onRegisterClick, dataAOS }: AuthViewProps) {
             >
               ¿No Tienes una Cuenta?
             </button>
+            */}
           </div>
         </form>
       </div>

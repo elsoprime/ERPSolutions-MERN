@@ -1,14 +1,14 @@
 import Button from '@/components/Shared/Button'
-import {ForgotPasswordForm} from '@/schemas/userSchema'
-import {useForm} from 'react-hook-form'
+import { ForgotPasswordForm } from '@/schemas/userSchema'
+import { useForm } from 'react-hook-form'
 import RecoveryForm from '../Forms/RecoveryForm'
-import {useMutation} from '@tanstack/react-query'
-import {toast} from 'react-toastify'
-import {ArrowPathIcon} from '@heroicons/react/24/outline'
-import {forgetPassword} from '@/api/AuthAPI'
+import { useMutation } from '@tanstack/react-query'
+import { toast } from 'react-toastify'
+import { ArrowPathIcon } from '@heroicons/react/24/outline'
+import { forgetPassword } from '@/api/AuthAPI'
 import Link from 'next/link'
-import {useState} from 'react'
-import {AlreadyConfirmedState} from '../States/AlreadyConfirmedState'
+import { useState } from 'react'
+import { AlreadyConfirmedState } from '../States/AlreadyConfirmedState'
 
 /**
  * @description Componente de vista para la recuperación de contraseña.
@@ -31,8 +31,8 @@ export default function ForgotPasswordViews() {
     register,
     reset,
     handleSubmit,
-    formState: {errors}
-  } = useForm<ForgotPasswordForm>({defaultValues: initialData})
+    formState: { errors }
+  } = useForm<ForgotPasswordForm>({ defaultValues: initialData })
 
   const mutation = useMutation<string, Error, ForgotPasswordForm>({
     mutationFn: forgetPassword,
@@ -92,12 +92,15 @@ export default function ForgotPasswordViews() {
             >
               ¿Ya Tienes una Cuenta?
             </Link>
-            <Link
+            {/*
+              ==== Nota: El registro de nuevos usuarios está deshabilitado temporalmente ====
+               <Link
               className='text-sm text-sky-500 hover:underline hover:text-orange-500 transition-colors duration-200'
               href='/'
             >
               ¿No Tienes una Cuenta? Regístrate
             </Link>
+           */}
           </div>
         </form>
       )}
